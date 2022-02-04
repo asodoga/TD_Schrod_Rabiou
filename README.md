@@ -1,2 +1,2 @@
-# TD_Schrod_Rabiou
-Code for solving time dependent Schrodinger equation in multidimension
+# TD_SCHROD
+My cool new project!
