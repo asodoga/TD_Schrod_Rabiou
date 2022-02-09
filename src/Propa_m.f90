@@ -1,5 +1,6 @@
 module Propa_m
   USE NumParameters_m
+   USE psi_m
   implicit none
 
 
@@ -57,7 +58,7 @@ contains
   TYPE (psi_t),  intent(inout) :: psi_dt
   TYPE (psi_t),  intent(inout)    :: psi
   TYPE(Op_t),    intent(in)    :: H
-  TYPE (psi_t)                 :: Hpsi !, Ki
+  TYPE (psi_t)                 :: Hpsi 
 
   real(kind=Rk), intent(in)    :: t,delta_t
   real(kind=Rk)                :: Rkk, Norm
@@ -68,41 +69,63 @@ contains
   write(out_unitp,*) 'BEGINNIG march_taylor',t,delta_t
   write(out_unitp,*) 'psi',psi%CVec
   Rkk = ONE
-  
-   psi_dt%CVec    = psi%CVec
- CALL calc_OpPsi(H,psi,Hpsi)
- Rkk = Rkk*delta_t
- Hpsi%CVec(:)    = - EYE*Hpsi%CVec(:)
-  psi_dt%CVec(:) = psi_dt%CVec(:) +Rkk*Hpsi%CVec(:)
-  CALL Calc_Norm(Hpsi, Norm)  
-  CALL Calc_Norm(psi_dt, Norm)
+  !!======================debut ordre 1==========================
+   !psi_dt%CVec    = psi%CVec
+ !CALL calc_OpPsi(H,psi,Hpsi)
+ !Rkk = Rkk*delta_t
+ !Hpsi%CVec(:)    = - EYE*Hpsi%CVec(:)
+ !psi_dt%CVec(:) = psi_dt%CVec(:) +Rkk*Hpsi%CVec(:)
+  !CALL Calc_Norm(Hpsi, Norm)  
+  !CALL Calc_Norm(psi_dt, Norm)
     
-  write(out_unitp,*) 'norm,Hpsi',Rkk*Norm
-  write(out_unitp,*) 'norm,psi_dt',Norm
+  !write(out_unitp,*) 'norm,Hpsi',Rkk*Norm
+  !write(out_unitp,*) 'norm,psi_dt',Norm
   
   
   
-  write(out_unitp,*) 'psi_dt',psi_dt%CVec
-  write(out_unitp,*) 'END march_taylor'
+   !write(out_unitp,*) 'psi_dt',psi_dt%CVec
+   !write(out_unitp,*) 'END march_taylor'
   !=====================fin ordre deux================================
+    
+    
+    
+    
+  !!===========================Ordre deux etplus=======================
+   
+   psi_dt%CVec    = psi%CVec
+   Do kk = 1,5000,1
+   CALL calc_OpPsi(H,psi,Hpsi)
+    Rkk = Rkk*(delta_t/kk)
+    Hpsi%CVec(:)    = - EYE*Hpsi%CVec(:)
+    psi_dt%CVec(:) = psi_dt%CVec(:) +Rkk*Hpsi%CVec(:)
+      
+       !CALL Calc_Norm(psi_dt, Norm)
+        !write(out_unitp,*) 'norm,psi_dt',Norm
+        CALL Calc_Norm(Hpsi, Norm)
+         Norm =   Rkk*Norm
+  write(out_unitp,*) 'norm,Hpsi',Norm
+ 
+  If(Norm .le. ONETENTH**10) Then
+   print*,'Taylor condition is fulfild after',kk,'iteration'
+   exit
+   else 
+   psi%CVec(:)    = Hpsi%CVec(:)
+   
   
   
+  Endif
+  
+  Enddo
+  
+  CALL Calc_Norm(psi_dt, Norm)
+        write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',Norm-ONE
+        write(out_unitp,*) 'psi_dt',psi_dt%CVec
+  write(out_unitp,*) 'END march_taylor'
   
   END SUBROUTINE march_taylor
   
   
-  SUBROUTINE Calc_Norm(psi, Norm)
- 
-  USE psi_m, ONLY : psi_t
-
-  TYPE (psi_t),  intent(in)     :: psi
-  real(kind = Rk),intent(inout) :: Norm
   
-  
-  Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
-  !write(out_unitp,*) 'norm,psi',Norm
-
- END SUBROUTINE Calc_Norm
   
   
   

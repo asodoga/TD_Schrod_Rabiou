@@ -46,7 +46,7 @@ PROGRAM TD_SCHROD
 
   t0  = ZERO
   tf  = 10._Rk
-  delta_t = ONETENTH
+  delta_t = 10._Rk
 
   CALL propagation(psif,psi0,H,t0,tf,delta_t)
   CALL Write_psi(psif)
