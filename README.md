@@ -1,2 +1,2 @@
 # TD_SCHROD
-Fortran codes for solving multidimensionnal shrodinger equation(TDSE).
+Fortran codes for solving multidimensionnal  Time dependant shrodinger equation(TDSE).
