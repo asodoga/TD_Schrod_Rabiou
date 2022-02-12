@@ -1,7 +1,7 @@
 &dat_taylor
    t0  = ZERO
-  tf  = 10._Rk
-  delta_t = 10._Rk
+  tf  = TEN
+  delta_t = ONE
   eps= ONETENTH**10
        /
  
