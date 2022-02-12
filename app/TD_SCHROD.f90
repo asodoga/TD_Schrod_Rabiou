@@ -31,6 +31,26 @@ PROGRAM TD_SCHROD
 
   write(out_unitp,*) ' | H | Psi > calculation'
   CALL Set_op(H,Basis) ! to be change
+  CALL calc_OpPsi(H,psi,Hpsi)
+  CALL Write_psi(Hpsi)
+
+
+  CALL init_psi(psi0,Basis,cplx=.TRUE.) ! to be changed
+  CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
+  psi0%CVec(:) = ZERO
+  psi0%CVec(1) = ONE
+  CALL Calc_Norm(psi0, Norm)
+  !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
+  write(out_unitp,*) 'norm,psi0',Norm
+
+namelist /dat_taylor/ t0,tf,delta_t ,eps
+  read(*,nml=dat_taylor)
+   write(out_unitp,nml=dat_taylor)
+  CALL propagation(psif,psi0,H,t0,tf,delta_t)
+  CALL Write_psi(psif)
+
+
+  write(out_unitp,*) 'deallocation'
   CALL dealloc_Op(H)
   CALL dealloc_psi(psi0)
   CALL dealloc_psi(psif)
