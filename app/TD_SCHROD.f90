@@ -10,7 +10,7 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
-  real(kind=Rk)          :: t0,tf,delta_t,Norm
+  real(kind=Rk)          :: t0,tf,delta_t,Norm,eps
 
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
@@ -43,11 +43,9 @@ PROGRAM TD_SCHROD
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
 
-
-  t0  = ZERO
-  tf  = 10._Rk
-  delta_t = 10._Rk
-
+namelist /dat_taylor/ t0,tf,delta_t ,eps
+  read(in_unitp,nml=dat_taylor)
+   write(out_unitp,nml=dat_taylor)
   CALL propagation(psif,psi0,H,t0,tf,delta_t)
   CALL Write_psi(psif)
 

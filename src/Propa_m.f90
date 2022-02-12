@@ -61,7 +61,7 @@ contains
   TYPE (psi_t)                 :: Hpsi 
 
   real(kind=Rk), intent(in)    :: t,delta_t
-  real(kind=Rk)                :: Rkk, Norm
+  real(kind=Rk)                :: Rkk, Norm,eps
   integer(kind = Rk)           :: kk
   ! variables locales
 
@@ -105,7 +105,7 @@ contains
          Norm =   Rkk*Norm
   write(out_unitp,*) 'norm,Hpsi',Norm
  
-  If(Norm .le. ONETENTH**10) Then
+  If(Norm .le. eps) Then
    print*,'Taylor condition is fulfild after',kk,'iteration'
    exit
    else 
