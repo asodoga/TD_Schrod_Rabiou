@@ -1,0 +1,1 @@
+ + gfortran  -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=1 -g -fcheck=bounds -fcheck=array-temps -fbacktrace -fcoarray=single  build/gfortran_2A42023B310FA28D/TD_SCHROD/app_TD_SCHROD.f90.o build/gfortran_2A42023B310FA28D/TD_SCHROD/libTD_SCHROD.a -o build/gfortran_2A42023B310FA28D/app/TD_SCHROD

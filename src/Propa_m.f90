@@ -2,10 +2,18 @@ module Propa_m
   USE NumParameters_m
    USE psi_m
   implicit none
+   
+   TYPE propa
+   real (kind=Rk)      :: t0
+   real (kind=Rk)      :: tf
+   real (kind=Rk)      :: delta_t
+   real (kind=Rk)      :: eps 
+   real (kind=Rk)      :: max_iter
+  END TYPE propa
 
-
+  
 contains
-  SUBROUTINE propagation(psif,psi0,H,t0,tf,delta_t)
+  SUBROUTINE propagation(psif,psi0,H,propa_t)
   USE op_m
   USE psi_m
 
@@ -13,16 +21,18 @@ contains
   TYPE (psi_t),  intent(in)    :: psi0
   TYPE(Op_t),    intent(in)    :: H
 
-  real(kind=Rk), intent(in)    :: t0,tf,delta_t
+ TYPE(propa), intent(inout)    :: propa_t
 
   ! variables locales
-  real(kind=Rk) :: t,t_deltat
+  real(kind=Rk) :: t ,t_deltat
   integer       :: i,nt
   TYPE (psi_t)  :: psi,psi_dt
+  CALL read_propa_t( propa_t)
+  write(out_unitp,*) 'propa_t= ',propa_t
 
-  write(out_unitp,*) 'BEGINNIG propagation', t0,tf,delta_t
+  write(out_unitp,*) 'BEGINNIG propagation', propa_t%t0,propa_t%tf,propa_t%delta_t
 
-  nt = int((tf-t0)/delta_t)
+  nt = int((propa_t%tf-propa_t%t0)/propa_t%delta_t)
 
   CALL init_psi(psi,psi0%Basis,cplx=.TRUE.) ! to be changed
   CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.) ! to be changed
@@ -31,11 +41,11 @@ contains
 
   DO i=0,nt-1
 
-    t = i*delta_t
-    t_deltat = t + delta_t
+    t = i*propa_t%delta_t
+    t_deltat = t + propa_t%delta_t
 
     write(out_unitp,*) 'march taylor',i,t,t_deltat
-    CALL march_taylor(psi,psi_dt,H,t,delta_t)
+    CALL march_taylor(psi,psi_dt,H,t,propa_t)
 
     psi%CVec(:) = psi_dt%CVec
 
@@ -51,22 +61,23 @@ contains
 
   END SUBROUTINE propagation
 
-  SUBROUTINE march_taylor(psi,psi_dt,H,t,delta_t)
+  SUBROUTINE march_taylor(psi,psi_dt,H,t,propa_t)
   USE op_m
   USE psi_m
 
   TYPE (psi_t),  intent(inout) :: psi_dt
-  TYPE (psi_t),  intent(inout)    :: psi
+  TYPE (psi_t),  intent(inout) :: psi
   TYPE(Op_t),    intent(in)    :: H
   TYPE (psi_t)                 :: Hpsi 
+  TYPE(propa) ,intent(inout)    :: propa_t
 
-  real(kind=Rk), intent(in)    :: t,delta_t
-  real(kind=Rk)                :: Rkk, Norm,eps
+  real(kind=Rk), intent(in)    :: t
+  real(kind=Rk)                :: Rkk, Norm
   integer(kind = Rk)           :: kk
   ! variables locales
+   CALL read_propa( propa_t)
 
-
-  write(out_unitp,*) 'BEGINNIG march_taylor',t,delta_t
+  write(out_unitp,*) 'BEGINNIG march_taylor',t,propa_t%delta_t
   write(out_unitp,*) 'psi',psi%CVec
   Rkk = ONE
   !!======================debut ordre 1==========================
@@ -93,9 +104,9 @@ contains
   !!===========================Ordre deux etplus=======================
    
    psi_dt%CVec    = psi%CVec
-   Do kk = 1,5000,1
+   Do kk = 1,propa_t%max_iter,1
    CALL calc_OpPsi(H,psi,Hpsi)
-    Rkk = Rkk*(delta_t/kk)
+    Rkk = Rkk*(propa_t%delta_t/kk)
     Hpsi%CVec(:)    = - EYE*Hpsi%CVec(:)
     psi_dt%CVec(:) = psi_dt%CVec(:) +Rkk*Hpsi%CVec(:)
       
@@ -105,7 +116,7 @@ contains
          Norm =   Rkk*Norm
   write(out_unitp,*) 'norm,Hpsi',Norm
  
-  If(Norm .le. eps) Then
+  If(Norm .le. propa_t%eps) Then
    print*,'Taylor condition is fulfild after',kk,'iteration'
    exit
    else 
@@ -125,6 +136,26 @@ contains
   END SUBROUTINE march_taylor
   
   
+  
+  
+  SUBROUTINE read_propa( propa_t)
+  USE psi_m
+implicit none
+  TYPE (propa),  intent(inout) :: propa_t
+  real(kind= Rk) :: t0,tf,delta_t ,eps,max_iter
+ 
+  namelist /prop/ t0,tf,delta_t ,eps,max_iter
+  read(*,nml=prop)
+  
+  propa_t%t0 = t0
+  propa_t%tf = tf
+  propa_t%delta_t = delta_t
+  propa_t%eps = eps
+  propa_t%max_iter = max_iter
+     
+ !write(out_unitp,*) 'propa_t= ',propa_t 
+   
+   END SUBROUTINE read_propa
   
   
   

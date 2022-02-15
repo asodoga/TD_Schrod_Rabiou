@@ -10,8 +10,8 @@ module psi_m
     real (kind=Rk),    allocatable :: RVec(:)
     complex (kind=Rk), allocatable :: CVec(:)
   END TYPE psi_t
-
-  public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm
+ 
+   public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm
   ! operation on psi has to be defined: psi=psi1, psi1+psi2, psi=psi1*cte ...
 contains
   SUBROUTINE init_psi(psi,Basis,cplx)
