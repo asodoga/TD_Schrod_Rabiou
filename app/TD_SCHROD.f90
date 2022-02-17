@@ -10,7 +10,7 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
-  TYPE(propa)            :: propa_t
+  TYPE(propa_t)          :: propa
   real(kind=Rk)          :: Norm
   !real(kind=Rk)          :: t0,tf,delta_t,Norm,eps
 
@@ -41,11 +41,11 @@ PROGRAM TD_SCHROD
   CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
   psi0%CVec(:) = ZERO
   psi0%CVec(1) = ONE
-  CALL Calc_Norm(psi0, Norm)
+  CALL Calc_Norm(psi0,Norm)
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
 
-  CALL propagation(psif,psi0,H,propa_t)
+  CALL propagation(psif,psi0,H,propa)
   CALL Write_psi(psif)
 
 
