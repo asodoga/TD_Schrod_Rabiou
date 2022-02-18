@@ -10,7 +10,7 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
-  TYPE(propa)            :: propa_t
+  TYPE(propa_t)            :: propa
   real(kind=Rk)          :: Norm
   !real(kind=Rk)          :: t0,tf,delta_t,Norm,eps
 
@@ -45,7 +45,7 @@ PROGRAM TD_SCHROD
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
 
-  CALL propagation(psif,psi0,H,propa_t)
+  CALL propagation(psif,psi0,H,propa)
   CALL Write_psi(psif)
 
 

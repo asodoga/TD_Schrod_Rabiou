@@ -1,3 +1,3 @@
 &basis_nD name='boxAB' nb=4 nq=6 A=-2.5 B=2.5 /
-&prop t0  = ZERO  tf  = 10._Rk   delta_t = 1._Rk  eps= ONETENTH**10  max_iter = 500 /
+&prop t0  = 0  tf  = 10   delta_t = 1  eps= 0.0000000001  max_iter = 500 /
 
