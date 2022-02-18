@@ -201,7 +201,7 @@ contains
   
    t0       = ZERO
    tf       = 10._Rk  
-   delta_t  = 1._Rk 
+   delta_t  = (ONETENTH)**3 
    eps      = ONETENTH**10._Rk 
    max_iter = 5000
    
