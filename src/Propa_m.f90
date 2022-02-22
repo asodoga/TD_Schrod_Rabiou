@@ -20,7 +20,7 @@ contains
 
   TYPE (psi_t),  intent(inout) :: psif
   TYPE (psi_t),  intent(in)    :: psi0
-  TYPE(Op_t),    intent(in)    :: H
+  TYPE(Op_t),    intent(inout)    :: H
 
  TYPE(propa_t), intent(inout)  :: propa
 
@@ -47,7 +47,7 @@ contains
 
     write(out_unitp,*) 'march taylor',i,t,t_deltat
   
-    CALL march
+    CALL march(psi,psi_dt,H,t,propa)
     psi%CVec(:) = psi_dt%CVec
 
   END DO
@@ -148,7 +148,7 @@ contains
   real(kind=Rk), intent(in)    :: t
   real(kind=Rk)                ::  Norm
   ! variables locales
-   CALL read_propa(propa)
+   !CALL read_propa(propa)
 
   write(out_unitp,*) 'BEGINNIG march_RK4th',t,propa%delta_t
   write(out_unitp,*) 'psi',psi%CVec
@@ -184,8 +184,8 @@ contains
   namelist /prop/ t0,tf,delta_t ,eps,max_iter, propa_name
    t0  = ZERO 
    tf  = 10._Rk  
-   delta_t = 1._Rk  
-   eps= ONETENTH**10  
+   delta_t = 0.001
+   eps= ONETENTH**10._Rk  
    max_iter = 5000
    propa_name = 'rk4'
 
@@ -209,7 +209,7 @@ contains
   USE psi_m
 
   TYPE (psi_t),  intent(in)   :: psi_in
-  TYPE (psi_t),  intent(out)  :: psi_out
+  TYPE (psi_t),  intent(inout)  :: psi_out
   TYPE(Op_t)  ,  intent(in)   :: H
    
   CALL calc_OpPsi(H,psi_in,psi_out)
@@ -219,22 +219,22 @@ contains
  
  END SUBROUTINE F
   
-   SUBROUTINE march
+   SUBROUTINE march(psi,psi_dt,H,t,propa)
    USE op_m
    USE psi_m
-   TYPE(Op_t)                     :: H
-   TYPE (propa_t)                 :: propa
-   TYPE (psi_t)                   :: psi,psi_dt
-   !character(len=40), intent(in) :: propa_name
-   real(kind=Rk)                  :: t
-     select case (propa%propa_name)
-     case ('rk4')
-     CALL marh_RK4th(psi,psi_dt,H,t,propa)
-     case ('taylor')
+   TYPE(Op_t)     , intent(inout)     :: H
+   TYPE (propa_t) , intent(inout)     :: propa
+   TYPE (psi_t)   , intent(inout)     :: psi
+   TYPE (psi_t)   , intent(inout)     :: psi_dt
+   real(kind=Rk)  ,intent(inout)      :: t
+   select case (propa%propa_name)
+   case ('rk4')
+   CALL marh_RK4th(psi,psi_dt,H,t,propa)
+   case ('taylor')
      CALL  march_taylor(psi,psi_dt,H,t,propa)
      !case default
      !CALL march_taylor(psi,psi_dt,H,t,propa)
-     end select
+   end select
  
   END SUBROUTINE march
   
