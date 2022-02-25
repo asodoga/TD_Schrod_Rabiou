@@ -45,7 +45,7 @@ PROGRAM TD_SCHROD
   CALL Calc_Norm(psi0, Norm)
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
-
+  CALL write_propa(propa)
   CALL propagation(psif,psi0,H,propa)
   CALL Write_psi(psif)
 
