@@ -1,10 +1,11 @@
 MODULE Basis_m
   USE NumParameters_m
 
+
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated
+  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis_cplx, GridTOBasis_Basis_cplx
 
   TYPE :: Basis_t
     integer                         :: nb         = 0
@@ -230,5 +231,47 @@ CONTAINS
     END IF
 
   END SUBROUTINE Scale_Basis
+
+
+
+!subroutine basistogrid
+SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
+  USE UtilLib_m
+
+  TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
+  COMPLEX(kind=Rk),        INTENT(INOUT)  :: B(:)
+  COMPLEX(kind=Rk),        INTENT(IN)     :: G(:)
+  INTEGER                                 :: IB,IQ
+
+  REAL(kind=Rk)   ,        ALLOCATABLE    :: d0bgw(:,:)
+
+
+
+  IF (Basis_IS_allocated(Basis)) THEN
+    d0bgw = TRANSPOSE(Basis%d0gb)
+    DO IB=1,Basis%nb
+      d0bgw(IB,:) = d0bgw(IB,:) * Basis%w(:)
+    END DO
+  ENDIF
+    B = MATMUL(d0bgw,G)
+
+END  SUBROUTINE GridTOBasis_Basis_cplx
+
+  !subroutine gridtobasis
+SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
+  USE UtilLib_m
+
+    TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
+    COMPLEX(kind=Rk),        INTENT(IN)     :: B(:)
+    COMPLEX(kind=Rk),        INTENT(INOUT)  :: G(:)
+
+        IF (Basis_IS_allocated(Basis)) THEN
+        G= MATMUL(Basis%d0gb,B)
+
+        ENDIF
+
+
+    END  SUBROUTINE BasisTOGrid_Basis_cplx
+
 
 END MODULE Basis_m

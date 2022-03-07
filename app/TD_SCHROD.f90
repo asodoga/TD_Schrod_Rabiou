@@ -10,15 +10,26 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
-  TYPE(propa_t)            :: propa
-  real(kind=Rk)          :: Norm
-  !real(kind=Rk)          :: t0,tf,delta_t,Norm,eps
+  TYPE(propa_t)          :: propa
+  REAL(kind=Rk)          :: Norm
+
+  !COMPLEX(kind=Rk),    ALLOCATABLE   :: G(:)
+  !COMPLEX(kind=Rk),    ALLOCATABLE   :: B(:)
+
+
+  TYPE(psi_t)                   :: G
+  TYPE(psi_t)                   :: B
+
+
+
+  !ALLOCATE(G(Basis%NQ), B(Basis%NB))
 
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
+
   CALL Read_Basis(Basis,nio=in_unitp)
-  
+
   !====================================================================
 
   write(out_unitp,*) 'Initialization of a real psi'
@@ -26,11 +37,39 @@ PROGRAM TD_SCHROD
   CALL init_psi(psi,Basis,cplx=.FALSE.) ! to be changed
   psi%RVec(:) = ONE
   CALL Write_psi(psi)
+  !
 
   write(out_unitp,*) 'Initialization of a complex psi'
   CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
   psi%CVec(:) = CONE
   CALL Write_psi(psi)
+
+ !initial wavepaket
+CALL init_psi(B,Basis,cplx=.TRUE.)
+ B%CVec(:)  = CZERO
+ !B%CVec (1) = CONE
+ WRITE(*,*) "B representation"
+ CALL Write_psi(B)
+ WRITE(*,*) ''
+
+ CALL init_psi(G,Basis,cplx=.TRUE.)
+  G%CVec(:)  = CZERO
+  G%CVec (1) = CONE
+  WRITE(*,*) "G representation"
+  CALL Write_psi(G)
+  WRITE(*,*) ''
+
+ CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,Basis)
+ WRITE(*,*) "B representation"
+ CALL Write_psi(B)
+ WRITE(*,*) ''
+ CALL BasisTOGrid_Basis_cplx(G%CVec,B%CVec,Basis)
+ WRITE(*,*) "G  afeter representation"
+ CALL Write_psi(G)
+ WRITE(*,*) ''
+
+
+
 
   write(out_unitp,*) ' | H | Psi > calculation'
   CALL Set_op(H,Basis) ! to be change
@@ -45,7 +84,7 @@ PROGRAM TD_SCHROD
   CALL Calc_Norm(psi0, Norm)
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
-  CALL write_propa(propa)
+  CALL read_propa(propa)
   CALL propagation(psif,psi0,H,propa)
   CALL Write_psi(psif)
 
