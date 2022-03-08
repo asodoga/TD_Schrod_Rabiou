@@ -65,7 +65,7 @@ contains
 
        psif%CVec(:) = psi%CVec
        CALL Calc_Norm(psi_dt, Norm)
-       
+
        CALL dealloc_psi(psi)
        CALL dealloc_psi(psi_dt)
        IF (debug) THEN
@@ -165,7 +165,7 @@ contains
        TYPE(propa_t), intent(in)    :: propa
 
        real(kind=Rk), intent(in)    :: t
-       real(kind=Rk)                ::  Norm
+       real(kind=Rk)                ::  Norm, Norm0
        !  variables locales
 
 
@@ -183,7 +183,8 @@ contains
        CALL mEyeHPsi(H,psi_inter,K4)
        psi_dt%CVec(:) = psi_dt%CVec(:)+(propa%delta_t/6._Rk)*(K1%CVec(:)+2*K2%CVec(:)+2*K3%CVec(:)+K4%CVec(:))
        CALL Calc_Norm(psi_dt, Norm)
-       write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',ABS(Norm-ONE)
+       CALL Calc_Norm(psi,Norm0)
+       write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',ABS(ONE-Norm)
        write(out_unitp,*) 'psi_dt',psi_dt%CVec
        write(out_unitp,*) 'END marh_RK4th'
 

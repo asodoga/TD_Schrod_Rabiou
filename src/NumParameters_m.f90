@@ -40,6 +40,9 @@
       real (kind=Rk), parameter ::                                              &
                     PI = 3.14159265358979323846264338327950288419716939937511_Rk
 
+
+      
+
       complex (kind=Rk), parameter :: EYE      = (0._Rk,1._Rk)
       complex (kind=Rk), parameter :: CZERO    = (0._Rk,0._Rk)
       complex (kind=Rk), parameter :: CONE     = (1._Rk,0._Rk)
