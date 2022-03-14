@@ -13,7 +13,7 @@ contains
 
     real(kind=Rk), intent(in) :: Q
 
-  Calc_pot = HALF * Q*Q
+  Calc_pot = mass*HALF * Q*Q
 
   END FUNCTION Calc_pot
 

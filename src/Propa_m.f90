@@ -21,15 +21,19 @@ contains
 
        TYPE (psi_t),  intent(inout) :: psif
        TYPE (psi_t),  intent(in)    :: psi0
-       TYPE(Op_t),    intent(inout)    :: H
+       TYPE(Op_t),    intent(inout) :: H
+       !TYPE(Basis_t)                ::Basis
+
 
        TYPE(propa_t), intent(inout)  :: propa
        logical, parameter :: debug = .true.
 
        ! variables locales
        real(kind=Rk) :: t ,t_deltat, Norm
-       integer       :: i,nt
+       integer       :: i,nt, j
        TYPE (psi_t)  :: psi,psi_dt
+      ! CALL Read_Basis(Basis,nio=in_unitp)
+
 
        if (debug) then
 
@@ -48,7 +52,6 @@ contains
 
        CALL init_psi(psi,psi0%Basis,cplx=.TRUE.) ! to be changed
        CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.) ! to be changed
-
        psi%CVec(:) = psi0%CVec
 
        DO i=0,nt-1
@@ -59,9 +62,29 @@ contains
             write(out_unitp,*) propa%propa_name,i,t,t_deltat
 
             CALL march(psi,psi_dt,H,t,propa)
+
             psi%CVec(:) = psi_dt%CVec
 
+            !IF(t == 0)Then
+            !CALL BasisTOGrid_Basis_cplx(G%CVec,B%CVec,Basis)
+            !WRITE(04,*) Basis%x(:),AIMAG(G%CVec)
+            !ENDIF
+
+
        END DO
+       !ecriture des paquets
+      ! DO i=0,nt-1
+           !open(unit=i+10)
+           !Do j = 1,40
+           !write(i+10,*)  j , ABS(psif%CVec(j))**2
+        ! ENDDO
+
+
+
+
+      ! écrire le paquet d'onde dans ce fichier
+      !close(unit=i+10)
+    ! END DO
 
        psif%CVec(:) = psi%CVec
        CALL Calc_Norm(psi_dt, Norm)
@@ -146,9 +169,9 @@ contains
 
         Enddo
 
-      !  CALL Calc_Norm(psi_dt, Norm)
-        !write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',abs(Norm-ONE)
-      !  write(out_unitp,*) 'psi_dt',psi_dt%CVec
+       CALL Calc_Norm(psi_dt, Norm)
+        write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',abs(Norm-ONE)
+       write(out_unitp,*) 'psi_dt',psi_dt%CVec
         write(out_unitp,*) 'END march_taylor'
 
     END SUBROUTINE march_taylor
@@ -167,7 +190,6 @@ contains
        real(kind=Rk), intent(in)    :: t
        real(kind=Rk)                ::  Norm, Norm0
        !  variables locales
-
 
        write(out_unitp,*) 'BEGINNIG march_RK4th',t,propa%delta_t
        write(out_unitp,*) 'psi',psi%CVec

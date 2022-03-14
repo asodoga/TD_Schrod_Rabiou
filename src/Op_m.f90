@@ -81,13 +81,17 @@ contains
     ! calculation of a potential on the grid
     allocate(V(Basis%nq))
     DO iq=1,Basis%nq
-      V(iq) = Calc_pot(Basis%x(iq))
+      V(iq) = ZERO
+
+
+
+      !Calc_pot(Basis%x(iq))
     END DO
 
     ! calculation of Op|b_i>
     DO ib=1,Basis%nb
       OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
-      OpPsi_g = TEN+OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
+      OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
       ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
       OpPsi_g = OpPsi_g * Basis%w
       Op%RMat(:,ib) = matmul(transpose(Basis%d0gb),OpPsi_g)
