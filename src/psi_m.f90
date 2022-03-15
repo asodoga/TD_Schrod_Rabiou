@@ -82,6 +82,19 @@ contains
   !write(out_unitp,*) 'norm,psi',Norm
 
   END SUBROUTINE Calc_Norm
+  
+  
+  
+    SUBROUTINE Calc_Norm2(G, Norm2)
+  TYPE (psi_t),  intent(in)     :: G
+  REAL(kind = Rk),intent(inout) :: Norm2
+
+
+
+  Norm2 = dot_product(G*Basis%W(:),G(:)) 
+
+
+END SUBROUTINE Calc_Norm2
  
  
  

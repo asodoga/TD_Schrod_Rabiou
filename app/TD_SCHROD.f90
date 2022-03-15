@@ -11,40 +11,107 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
   TYPE(propa_t)          :: propa
-  real(kind=Rk)          :: Norm
-  !real(kind=Rk)          :: t0,tf,delta_t,Norm,eps
+  REAL(kind=Rk)          :: Norm,phase,sigma,k0,Q0,sig0,Norm2
+  !COMPLEX(kind=Rk),    ALLOCATABLE   :: G(:)
+  !COMPLEX(kind=Rk),    ALLOCATABLE   :: B(:)
+
+
+  TYPE(psi_t)                   :: G
+  TYPE(psi_t)                   :: B
+  INTEGER                       ::J
+
+
+
+
+  !ALLOCATE(G(Basis%NQ), B(Basis%NB))
 
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
+
   CALL Read_Basis(Basis,nio=in_unitp)
+
   !====================================================================
 
-  write(out_unitp,*) 'Initialization of a real psi'
+!  write(out_unitp,*) 'Initialization of a real psi'
 
-  CALL init_psi(psi,Basis,cplx=.FALSE.) ! to be changed
-  psi%RVec(:) = ONE
-  CALL Write_psi(psi)
+  !CALL init_psi(psi,Basis,cplx=.FALSE.) ! to be changed
+!  psi%RVec(:) = ONE
+!  CALL Write_psi(psi)
+
+
+  CALL init_psi(G,Basis,cplx=.TRUE.)
+  CALL init_psi(B,Basis,cplx=.TRUE.)
+  sigma = 0.5
+  sig0 = 0.5
+  k0 = 1
+  phase = 0
+  Q0 = 0
+  G%CVec(:)  = EXP(-(ONETENTH**2)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+EYE*phase)
+  CALL Calc_Norm2(G, Norm2)
+  G%CVec(:) = G%CVec(:)/Norm2
+  CALL Calc_Norm2(G, Norm2)
+  open(unit=11,file = "Gwp0")
+  Do J = 1,500
+  write(11,*) Basis%x(J) , ABS(G%CVec(J))**2,Norm2
+ENDDO
+
+
+   !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP((Basis%x(:)-Q0))
+   !CALL Calc_Norm(G, Norm)
+  !G%CVec(:)  = G%CVec(:)/Norm
+  !CALL Calc_NormG(G, GNorm)
+   !WRITE(*,*) "+++++++++++++++++++++++++++++++G representation+++++++++++++++++++++++++++++++++++++"
+   !WRITE(*,*) "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+   write(out_unitp,*)'Norm de G',  Norm2
+
+  ! WRITE(*,*) "G representation"
+  ! CALL Write_psi(G)
+   !WRITE(*,*) ''
+
+ CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,Basis)
+ CALL Calc_Norm(B, Norm)
+ write(out_unitp,*)'Norm de B',  Norm
+ !B%CVec(:) = B%CVec(:)/Norm
+ open(unit=12,file = "Bwp0")
+ Do J = 1,500
+ write(12,*) J , ABS(real(B%CVec(J))**2),Norm
+ENDDO
+  !CALL Calc_Norm(B, Norm)
+ !WRITE(*,*) "B representation"
+ !CALL Write_psi(B)
+ !WRITE(*,*) ''
+  !
 
   write(out_unitp,*) 'Initialization of a complex psi'
   CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
-  psi%CVec(:) = CONE
+  psi%CVec(:) = B%CVec(:)
   CALL Write_psi(psi)
 
-  write(out_unitp,*) ' | H | Psi > calculation'
+
+
+ !CALL BasisTOGrid_Basis_cplx(G%CVec,B%CVec,Basis)
+ !WRITE(*,*) "G  afeter representation"
+ !CALL Write_psi(G)
+! WRITE(*,*) ''
+
+
+
+
+  !write(out_unitp,*) ' | H | Psi > calculation'
   CALL Set_op(H,Basis) ! to be change
   CALL calc_OpPsi(H,psi,Hpsi)
-  CALL Write_psi(Hpsi)
+  !CALL Write_psi(Hpsi)
 
 
   CALL init_psi(psi0,Basis,cplx=.TRUE.) ! to be changed
   CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
-  psi0%CVec(:) = ZERO
-  psi0%CVec(1) = ONE
-  CALL Calc_Norm(psi0,Norm)
+  psi0%CVec(:) = B%CVec(:)
+!  psi0%CVec(1) = ONE
+  CALL Calc_Norm(psi0, Norm)
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
-
+  CALL read_propa(propa)
   CALL propagation(psif,psi0,H,propa)
   CALL Write_psi(psif)
 
