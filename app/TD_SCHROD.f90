@@ -48,11 +48,11 @@ PROGRAM TD_SCHROD
   phase = 0
   Q0 = 0
   G%CVec(:)  = EXP(-(ONETENTH**2)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+EYE*phase)
-  CALL Calc_NormG(G, Norm2)
+  CALL Calc_Norm2(G, Norm2)
   G%CVec(:) = G%CVec(:)/Norm2
-  CALL Calc_NormG(G, Norm2)
+  !CALL Calc_Norm2(G, Norm2)
   open(unit=11,file = "Gwp0")
-  Do J = 1,500
+  Do J = 1,200
   write(11,*) Basis%x(J) , ABS(G%CVec(J))**2,Norm2
 ENDDO
 
@@ -74,7 +74,7 @@ ENDDO
  write(out_unitp,*)'Norm de B',  Norm
  !B%CVec(:) = B%CVec(:)/Norm
  open(unit=12,file = "Bwp0")
- Do J = 1,500
+ Do J = 1,200
  write(12,*) J , ABS(real(B%CVec(J))**2),Norm
 ENDDO
   !CALL Calc_Norm(B, Norm)

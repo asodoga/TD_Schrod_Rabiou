@@ -86,13 +86,12 @@ contains
 
 
   SUBROUTINE Calc_Norm2(G, Norm2)
-  USE Basis_m  
   TYPE (psi_t),  intent(in)     :: G
   REAL(kind = Rk),intent(inout) :: Norm2
-
-
-
-  Norm2 = dot_product(G*Basis%W(:),G(:))
+  TYPE(Basis_t)                 :: Basis
+  TYPE(psi_t)                   :: G1
+  G1%CVec(:)  = G%CVec(:)*Basis%W(:)
+  Norm2 = dot_product(G1%CVec(:),G%CVec(:))
 
 
 END SUBROUTINE Calc_Norm2
