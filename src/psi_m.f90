@@ -86,6 +86,7 @@ contains
 
 
   SUBROUTINE Calc_Norm2(G, Norm2)
+  USE Basis_m  
   TYPE (psi_t),  intent(in)     :: G
   REAL(kind = Rk),intent(inout) :: Norm2
 
