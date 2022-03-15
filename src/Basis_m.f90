@@ -45,13 +45,13 @@ CONTAINS
     IF (Basis_IS_allocated(Basis)) THEN
       CALL Write_RVec(Basis%x,out_unitp,5,name_info='x')
       write(out_unitp,*)
-      CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
+      !CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
+      !CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
+      !CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+      !CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
     ELSE
       write(out_unitp,*) ' Basis tables (x, w, dngb) are not allocated.'
     END IF
@@ -97,7 +97,7 @@ CONTAINS
       STOP ' ERROR in Read_Basis: problems with the namelist.'
     END IF
     IF (err_io > 0) THEN
-      write(out_unitp,basis_nD)
+      !write(out_unitp,basis_nD)
       write(out_unitp,*) ' ERROR in Read_Basis'
       write(out_unitp,*) '  while reading the namelist "basis_nD"'
       write(out_unitp,*) ' Probably, some arguments of namelist are wrong.'
@@ -122,7 +122,7 @@ CONTAINS
     CALL Scale_Basis(Basis,Q0,scaleQ)
     CALL CheckOrtho_Basis(Basis,nderiv=2)
 
-    CALL Write_Basis(Basis)
+    !CALL Write_Basis(Basis)
 
   END SUBROUTINE Read_Basis
   SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
@@ -180,27 +180,27 @@ CONTAINS
 
       S = matmul(d0bgw,Basis%d0gb)
       IF (nderiv > -1) CALL Write_RMat(S,out_unitp,5,name_info='S')
-      Sii = ZERO
-      Sij = ZERO
+      !Sii = ZERO
+      !Sij = ZERO
       DO ib=1,Basis%nb
         IF (abs(S(ib,ib)-ONE) > Sii) Sii = abs(S(ib,ib)-ONE)
         S(ib,ib) = ZERO
       END DO
       Sij = maxval(S)
-      write(out_unitp,*) 'Sii,Sij',Sii,Sij
+      !write(out_unitp,*) 'Sii,Sij',Sii,Sij
 
       IF (nderiv > 0) THEN
-        write(out_unitp,*)
+      !  write(out_unitp,*)
         S = matmul(d0bgw,Basis%d1gb(:,:,1))
         !CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>',Rformat='e13.4')
-        CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
+        !CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
       END IF
 
       IF (nderiv > 1) THEN
         write(out_unitp,*)
         S = matmul(d0bgw,Basis%d2gb(:,:,1,1))
         !CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d2b>',Rformat='e13.4')
-        CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
+        !CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
       END IF
 
     ELSE

@@ -11,7 +11,7 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
   TYPE(propa_t)          :: propa
-  REAL(kind=Rk)          :: Norm,phase,sigma,k0,Q0,sig0
+  REAL(kind=Rk)          :: Norm,phase,sigma,k0,Q0,sig0,Norm2
   !COMPLEX(kind=Rk),    ALLOCATABLE   :: G(:)
   !COMPLEX(kind=Rk),    ALLOCATABLE   :: B(:)
 
@@ -48,22 +48,22 @@ PROGRAM TD_SCHROD
   phase = 0
   Q0 = 0
   G%CVec(:)  = EXP(-(ONETENTH**2)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+EYE*phase)
-  CALL Calc_Norm(G, Norm)
-  G%CVec(:) = G%CVec(:)/Norm
-  CALL Calc_Norm(G, Norm)
+  CALL Calc_NormG(G, Norm2)
+  G%CVec(:) = G%CVec(:)/Norm2
+  CALL Calc_NormG(G, Norm2)
   open(unit=11,file = "Gwp0")
   Do J = 1,500
-  write(11,*) Basis%x(J) , ABS(G%CVec(J))**2,Norm
+  write(11,*) Basis%x(J) , ABS(G%CVec(J))**2,Norm2
 ENDDO
 
 
    !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP((Basis%x(:)-Q0))
    !CALL Calc_Norm(G, Norm)
   !G%CVec(:)  = G%CVec(:)/Norm
-   CALL Calc_Norm(G, Norm)
-   WRITE(*,*) "+++++++++++++++++++++++++++++++G representation+++++++++++++++++++++++++++++++++++++"
-   WRITE(*,*) "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-   write(out_unitp,*)'Norm de G',  Norm
+  !CALL Calc_NormG(G, GNorm)
+   !WRITE(*,*) "+++++++++++++++++++++++++++++++G representation+++++++++++++++++++++++++++++++++++++"
+   !WRITE(*,*) "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+   write(out_unitp,*)'Norm de G',  Norm2
 
   ! WRITE(*,*) "G representation"
   ! CALL Write_psi(G)

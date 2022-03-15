@@ -10,8 +10,8 @@ module psi_m
     real (kind=Rk),    allocatable :: RVec(:)
     complex (kind=Rk), allocatable :: CVec(:)
   END TYPE psi_t
- 
-   public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm
+
+   public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm,Calc_Norm2
   ! operation on psi has to be defined: psi=psi1, psi1+psi2, psi=psi1*cte ...
 contains
   SUBROUTINE init_psi(psi,Basis,cplx)
@@ -71,21 +71,30 @@ contains
       write(out_unitp,*) 'END Writting psi'
     END IF
   END SUBROUTINE write_psi
-  
-  
+
+
   SUBROUTINE Calc_Norm(psi, Norm)
   TYPE (psi_t),  intent(in)     :: psi
   real(kind = Rk),intent(inout) :: Norm
-  
-  
+
+
   Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
   !write(out_unitp,*) 'norm,psi',Norm
 
   END SUBROUTINE Calc_Norm
- 
- 
- 
- 
-  
-  
+
+
+
+  SUBROUTINE Calc_Norm2(G, Norm2)
+  TYPE (psi_t),  intent(in)     :: G
+  REAL(kind = Rk),intent(inout) :: Norm2
+
+
+
+  Norm2 = dot_product(G*Basis%W(:),G(:))
+
+
+END SUBROUTINE Calc_Norm2
+
+
 end module psi_m

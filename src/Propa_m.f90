@@ -30,7 +30,7 @@ contains
 
        ! variables locales
        real(kind=Rk) :: t ,t_deltat, Norm
-       integer       :: i,nt, j
+       integer       :: i,nt
        TYPE (psi_t)  :: psi,psi_dt
       ! CALL Read_Basis(Basis,nio=in_unitp)
 
@@ -327,6 +327,7 @@ contains
        ! TYPE (psi_t)                 :: Hpsi
         !real(kind=Rk), intent(in)    :: t
         !real(kind=Rk)                ::  Norm
+         !anorm=sum(abs(psi)**2)*dq2
 
 
        ! CALL  energy(H,psi)
