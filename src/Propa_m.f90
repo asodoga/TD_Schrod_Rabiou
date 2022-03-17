@@ -18,11 +18,12 @@ contains
     SUBROUTINE propagation(psif,psi0,H,propa)
        USE op_m
        USE psi_m
+       USE Basis_m
 
        TYPE (psi_t),  intent(inout) :: psif
        TYPE (psi_t),  intent(in)    :: psi0
        TYPE(Op_t),    intent(inout) :: H
-       !TYPE(Basis_t)                ::Basis
+       TYPE (psi_t)                 :: G
 
 
        TYPE(propa_t), intent(inout)  :: propa
@@ -30,7 +31,7 @@ contains
 
        ! variables locales
        real(kind=Rk) :: t ,t_deltat, Norm
-       integer       :: i,nt
+       integer       :: i,nt,IQ,nf
        TYPE (psi_t)  :: psi,psi_dt
       ! CALL Read_Basis(Basis,nio=in_unitp)
 
@@ -52,6 +53,7 @@ contains
 
        CALL init_psi(psi,psi0%Basis,cplx=.TRUE.) ! to be changed
        CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(G,psi0%Basis,cplx=.TRUE.) ! to be changed
        psi%CVec(:) = psi0%CVec
 
        DO i=0,nt-1
@@ -64,28 +66,23 @@ contains
             CALL march(psi,psi_dt,H,t,propa)
 
             psi%CVec(:) = psi_dt%CVec
+               nf = int(nt/5)
+             IF( nf == 0)then
+             nf = 1
+             
+             ENDIF      
 
-            !IF(t == 0)Then
-            !CALL BasisTOGrid_Basis_cplx(G%CVec,B%CVec,Basis)
-            !WRITE(04,*) Basis%x(:),AIMAG(G%CVec)
-            !ENDIF
+            IF(   MOD(i,nf) == 0  )Then
+             OPEN(unit=i+10)
+             CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
+             DO  IQ = 1, psi_dt%Basis%nq
+             WRITE(i+10,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2
+             ENDDO
+              CLOSE(UNIT=i+10)
+            ENDIF
 
 
        END DO
-       !ecriture des paquets
-      ! DO i=0,nt-1
-           !open(unit=i+10)
-           !Do j = 1,40
-           !write(i+10,*)  j , ABS(psif%CVec(j))**2
-        ! ENDDO
-
-
-
-
-      ! écrire le paquet d'onde dans ce fichier
-      !close(unit=i+10)
-    ! END DO
-
        psif%CVec(:) = psi%CVec
        CALL Calc_Norm(psi_dt, Norm)
 
@@ -106,11 +103,12 @@ contains
     SUBROUTINE march_taylor(psi,psi_dt,H,t,propa)
        USE op_m
        USE psi_m
+       USE Basis_m
 
        TYPE (psi_t)  , INTENT(INOUT):: psi_dt
        TYPE (psi_t)  ,INTENT(INOUT) :: psi
        TYPE(Op_t)    ,INTENT(IN)    :: H
-       TYPE (psi_t)                 :: Hpsi
+       TYPE (psi_t)                 :: Hpsi,G
        TYPE(propa_t) ,INTENT(IN)    :: propa
        real(kind=Rk) , INTENT(IN)   :: t
 
@@ -141,11 +139,7 @@ contains
 
        !write(out_unitp,*) 'psi_dt',psi_dt%CVec
        !write(out_unitp,*) 'END march_taylor'
-       !=====================fin ordre deux================================
-
-
-
-
+       
        !!===========================Ordre deux etplus=======================
 
         psi_dt%CVec    = psi%CVec
@@ -158,7 +152,7 @@ contains
             !write(out_unitp,*) 'norm,psi_dt',Norm
             CALL Calc_Norm(Hpsi, Norm)
             Norm =   Rkk*Norm
-            !write(out_unitp,*) 'norm,Hpsi',Norm
+            write(out_unitp,*) 'norm,Hpsi',kk,Norm
 
             If(Norm <= propa%eps) Then
                 print*,'Taylor condition is fulfild after',kk,'iteration'
@@ -166,7 +160,7 @@ contains
             else
                 psi%CVec(:)    = Hpsi%CVec(:)
             Endif
-
+CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
         Enddo
 
        CALL Calc_Norm(psi_dt, Norm)
@@ -180,6 +174,7 @@ contains
     SUBROUTINE marh_RK4th(psi,psi_dt,H,t,propa)
        USE op_m
        USE psi_m
+       USE Basis_m
 
        TYPE (psi_t),  intent(inout) :: psi_dt
        TYPE (psi_t),  intent(in)    :: psi
@@ -327,7 +322,6 @@ contains
        ! TYPE (psi_t)                 :: Hpsi
         !real(kind=Rk), intent(in)    :: t
         !real(kind=Rk)                ::  Norm
-         !anorm=sum(abs(psi)**2)*dq2
 
 
        ! CALL  energy(H,psi)

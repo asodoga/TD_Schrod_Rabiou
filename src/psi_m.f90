@@ -11,7 +11,7 @@ module psi_m
     complex (kind=Rk), allocatable :: CVec(:)
   END TYPE psi_t
 
-   public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm,Calc_Norm2
+   public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm, Calc_Norm_Grid
   ! operation on psi has to be defined: psi=psi1, psi1+psi2, psi=psi1*cte ...
 contains
   SUBROUTINE init_psi(psi,Basis,cplx)
@@ -85,16 +85,23 @@ contains
 
 
 
-  SUBROUTINE Calc_Norm2(G, Norm2)
+
+  SUBROUTINE Calc_Norm_Grid(G, Norm)
+    USE UtilLib_m
   TYPE (psi_t),  intent(in)     :: G
-  REAL(kind = Rk),intent(inout) :: Norm2
-  TYPE(Basis_t)                 :: Basis
-  TYPE(psi_t)                   :: G1
-  G1%CVec(:)  = G%CVec(:)*Basis%W(:)
-  Norm2 = dot_product(G1%CVec(:),G%CVec(:))
+  TYPE (psi_t)                  :: G1
+  !TYPE(Basis_t) , INTENT(IN)    :: Basis
+  REAL(kind = Rk),intent(inout) :: Norm
+  !INTEGER                       :: IB
 
 
-END SUBROUTINE Calc_Norm2
+  !DO IB=1,Basis%nb
+   ! G1%CVec(IB) =  G%CVec(IB)* Basis%w(IB)
+  !END DO
+  Norm = dot_product(G%CVec(:)*G%Basis%W(:),G%CVec(:))
+  Norm = SQRT(Norm)
 
+
+END SUBROUTINE Calc_Norm_Grid
 
 end module psi_m

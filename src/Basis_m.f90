@@ -122,7 +122,7 @@ CONTAINS
     CALL Scale_Basis(Basis,Q0,scaleQ)
     CALL CheckOrtho_Basis(Basis,nderiv=2)
 
-    CALL Write_Basis(Basis)
+    !CALL Write_Basis(Basis)
 
   END SUBROUTINE Read_Basis
   SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi

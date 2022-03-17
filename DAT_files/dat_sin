@@ -1,2 +1,3 @@
-&basis_nD name='boxAB' nb= 20 nq=20 A=-6 B=6/
-&prop t0  = 0  tf  = 12   delta_t = 1  eps= 0.0000000001  max_iter =  5000 propa_name = 'taylor'/
+&basis_nD name='boxAB' nb= 250 nq=250 A=-10 B=250/
+&prop t0  = 0  tf  = 200   delta_t = 0.1  eps= 0.0000000001
+  max_iter =  5000 propa_name = 'taylor'/
