@@ -23,19 +23,20 @@ contains
        TYPE (psi_t),  intent(inout) :: psif
        TYPE (psi_t),  intent(in)    :: psi0
        TYPE(Op_t),    intent(inout) :: H
-       TYPE (psi_t)                 :: G
+       TYPE (psi_t)                 :: G,rho_exact,rho_calc   !,rho
 
 
-       TYPE(propa_t), intent(inout)  :: propa
-       logical, parameter :: debug = .true.
+
+       TYPE(propa_t), intent(inout) :: propa
+       logical, parameter           :: debug = .true.
 
        ! variables locales
-       real(kind=Rk) :: t ,t_deltat, Norm
-       integer       :: i,nt,IQ,nf
-       TYPE (psi_t)  :: psi,psi_dt
-      ! CALL Read_Basis(Basis,nio=in_unitp)
-
-
+       REAL(kind=Rk)                :: t ,t_deltat, Norm,Norm1
+       REAL(kind=Rk)                :: alpha,hbar,v,k0,mass,w0
+       complex (kind=Rk)            :: c0,c3
+       TYPE (psi_t)                 ::c1,c2,c4
+       INTEGER                      :: i,nt,IQ,nf
+       TYPE (psi_t)                 :: psi,psi_dt
        if (debug) then
 
                  write(out_unitp,*) 'BEGINNIG propagation', propa%t0,propa%tf,propa%delta_t
@@ -54,29 +55,59 @@ contains
        CALL init_psi(psi,psi0%Basis,cplx=.TRUE.) ! to be changed
        CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.) ! to be changed
        CALL init_psi(G,psi0%Basis,cplx=.TRUE.) ! to be changed
-       psi%CVec(:) = psi0%CVec
+       CALL init_psi(rho_exact,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(rho_calc,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(c1,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(c2,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(c4,psi0%Basis,cplx=.TRUE.) ! to be changed
+       !CALL init_psi(rho,psi0%Basis,cplx=.TRUE.) ! to be changed
+
+              psi%CVec(:) = psi0%CVec
+
+        hbar = ONE
+        mass = ONE
+        alpha = TWO
+        k0 = ONE
+        w0 = (hbar*k0*k0)/(TWO*mass)
+         v= (hbar*k0)/mass
 
        DO i=0,nt-1
 
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
 
+             c0 = SQRT(PI/(alpha*alpha + EYE*(hbar*t)/(TWO*mass)))
+             c1%CVec(:) = EYE*(k0*rho_exact%Basis%x(:)-w0*t)
+             c2%CVec(:) = -(rho_exact%Basis%x(:)-v*t)**TWO
+             c3 = FOUR*(alpha*alpha +EYE*(hbar*t)/(TWO*mass))
+             c4%CVec(:) = c2%CVec(:)/c3
+            rho_exact%CVec(:) = c0*EXP(c1%CVec(:))*EXP(c4%CVec(:))
+
+            CALL Calc_Norm_Grid(rho_exact, Norm1)
+            rho_exact%CVec(:) = rho_exact%CVec(:)/Norm1
+            !  CALL Calc_Norm_Grid(rho_exact, Norm1)
+
+
+
             write(out_unitp,*) propa%propa_name,i,t,t_deltat
 
             CALL march(psi,psi_dt,H,t,propa)
 
             psi%CVec(:) = psi_dt%CVec
+            rho_calc%CVec(:)= psi_dt%CVec
+            !rho%CVec(:)  = rho_exact%CVec(:)-rho_calc%CVec(:)
                nf = int(nt/5)
              IF( nf == 0)then
              nf = 1
-             
-             ENDIF      
+
+             ENDIF
 
             IF(   MOD(i,nf) == 0  )Then
              OPEN(unit=i+10)
              CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
              DO  IQ = 1, psi_dt%Basis%nq
-             WRITE(i+10,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2
+             WRITE(i+10,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2, ABS(rho_exact%CVec(IQ))**2-ABS(G%CVec(IQ))**2,&
+             ABS(rho_exact%CVec(IQ))**2
              ENDDO
               CLOSE(UNIT=i+10)
             ENDIF
@@ -139,7 +170,7 @@ contains
 
        !write(out_unitp,*) 'psi_dt',psi_dt%CVec
        !write(out_unitp,*) 'END march_taylor'
-       
+
        !!===========================Ordre deux etplus=======================
 
         psi_dt%CVec    = psi%CVec

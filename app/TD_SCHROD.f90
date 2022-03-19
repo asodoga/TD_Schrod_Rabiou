@@ -11,7 +11,7 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
   TYPE(propa_t)          :: propa
-  REAL(kind=Rk)          :: Norm,phase,sigma,k0,Q0,sig0,Norm1
+  REAL(kind=Rk)          :: Norm,phase,sigma,k0,Q0,sig0,Norm1,alpha
   !COMPLEX(kind=Rk),    ALLOCATABLE   :: G(:)
   !COMPLEX(kind=Rk),    ALLOCATABLE   :: B(:)
 
@@ -43,12 +43,14 @@ OPEN(unit=13,file = 'B' )
 
   CALL init_psi(G,Basis,cplx=.TRUE.)
   CALL init_psi(B,Basis,cplx=.TRUE.)
-  sigma = 0.5
+  sigma = HALF
   sig0 = TWO
-  k0 = 1
-  phase = 0
-  Q0 = 0
-  G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%x(:))
+  k0 = ONE
+  phase = ZERO
+  Q0 = ZERO
+  alpha= TWO
+  G%CVec(:)  =SQRT(PI/alpha*alpha)*EXP(EYE*k0*(G%Basis%x(:)-Q0))*EXP(-(G%Basis%x(:)-Q0)*(G%Basis%x(:)-Q0)/(FOUR*alpha*alpha))
+  !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%x(:))
   !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+ EYE*phase)
 
    CALL Calc_Norm_Grid(G, Norm1)
