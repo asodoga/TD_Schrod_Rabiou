@@ -81,7 +81,8 @@ contains
     ! calculation of a potential on the grid
     allocate(V(Basis%nq))
     DO iq=1,Basis%nq
-      V(iq) = ZERO  !    Calc_pot(Basis%x(iq))
+      V(iq) = ZERO 
+      !Calc_pot(Basis%x(iq))
     END DO
 
     ! calculation of Op|b_i>
