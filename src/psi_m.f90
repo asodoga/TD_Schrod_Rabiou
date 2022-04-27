@@ -93,11 +93,6 @@ contains
   !TYPE(Basis_t) , INTENT(IN)    :: Basis
   REAL(kind = Rk),intent(inout) :: Norm
   !INTEGER                       :: IB
-
-
-  !DO IB=1,Basis%nb
-   ! G1%CVec(IB) =  G%CVec(IB)* Basis%w(IB)
-  !END DO
   Norm = dot_product(G%CVec(:)*G%Basis%W(:),G%CVec(:))
   Norm = SQRT(Norm)
 

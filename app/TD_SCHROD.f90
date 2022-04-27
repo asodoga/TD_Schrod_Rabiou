@@ -11,9 +11,16 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)           :: psi0,psif
   TYPE (op_t)            :: H
   TYPE(propa_t)          :: propa
-  TYPE(psi_t)            :: G
-  TYPE(psi_t)            :: B
-  REAL(kind=Rk)          :: Norm
+  REAL(kind=Rk)          :: Norm ,E !,phase,sigma,k0,Q0,sig0
+  !COMPLEX(kind=Rk),    ALLOCATABLE   :: G(:)
+  !COMPLEX(kind=Rk),    ALLOCATABLE   :: B(:)
+
+
+  TYPE(psi_t)                   :: G
+  TYPE(psi_t)                   :: B
+  !INTEGER                       IQ , IB
+
+  !ALLOCATE(G(Basis%NQ), B(Basis%NB))
 
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
@@ -23,25 +30,31 @@ PROGRAM TD_SCHROD
 
   !====================================================================
 
+
+
+OPEN(unit=14,file = 'ENERGY' )
 !  write(out_unitp,*) 'Initialization of a real psi'
 
   !CALL init_psi(psi,Basis,cplx=.FALSE.) ! to be changed
 !  psi%RVec(:) = ONE
 !  CALL Write_psi(psi)
-  write(out_unitp,*) 'Initialization of a complex psi'
-  CALL init_psi(G,Basis,cplx=.TRUE.)
-  CALL init_psi(B,Basis,cplx=.TRUE.)
-  CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
-  CALL init_wp(G,B) !nitial wavepaket
-  psi%CVec(:) = B%CVec(:)
-  CALL Write_psi(psi)
+write(out_unitp,*) 'Initialization of a complex psi'
+CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
+CALL init_psi(psi0,Basis,cplx=.TRUE.) ! to be changed
+CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
+CALL init_psi(G ,Basis,cplx=.TRUE.) ! to be changed
+CALL initial_wp(B,psi0,G)
+
+psi%CVec(:) = B%CVec(:)
+CALL Write_psi(psi)
 
   write(out_unitp,*) ' | H | Psi > calculation'
   CALL Set_op(H,Basis) ! to be change
   CALL calc_OpPsi(H,psi,Hpsi)
+  CALL ENERGY(B,H,E)
+  WRITE(14,*) E
   CALL Write_psi(Hpsi)
-  CALL init_psi(psi0,Basis,cplx=.TRUE.) ! to be changed
-  CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
+
   psi0%CVec(:) = B%CVec(:)
 !  psi0%CVec(1) = ONE
   CALL Calc_Norm(psi0, Norm)

@@ -1,6 +1,7 @@
 module Propa_m
      USE NumParameters_m
      USE psi_m
+     !USE fft_m
 
      implicit none
 
@@ -23,18 +24,25 @@ contains
        TYPE (psi_t),  intent(inout) :: psif
        TYPE (psi_t),  intent(in)    :: psi0
        TYPE(Op_t),    intent(inout) :: H
-       TYPE (psi_t)                 :: G,rho_num ,rho
-
+       TYPE (psi_t)                 :: B,G,rho_exact,rho_calc
+       COMPLEX(KIND=Rk) , ALLOCATABLE , DIMENSION(:) :: cf,pdananum
+       COMPLEX(KIND=Rk) ,            DIMENSION(1000) :: scf
+       REAL(KIND=Rk) , ALLOCATABLE , DIMENSION(:) :: time
+       COMPLEX(KIND=Rk) , ALLOCATABLE , DIMENSION(:) :: Qm
 
 
        TYPE(propa_t), intent(inout) :: propa
        logical, parameter           :: debug = .true.
 
        ! variables locales
-       REAL(kind=Rk)                :: t ,t_deltat, Norm
-
+       REAL(kind=Rk)                :: t ,t_deltat, Norm,Norm1
+       REAL(kind=Rk)                :: alpha,hbar,v,k0,mass,w0
+       COMPLEX(KIND=Rk)             :: alphat,gammat,ki
+       REAL(KIND= Rk)               :: k, omega,argki,E,E1,xt,pt
+       complex (kind=Rk)            :: c0,c3
+       TYPE (psi_t)                 ::c1,c2,c4
        INTEGER                      :: i,nt,IQ,nf
-       TYPE (psi_t)                 :: psi,psi_dt,rho_ana
+       TYPE (psi_t)                 :: psi,psi_dt
        if (debug) then
 
                  write(out_unitp,*) 'BEGINNIG propagation', propa%t0,propa%tf,propa%delta_t
@@ -49,47 +57,102 @@ contains
        endif
 
        nt = int((propa%tf-propa%t0)/propa%delta_t)
-
+       ALLOCATE (cf(0:nt-1))
+       ALLOCATE (pdananum(0:nt-1))
+       ALLOCATE (time(0:nt-1))
+       ALLOCATE (Qm(0:nt-1))
        CALL init_psi(psi,psi0%Basis,cplx=.TRUE.) ! to be changed
        CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.) ! to be changed
        CALL init_psi(G,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(rho_num,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(rho,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(rho_ana,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(B,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(rho_exact,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(rho_calc,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(c1,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(c2,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(c4,psi0%Basis,cplx=.TRUE.) ! to be change
 
+       psi%CVec(:) = psi0%CVec
 
-        psi%CVec(:) = psi0%CVec
+        hbar = ONE
+        mass = ONE
+        alpha = TWO
+        k0 = ONE !impulsion init
+        w0 = (hbar*k0**2)/(TWO*mass)
+        v= (hbar*k0)/mass
+        ! k    = ONE !raideur du ressort
+        ! xt =ZERO ; pt =ZERO
+      !omega = SQRT(k/mass)
+    !  alphat = HALF*EYE*mass*omega
+      OPEN(UNIT = 15, FILE = 'CORFNC')
+      OPEN(UNIT = 16, FILE = 'Cf')
+      OPEN(UNIT = 21, FILE = 'prod')
+      OPEN(UNIT = 22, FILE = 'Qm')
 
        DO i=0,nt-1
 
             t = i*propa%delta_t
+            time(i) = t
             t_deltat = t + propa%delta_t
-      write(out_unitp,*) propa%propa_name,i,t,t_deltat
+
+             c0 = SQRT(PI/(alpha**2 + EYE*(hbar*t)/(TWO*mass)))
+             c1%CVec(:) = EYE*(k0*rho_exact%Basis%x(:)-w0*t)
+             c2%CVec(:) = -(rho_exact%Basis%x(:)-v*t)**2
+             c3 = FOUR*(alpha**2 +EYE*(hbar*t/TWO*mass))
+             c4%CVec(:) = c2%CVec(:)/c3
+            rho_exact%CVec(:) = c0*EXP(c1%CVec(:))*EXP(c4%CVec(:))
+
+
+          !  xt = COS(omega*t)
+            !pt = -(k/omega)*SIN(omega*t)
+            !alphat = HALF*EYE*SQRT(k*mass)
+            !gammat= -k*SIN(TWO*omega*t)-FOUR*omega*EYE*LOG((mass*omega/PI)**FOURTH)-TWO*t*omega**2
+            !gammat= gammat/FOUR*omega
+            !rho_exact%CVec(:)= EXP(EYE*alphat*(G%Basis%x(:)-xt)**2+EYE*pt*(G%Basis%x(:)-xt)+EYE*gammat)
+            CALL Calc_Norm_Grid(rho_exact, Norm1)
+            rho_exact%CVec(:) = rho_exact%CVec(:)/Norm1
+            !  CALL Calc_Norm_Grid(rho_exact, Norm1)
+
+
+
+            write(out_unitp,*) propa%propa_name,i,t,t_deltat
 
             CALL march(psi,psi_dt,H,t,propa)
+            CALL CORFNC(psi0,psi_dt,ki,argki)
+            pdananum(i)   =  DOT_PRODUCT(rho_exact%CVec,psi_dt%CVec)
 
-            psi%CVec(:) = psi_dt%CVec(:)
+            cf(i) = ki
+            !CALL fourrow_dp(cf,-1)
+            CALL ENERGY(psi_dt,H,E)
+            CALL GridTOBasis_Basis_cplx(B%CVec,rho_exact%CVec,G%Basis)
+            CALL ENERGY(B,H,E1)
+            WRITE(15,*) time(i), E,E1,ABS(E1-E)
 
-               nf = int(nt/5)
+            psi%CVec(:) = psi_dt%CVec
+            rho_calc%CVec(:)= psi_dt%CVec
+             nf = int(nt/5)
              IF( nf == 0)then
              nf = 1
 
              ENDIF
 
-            IF(   MOD(i,nf) == 0  )Then
-             OPEN(unit=i+10)
-             CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
-             rho_num%CVec(:)= G%CVec(:)
-             CALL ana_wp(rho_ana,t)
-             CALL calc_rho(rho_ana,rho_num,rho)
-             DO  IQ = 1, psi_dt%Basis%nq
-             WRITE(i+10,*) G%Basis%x(IQ), ABS(rho_num%CVec(IQ))**2, ABS(rho%CVec(IQ)),ABS(rho_ana%CVec(IQ))**2
-             ENDDO
-              CLOSE(UNIT=i+10)
-            ENDIF
 
+            IF(   MOD(i,nf) == 0  )Then
+              CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
+             OPEN(unit=i+10)
+
+             DO  IQ = 1, psi_dt%Basis%nq
+             WRITE(i+10,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2 , LOG(ABS(ABS(rho_exact%CVec(IQ))**2-ABS(G%CVec(IQ))**2)),&
+             ABS(rho_exact%CVec(IQ))**2
+             ENDDO
+
+              CLOSE(UNIT=i+10)
+
+            ENDIF
+            CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
+            Qm(i) = DOT_PRODUCT(G%CVec(:),G%CVec(:)*G%Basis%w(:)*G%Basis%x(:))
 
        END DO
+       CLOSE(15)
        psif%CVec(:) = psi%CVec
        CALL Calc_Norm(psi_dt, Norm)
 
@@ -102,8 +165,12 @@ contains
            flush(out_unitp)
        END IF
 
-
-
+     DO i=0,nt-1
+       WRITE(16,*) time(i), ABS(cf(i))
+       WRITE(22,*) time(i), REAL(Qm(i))
+       WRITE(21,*) time(i), ABS(pdananum(i)),ABS(ATAN2(aimag(pdananum(i)),real(pdananum(i))))
+    END DO
+    CALL spectrum(Cf ,time,scf,propa%delta_t,nt)
 
     END SUBROUTINE propagation
 
@@ -160,8 +227,10 @@ contains
             CALL Calc_Norm(Hpsi, Norm)
             Norm =   Rkk*Norm
             write(out_unitp,*) 'norm,Hpsi',kk,Norm
-
-            If(Norm <= propa%eps) Then
+          If(Norm  .gt. 1000000000000000_Rk) Then
+            write(*,*)'Numerical Problem deltta_t too large'
+            exit
+           ElseIf(Norm <= propa%eps) Then
                 print*,'Taylor condition is fulfild after',kk,'iteration'
                 exit
             else
@@ -317,38 +386,45 @@ CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
 
 
 
-
-    SUBROUTINE init_wp(G,B)
+    SUBROUTINE initial_wp(B,psi0,G)
       USE NumParameters_m
-        USE op_m
-        USE psi_m
-        USE Basis_m
-        TYPE(psi_t) ,INTENT(INOUT)    :: G
-        TYPE(psi_t) ,INTENT(INOUT)    :: B
-        INTEGER                       IQ , IB
-        REAL(kind=Rk)          :: Norm,phase,sigma,k0,Q0,sig0,Norm1,alpha
+      USE Basis_m
+      USE psi_m
 
+      TYPE(psi_t),INTENT(INOUT)     :: B,G
+      TYPE(psi_t),INTENT(IN)        :: psi0
+      INTEGER                       :: IQ , IB
 
+       COMPLEX(KIND=Rk)             :: alpha0,gamma0
+       REAL(KIND= Rk)               :: k,mass, omega,Norm,Norm1
+       REAL(kind=Rk)                 ::alpha,k0,phase,Q0,sig0,sigma
 
-        OPEN(unit=11,file = 'norm' )
-        OPEN(unit=12,file = 'G' )
-        OPEN(unit=13,file = 'B' )
+      OPEN(unit=11,file = 'norm' )
+      OPEN(unit=12,file = 'G' )
+      OPEN(unit=13,file = 'B' )
 
-        CALL init_psi(G,G%Basis,cplx=.TRUE.)
-        CALL init_psi(B,G%Basis,cplx=.TRUE.)
-        sigma = HALF
-        sig0 = TWO
+        CALL init_psi(G,psi0%Basis,cplx=.TRUE.)
+        CALL init_psi(B,psi0%Basis,cplx=.TRUE.)
+        !sigma = HALF
+      !  sig0 = TWO
         k0 = ONE
-        phase = ZERO
+      !  phase = ZERO
         Q0 = ZERO
         alpha= TWO
-        G%CVec(:)  =SQRT(PI/alpha*alpha)*EXP(EYE*k0*(G%Basis%x(:)-Q0))*EXP(-(G%Basis%x(:)-Q0)*(G%Basis%x(:)-Q0)/(FOUR*alpha*alpha))
+       !omega = SQRT(k/mass)
+       !alpha0 = HALF*EYE*mass*SQRT(k*mass)
+
+
+      !  gamma0     = -EYE*LOG((SQRT(mass*omega)/PI)**0.25)
+        !G%CVec(:)  = EXP(EYE*alpha0*(G%Basis%x(:)-ONE)**2+EYE*gamma0)
+        G%CVec(:)  =SQRT(PI/alpha**2)*EXP(EYE*k0*(G%Basis%x(:)-Q0))*EXP(-(G%Basis%x(:)-Q0)**2/(FOUR*alpha**2))
         !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%x(:))
         !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+ EYE*phase)
 
+
          CALL Calc_Norm_Grid(G, Norm1)
          G%CVec(:) = G%CVec(:)/Norm1
-         CALL Calc_Norm_Grid(G, Norm1)
+        CALL Calc_Norm_Grid(G, Norm1)
          DO  IQ = 1, G%Basis%nq
            write(12,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2
          ENDDO
@@ -357,101 +433,63 @@ CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
        !B%CVec(:) = B%CVec(:)/Norm
        write(11,*) Norm1,Norm
        DO  IB = 1, G%Basis%nb
-           write(13,*) G%Basis%x(IB), ABS(G%CVec(IB))**2
+           write(13,*) G%Basis%x(IB), ABS(B%CVec(IB))**2
          ENDDO
+      END SUBROUTINE initial_wp
 
 
+      SUBROUTINE ENERGY(psi,H,E)
+        USE UtilLib_m
+        USE op_m
+        USE psi_m
 
+        TYPE (psi_t),  intent(in)       :: psi
+        TYPE(Op_t)  ,  intent(in)       :: H
+        REAL(KIND= Rk)                  :: E
+        TYPE (psi_t)                    :: Hpsi
 
-      END SUBROUTINE init_wp
+            CALL calc_OpPsi(H,psi,Hpsi)
+            E= REAL(dot_product(psi%CVec(:),Hpsi%CVec(:)),KIND= Rk)
 
+      End SUBROUTINE ENERGY
+      SUBROUTINE CORFNC(psi_in,psi_out,ki,argki)
+        USE UtilLib_m
+        USE op_m
+        USE psi_m
 
+        TYPE (psi_t),  intent(in)                :: psi_in,psi_out
+        COMPLEX(KIND=Rk)  ,  INTENT(INOUT)       :: ki
+        REAL(KIND=Rk)     ,INTENT(INOUT)         ::argki
 
-      SUBROUTINE ana_wp(rho_ana,t)
+            ki= dot_product(psi_in%CVec(:),psi_out%CVec(:))
+            argki =ATAN(AIMAG(ki)/REAL(ki))
+      End SUBROUTINE CORFNC
+
+      SUBROUTINE spectrum(f,time,sf,delta_t,N)
         USE NumParameters_m
-          USE op_m
-          USE psi_m
-
-          TYPE (psi_t),  intent(inout) :: rho_ana
-          real(kind=Rk), intent(in)    :: t
-
-          REAL(kind=Rk)                :: alpha,hbar,v,k0,mass,w0,Norm1
-          complex (kind=Rk)            :: c0,c3
-          TYPE (psi_t)                 ::c1,c2,c4
-
-          hbar  = ONE
-          mass  = ONE
-          alpha = TWO
-          k0    = ONE
-          w0    = (hbar*k0*k0)/(TWO*mass)
-          v     = (hbar*k0)/mass
-
-          CALL init_psi(rho_ana,rho_ana%Basis,cplx=.TRUE.) ! to be changed
-          CALL init_psi(c1,c1%Basis,cplx=.TRUE.) ! to be changed
-          CALL init_psi(c2,c2%Basis,cplx=.TRUE.) ! to be changed
-          CALL init_psi(c4,c4%Basis,cplx=.TRUE.) ! to be changed
-
-          c0 = SQRT(PI/(alpha*alpha + EYE*(hbar*t)/(TWO*mass)))
-          c1%CVec(:) = EYE*(k0*rho_ana%Basis%x(:)-w0*t)
-          c2%CVec(:) = -(rho_ana%Basis%x(:)-v*t)**TWO
-          c3 = FOUR*(alpha*alpha +EYE*(hbar*t)/(TWO*mass))
-          c4%CVec(:) = c2%CVec(:)/c3
-          rho_ana%CVec(:) = c0*EXP(c1%CVec(:))*EXP(c4%CVec(:))
-
-          CALL Calc_Norm_Grid(rho_ana, Norm1)
-          rho_ana%CVec(:) = rho_ana%CVec(:)/Norm1
-
-        END SUBROUTINE ana_wp
-
-
-
-
-
-
-        SUBROUTINE calc_rho(rho_ana,rho_num ,rho)
-            USE op_m
-            USE psi_m
-
-            TYPE (psi_t),  intent(inout) :: rho
-            TYPE (psi_t),  intent(inout) :: rho_ana,rho_num
-            CALL init_psi(rho,rho%Basis,cplx=.TRUE.) ! to be changed
-            CALL init_psi(rho_ana,rho_ana%Basis,cplx=.TRUE.) ! to be changed
-            CALL init_psi(rho_num,rho_num%Basis,cplx=.TRUE.) ! to be changed
-
-            rho%CVec(:)  = rho_ana%CVec(:)-rho_num%CVec(:)
-           ! rho%CVec(:)   = LOG(rho%CVec(:))
-
-
-         END SUBROUTINE calc_rho
-
-    !SUBROUTINE out_propa(psi0,psi_dt,propa)
-        !USE op_m
-        !USE psi_m
-
-        !TYPE (psi_t),  intent(inout) :: psi_dt
-        !TYPE (psi_t),  intent(inout) :: psi0
-        !TYPE (psi_t)                 :: cor_fonct
-        !TYPE(propa_t), intent(in)    :: propa
-        !real(kind= Rk)               :: energy
-       ! TYPE (psi_t)                 :: Hpsi
-        !real(kind=Rk), intent(in)    :: t
-        !real(kind=Rk)                ::  Norm
-
-
-       ! CALL  energy(H,psi)
-
-       !END SUBROUTINE out_propa
-
-
-
-
-
-
-
-
-
-
-
+        USE UtilLib_m
+        COMPLEX(KIND=Rk),INTENT(IN) , DIMENSION(:)    :: f
+        COMPLEX(KIND=Rk),INTENT(INOUT) , DIMENSION(0:999) :: sf
+        REAL(KIND=Rk),INTENT(IN) , DIMENSION(:)       :: time
+        REAL(KIND=Rk),ALLOCATABLE, DIMENSION(:)       :: w
+        REAL(KIND=Rk),INTENT(IN)                      :: delta_t
+        INTEGER,INTENT(IN)                            :: N
+        REAL(KIND=Rk)                                 :: wm,wmax,dw
+        INTEGER                                       :: Iw,nw,I
+        OPEN(UNIT=20,FILE="spectrum")
+        sf(:) = CZERO
+        wm = -0.5;wmax = 9.5;dw = 0.01
+        nw = int((wmax-wm)/dw)
+        ALLOCATE(w(0:nw-1))
+        DO Iw = 0,nw-1
+           w(Iw) = wm + float(Iw)*dw
+           Sf(Iw)= ZERO
+           DO I = 1,N
+               sf(Iw) = sf(Iw)+ f(I)*EXP(EYE*w(Iw)*time(I))*delta_t
+           ENDDO !itime
+           WRITE(20,*)  w(Iw), ABS(sf(Iw))
+        ENDDO !omega
+      END SUBROUTINE spectrum
 
 
 
