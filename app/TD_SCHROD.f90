@@ -45,17 +45,17 @@ CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
 CALL init_psi(G ,Basis,cplx=.TRUE.) ! to be changed
 CALL initial_wp(B,psi0,G)
 
-psi%CVec(:) = B%CVec(:)
+psi%CVec(:,1) = B%CVec(:,1)
 CALL Write_psi(psi)
 
   write(out_unitp,*) ' | H | Psi > calculation'
   CALL Set_op(H,Basis) ! to be change
   CALL calc_OpPsi(H,psi,Hpsi)
-  CALL ENERGY(B,H,E)
+  !CALL ENERGY(B%CVec,H,E)
   WRITE(14,*) E
   CALL Write_psi(Hpsi)
 
-  psi0%CVec(:) = B%CVec(:)
+  psi0%CVec(:,1) = B%CVec(:,1)
 !  psi0%CVec(1) = ONE
   CALL Calc_Norm(psi0, Norm)
   !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))

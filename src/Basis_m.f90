@@ -31,12 +31,12 @@ CONTAINS
 
       TYPE(Basis_t),   intent(in)  :: Basis
       logical                      :: alloc
-      integer                      :: i
+      integer                      :: ib
 
       alloc = allocated(Basis%tab_basis)
       IF ( allocated(Basis%tab_basis)) THEN
-        Do i=1,size(Basis%tab_basis)
-          alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
+        Do ib=1,size(Basis%tab_basis)
+          alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(ib))
         END DO
       ELSE
         alloc =             allocated(Basis%x)
@@ -51,12 +51,12 @@ CONTAINS
 
         TYPE(Basis_t),   intent(in)  :: Basis
         logical                      :: alloc
-        integer                      :: i
+        integer                      :: ib
 
         alloc = allocated(Basis%tab_basis)
         IF ( allocated(Basis%tab_basis)) THEN
-          Do i=1,size(Basis%tab_basis)
-            alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
+          Do ib=1,size(Basis%tab_basis)
+            alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(ib))
           END DO
         ELSE
           alloc =             allocated(Basis%x)
@@ -179,7 +179,8 @@ CONTAINS
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
       Basis%nb = product(Basis%tab_basis(:)%nb)
-      Basis%nq = product(Basis%tab_basis(:)%nq)
+      Basis%nq = 0
+      !product(Basis%tab_basis(:)%nq) ! DML cette valeur sera fausse lorsqu'il y a une base électronique
 
     ELSE
       Basis%nb_basis  = nb_basis
@@ -188,17 +189,23 @@ CONTAINS
       Basis%Basis_name     = trim(adjustl(name))
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
 
-    SELECT CASE (Basis%Basis_name)
-      CASE ('boxab')
-      CALL Construct_Basis_Sin(Basis)
-      Q0      = A
-      scaleQ  = pi/(B-A)
-      CASE ('herm','ho')
-      CALL Construct_Basis_Ho(Basis)
-      CASE default
-      STOP 'ERROR in Read_Basis: no default basis.'
-    END SELECT
+      SELECT CASE (Basis%Basis_name)
+      CASE('el')
+        write(6,*) 'Electronic basis. Electronic state number:',basis%nb
+        basis%nq = 0
 
+      CASE ('boxab')
+        CALL Construct_Basis_Sin(Basis)
+        Q0      = A
+        scaleQ  = pi/(B-A)
+
+      CASE ('herm','ho')
+        CALL Construct_Basis_Ho(Basis)
+
+      CASE default
+        STOP 'ERROR in Read_Basis: no default basis.'
+      END SELECT
+      !  this part wil not have sens for 'el' basis
       CALL Scale_Basis(Basis,Q0,scaleQ)
       CALL CheckOrtho_Basis(Basis,nderiv=2)
     END IF
@@ -237,6 +244,20 @@ CONTAINS
     END IF
 
   END SUBROUTINE Construct_Basis_Sin
+
+
+
+
+  SUBROUTINE Construct_Basis_el(Basis) ! 'el' :
+  USE UtilLib_m
+
+     TYPE(Basis_t),       intent(inout)  :: Basis
+      Basis%nq = 0
+      RETURN
+
+
+
+  END SUBROUTINE Construct_Basis_el
 
 
 
@@ -492,6 +513,7 @@ CONTAINS
     TYPE(Basis_t),       intent(inout)  :: Basis
     real(kind=Rk),       intent(in)     :: x0,sx
 
+    IF (Basis%nq == 0) RETURN
     IF (abs(sx) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
 
       Basis%x(:) = x0 + Basis%x(:) / sx
@@ -516,22 +538,50 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
   USE UtilLib_m
 
   TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
-  COMPLEX(kind=Rk),        INTENT(INOUT)  :: B(:)
-  COMPLEX(kind=Rk),        INTENT(IN)     :: G(:)
-  INTEGER                                 :: IB,IQ
+  COMPLEX(kind=Rk),        INTENT(INOUT)  :: B(:,:)
+  COMPLEX(kind=Rk),        INTENT(IN)     :: G(:,:)
+  integer                                 :: iq,ie,ib
+  logical,             parameter      :: debug = .true.
 
-  REAL(kind=Rk)   ,        ALLOCATABLE    :: d0bgw(:,:)
+   IF (debug) THEN
+     write(out_unitp,*) 'BEGINNING GridTOBasis_Basis'
+     write(out_unitp,*) 'intent(in) :: G(:,:)',G
+     !CALL Write_Basis(Basis)
+     flush(out_unitp)
+   END IF
 
 
+   IF (.NOT. Basis_IS_allocated(Basis)) THEN
+     write(out_unitp,*) ' ERROR in BasisTOGrid_Basis_cplx'
+     write(out_unitp,*) " the basis is not allocated."
+     STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
+   END IF
 
-  IF (Basis_IS_allocated(Basis)) THEN
-    d0bgw = TRANSPOSE(Basis%d0gb)
-    DO IB=1,Basis%nb
-      d0bgw(IB,:) = d0bgw(IB,:) * Basis%w(:)
-    END DO
-  ENDIF
-    B = MATMUL(d0bgw,G)
 
+   IF(allocated(Basis%tab_basis)) THEN
+       B =CZERO
+     DO ie=1,Basis%tab_basis(2)%nb
+       Do ib=1,Basis%tab_basis(1)%nb
+       Do iq=1,Basis%tab_basis(1)%nq
+
+         B(ib,ie)=B(ib,ie)+Basis%tab_basis(1)%d0gb(iq,ib)*Basis%w(iq)*G(iq,ie)
+       END DO
+       END DO
+     END DO
+   ELSE
+        B = ZERO
+       DO ib=1,Basis%nb
+       DO iq=1,Basis%nq
+        B(ib,1)=B(ib,1)+Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq,1)
+       END DO
+       END DO
+   END IF
+
+   IF (debug) THEN
+    ! write(out_unitp,*) 'intent(OUTIN) :: B(:)',B
+     write(out_unitp,*) 'END GridTOBasis_Basis_cplx'
+     flush(out_unitp)
+   END IF
 END  SUBROUTINE GridTOBasis_Basis_cplx
 
   !subroutine gridtobasis
@@ -539,18 +589,53 @@ SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
   USE UtilLib_m
 
     TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
-    COMPLEX(kind=Rk),        INTENT(IN)     :: B(:)
-    COMPLEX(kind=Rk),        INTENT(INOUT)  :: G(:)
+    COMPLEX(kind=Rk),        INTENT(IN)     :: B(:,:)
+    COMPLEX(kind=Rk),        INTENT(INOUT)  :: G(:,:)
+    integer                                 :: iq,ie,ib
+    logical,             parameter      :: debug = .true.
 
-        IF (Basis_IS_allocated(Basis)) THEN
-        G= MATMUL(Basis%d0gb,B)
+   IF (debug) THEN
+     write(out_unitp,*) 'BEGINNING BasisTOGrid_Basis'
+     write(out_unitp,*) 'intent(in) :: B(:,:)',B
+    !   CALL Write_Basis(Basis)
+    flush(out_unitp)
+   END IF
 
-        ENDIF
+ IF (.NOT. Basis_IS_allocated(Basis)) THEN
+    write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+     write(out_unitp,*) " the basis is not allocated."
+     STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
+END IF
 
 
+IF(allocated(Basis%tab_basis)) THEN
+   G =ZERO
+
+  DO ie=1,Basis%tab_basis(2)%nb
+
+  DO ib=1,Basis%tab_basis(1)%nb
+  DO iq=1,Basis%tab_basis(1)%nq
+     G(iq,ie) =G(iq,ie)+ Basis%tab_basis(1)%d0gb(iq,ib)*B(ib,ie)
+ END DO
+ END DO
+ END DO
+ ELSE
+       G =ZERO
+ DO iq=1,Basis%nq
+    DO ib=1,Basis%nb
+      G(iq,1)= G(iq,1)+Basis%d0gb(iq,ib)*B(ib,1)
+    END DO
+ END DO
+END IF
+
+IF (debug) THEN
+ write(out_unitp,*) 'intent(OUTIN) :: G(:,:)',G
+ write(out_unitp,*) 'END BasisTOGrid_Basis'
+ flush(out_unitp)
+END IF
     END  SUBROUTINE BasisTOGrid_Basis_cplx
 
-  
+
 
 
 

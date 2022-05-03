@@ -7,8 +7,8 @@ module psi_m
 
   TYPE :: psi_t
     TYPE (Basis_t),    pointer     :: Basis
-    real (kind=Rk),    allocatable :: RVec(:)
-    complex (kind=Rk), allocatable :: CVec(:)
+    real (kind=Rk),    allocatable :: RVec(:,:)
+    complex (kind=Rk), allocatable :: CVec(:,:)
   END TYPE psi_t
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm, Calc_Norm_Grid
@@ -31,11 +31,18 @@ contains
     psi%Basis => Basis
 
     IF (cplx) THEN
-      allocate(psi%CVec(Basis%nb))
+     IF(allocated(Basis%tab_basis))THEN
+      allocate(psi%CVec(Basis%tab_basis(1)%nb,Basis%tab_basis(2)%nb))
+     else
+      allocate(psi%CVec(Basis%nb,1))
+     END IF
     ELSE
-      allocate(psi%RVec(Basis%nb))
+      IF(allocated(Basis%tab_basis))THEN
+        allocate(psi%RVec(Basis%tab_basis(1)%nb,Basis%tab_basis(2)%nb))
+      ELSE
+        allocate(psi%RVec(Basis%nb,1))
+      END IF
     END IF
-
   END SUBROUTINE init_psi
 
   SUBROUTINE dealloc_psi(psi)
@@ -46,7 +53,6 @@ contains
     IF (allocated(psi%RVec)) THEN
       deallocate(psi%RVec)
     END IF
-
     IF (allocated(psi%CVec)) THEN
       deallocate(psi%CVec)
     END IF
@@ -70,6 +76,7 @@ contains
       write(out_unitp,*) psi%CVec
       write(out_unitp,*) 'END Writting psi'
     END IF
+
   END SUBROUTINE write_psi
 
 
@@ -77,8 +84,18 @@ contains
   TYPE (psi_t),  intent(in)     :: psi
   real(kind = Rk),intent(inout) :: Norm
 
+  !IF (allocated(psi%CVec)) THEN
+  !Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
+  !END IF
 
-  Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
+  IF (allocated(psi%CVec)) THEN
+   Norm = sqrt(real(dot_product(psi%CVec(:,1),psi%CVec(:,1)), kind=Rk))
+  END IF
+
+
+  !IF (allocated(psi%RVec)) THEN
+   !Norm = sqrt(dot_product(psi%RVec,psi%RVec), kind=Rk)
+  !END IF
   !write(out_unitp,*) 'norm,psi',Norm
 
   END SUBROUTINE Calc_Norm
@@ -93,7 +110,7 @@ contains
   !TYPE(Basis_t) , INTENT(IN)    :: Basis
   REAL(kind = Rk),intent(inout) :: Norm
   !INTEGER                       :: IB
-  Norm = dot_product(G%CVec(:)*G%Basis%W(:),G%CVec(:))
+  Norm = dot_product(G%CVec(:,1)*G%Basis%W(:),G%CVec(:,1))
   Norm = SQRT(Norm)
 
 
