@@ -70,7 +70,7 @@ contains
 
             CALL march(psi,psi_dt,H,t,propa)
 
-            psi%CVec(:,1) = psi_dt%CVec(:,1)
+            psi%CVec(:) = psi_dt%CVec(:)
 
                nf = int(nt/5)
              IF( nf == 0)then
@@ -81,18 +81,18 @@ contains
             IF(   MOD(i,nf) == 0  )Then
              OPEN(unit=i+10)
              CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
-             rho_num%CVec(:,1)= G%CVec(:,1)
-             CALL ana_wp(rho_ana,t)
+             rho_num%CVec(:)= G%CVec(:)
+             !CALL ana_wp(rho_ana,t)
              !CALL calc_rho(rho_ana,rho_num,rho)
              DO  IQ = 1, psi_dt%Basis%nq
-             WRITE(i+10,*) G%Basis%x(IQ), ABS(rho_num%CVec(IQ,1))**2, ABS(rho%CVec(IQ,1)),ABS(rho_ana%CVec(IQ,1))**2
+             WRITE(i+10,*) G%Basis%x(IQ), ABS(rho_num%CVec(IQ))**2, ABS(rho%CVec(IQ)),ABS(rho_ana%CVec(IQ))**2
              ENDDO
               CLOSE(UNIT=i+10)
             ENDIF
 
 
        END DO
-       psif%CVec(:,1) = psi%CVec(:,1)
+       psif%CVec(:) = psi%CVec(:)
        CALL Calc_Norm(psi_dt, Norm)
 
        CALL dealloc_psi(psi)
@@ -155,7 +155,7 @@ contains
         Do  kk = 1,propa%max_iter,1
             CALL mEyeHPsi(H,psi,Hpsi)
             Rkk = Rkk*(propa%delta_t/kk)
-            psi_dt%CVec(:,1) = psi_dt%CVec(:,1) +Rkk*Hpsi%CVec(:,1)
+            psi_dt%CVec(:) = psi_dt%CVec(:) +Rkk*Hpsi%CVec(:)
 
             !CALL Calc_Norm(psi_dt, Norm)
             !write(out_unitp,*) 'norm,psi_dt',Norm
@@ -167,7 +167,7 @@ contains
                 print*,'Taylor condition is fulfild after',kk,'iteration'
                 exit
             else
-                psi%CVec(:,1)    = Hpsi%CVec(:,1)
+                psi%CVec(:)    = Hpsi%CVec(:)
             Endif
               CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
         Enddo
@@ -207,7 +207,7 @@ contains
        CALL mEyeHPsi(H,psi_inter,K3)
        psi_inter%CVec = psi%CVec+propa%delta_t*K3%CVec
        CALL mEyeHPsi(H,psi_inter,K4)
-       psi_dt%CVec(:,1) = psi_dt%CVec(:,1)+(propa%delta_t/6._Rk)*(K1%CVec(:,1)+2*K2%CVec(:,1)+2*K3%CVec(:,1)+K4%CVec(:,1))
+       psi_dt%CVec(:) = psi_dt%CVec(:)+(propa%delta_t/6._Rk)*(K1%CVec(:)+2*K2%CVec(:)+2*K3%CVec(:)+K4%CVec(:))
        CALL Calc_Norm(psi_dt, Norm)
        CALL Calc_Norm(psi,Norm0)
        write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',ABS(ONE-Norm)
@@ -263,7 +263,7 @@ contains
 
        CALL calc_OpPsi(H,psi_in,psi_out)
 
-       psi_out%CVec(:,1)    = - EYE*psi_out%CVec(:,1)
+       psi_out%CVec(:)    = - EYE*psi_out%CVec(:)
 
 
     END SUBROUTINE mEyeHPsi
@@ -341,14 +341,14 @@ contains
           CALL init_psi(c4,c4%Basis,cplx=.TRUE.) ! to be changed
 
           c0 = SQRT(PI/(alpha*alpha + EYE*(hbar*t)/(TWO*mass)))
-          c1%CVec(:,1) = EYE*(k0*rho_ana%Basis%x(:)-w0*t)
-          c2%CVec(:,1) = -(rho_ana%Basis%x(:)-v*t)**TWO
+          c1%CVec(:) = EYE*(k0*rho_ana%Basis%x(:)-w0*t)
+          c2%CVec(:) = -(rho_ana%Basis%x(:)-v*t)**TWO
           c3 = FOUR*(alpha*alpha +EYE*(hbar*t)/(TWO*mass))
-          c4%CVec(:,1) = c2%CVec(:,1)/c3
-          rho_ana%CVec(:,1) = c0*EXP(c1%CVec(:,1))*EXP(c4%CVec(:,1))
+          c4%CVec(:) = c2%CVec(:)/c3
+          rho_ana%CVec(:) = c0*EXP(c1%CVec(:))*EXP(c4%CVec(:))
 
           CALL Calc_Norm_Grid(rho_ana, Norm1)
-          rho_ana%CVec(:,1) = rho_ana%CVec(:,1)/Norm1
+          rho_ana%CVec(:) = rho_ana%CVec(:)/Norm1
 
         END SUBROUTINE ana_wp
 
@@ -374,6 +374,7 @@ contains
       OPEN(unit=11,file = 'norm' )
       OPEN(unit=12,file = 'G' )
       OPEN(unit=13,file = 'B' )
+      !OPEN(unit=14,file = 'G1' )
 
         CALL init_psi(G,psi0%Basis,cplx=.TRUE.)
         CALL init_psi(B,psi0%Basis,cplx=.TRUE.)
@@ -392,22 +393,27 @@ contains
         !G%CVec(:)  =SQRT(PI/alpha**2)*EXP(EYE*k0*(G%Basis%x(:)-Q0))*EXP(-(G%Basis%x(:)-Q0)**2/(FOUR*alpha**2))
         !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%x(:))
         !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+ EYE*phase)
-        G%CVec(:,1) = CONE
+        G%CVec(2) = 1
 
 
          CALL Calc_Norm_Grid(G, Norm1)
-         G%CVec(:,1) = G%CVec(:,1)/Norm1
-        CALL Calc_Norm_Grid(G, Norm1)
+         G%CVec(:) = G%CVec(:)/Norm1
+         CALL Calc_Norm_Grid(G, Norm1)
          DO  IQ = 1, G%Basis%nq
-           write(12,*) G%Basis%x(IQ), ABS(G%CVec(IQ,1))**2
+           write(12,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2
          ENDDO
        CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,G%Basis)
        CALL Calc_Norm(B, Norm)
        !B%CVec(:) = B%CVec(:)/Norm
        write(11,*) Norm1,Norm
-       DO  IB = 1, G%Basis%nb
-           write(13,*) G%Basis%x(IB), ABS(B%CVec(IB,1))**2
+       DO  IB = 1, B%Basis%nb
+           write(13,*) B%Basis%x(IB), ABS(B%CVec(IB))**2
          ENDDO
+        ! call BasisTOGrid_Basis_cplx(G%CVec, B%CVec,B%Basis)
+
+          ! DO  IQ = 1, G%Basis%nq
+            ! write(14,*) G%Basis%x(IQ), ABS(B%CVec(IQ))**2
+          ! ENDDO
       END SUBROUTINE initial_wp
 
 
@@ -422,7 +428,7 @@ contains
         TYPE (psi_t)                    :: Hpsi
 
             CALL calc_OpPsi(H,psi,Hpsi)
-            E= REAL(dot_product(psi%CVec(:,1),Hpsi%CVec(:,1)),KIND= Rk)
+            E= REAL(dot_product(psi%CVec(:),Hpsi%CVec(:)),KIND= Rk)
 
       End SUBROUTINE ENERGY
       SUBROUTINE autocor_func(psi_in,psi_out,ki,argki)
@@ -434,7 +440,7 @@ contains
         COMPLEX(KIND=Rk)  ,  INTENT(INOUT)       :: ki
         REAL(KIND=Rk)     ,INTENT(INOUT)         ::argki
 
-            ki= dot_product(psi_in%CVec(:,1),psi_out%CVec(:,1))
+            ki= dot_product(psi_in%CVec,psi_out%CVec)
             argki =ATAN(AIMAG(ki)/REAL(ki))
       End SUBROUTINE autocor_func
 

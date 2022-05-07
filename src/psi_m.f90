@@ -7,8 +7,8 @@ module psi_m
 
   TYPE :: psi_t
     TYPE (Basis_t),    pointer     :: Basis
-    real (kind=Rk),    allocatable :: RVec(:,:)
-    complex (kind=Rk), allocatable :: CVec(:,:)
+    real (kind=Rk),    allocatable :: RVec(:)
+    complex (kind=Rk), allocatable :: CVec(:)
   END TYPE psi_t
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm, Calc_Norm_Grid
@@ -32,15 +32,15 @@ contains
 
     IF (cplx) THEN
      IF(allocated(Basis%tab_basis))THEN
-      allocate(psi%CVec(Basis%tab_basis(1)%nb,Basis%tab_basis(2)%nb))
+      allocate(psi%CVec(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
      else
-      allocate(psi%CVec(Basis%nb,1))
+      allocate(psi%CVec(Basis%nb))
      END IF
     ELSE
       IF(allocated(Basis%tab_basis))THEN
-        allocate(psi%RVec(Basis%tab_basis(1)%nb,Basis%tab_basis(2)%nb))
+        allocate(psi%RVec(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
       ELSE
-        allocate(psi%RVec(Basis%nb,1))
+        allocate(psi%RVec(Basis%nb))
       END IF
     END IF
   END SUBROUTINE init_psi
@@ -89,7 +89,7 @@ contains
   !END IF
 
   IF (allocated(psi%CVec)) THEN
-   Norm = sqrt(real(dot_product(psi%CVec(:,1),psi%CVec(:,1)), kind=Rk))
+   Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
   END IF
 
 
@@ -110,7 +110,7 @@ contains
   !TYPE(Basis_t) , INTENT(IN)    :: Basis
   REAL(kind = Rk),intent(inout) :: Norm
   !INTEGER                       :: IB
-  Norm = dot_product(G%CVec(:,1)*G%Basis%W(:),G%CVec(:,1))
+  Norm = dot_product(G%CVec(:)*G%Basis%W(:),G%CVec(:))
   Norm = SQRT(Norm)
 
 

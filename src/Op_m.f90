@@ -65,11 +65,9 @@ contains
     TYPE(Op_t),     intent(inout)       :: Op
     TYPE (Basis_t), intent(in),  target :: Basis
 
-
-    integer :: ib,iq
-
-    real (kind=Rk), allocatable :: V(:,:),OpPsi_g(:)
-     real(kind=Rk), allocatable   :: Q(:)
+    real (kind=Rk), allocatable         :: V(:),OpPsi_g(:),Psi_b(:),Psi_g(:)
+    real (kind=Rk), allocatable         :: Q(:),mat_pot(:,:)
+    integer                             :: ib,iq,iq1,iq2,jb,ib1,ib2
 
     IF (.NOT. Basis_IS_allocated(Basis)) THEN
       STOP 'ERROR in Set_Op: the Basis is not initialized'
@@ -79,48 +77,32 @@ contains
 
     Op%Basis => Basis
 
-
-    allocate(V(2,2))
-    allocate(Q(1))
-    DO iq=1,Op%Basis%nq
-       !Q(1) = Op%Basis%x(iq)
-      !V(iq) = Calc_pot(Basis%x(iq))
-      CALL sub_pot(V,Q(1))
-    END DO
-
+    allocate(mat_pot(2,2))
+     allocate(Q(1))
+     allocate(Psi_b(Basis%nb))
+     allocate(Psi_g(Basis%nq))
+     CALL sub_pot(mat_pot,Q)
+     Do iq=1,Basis%nq
+       Q=Basis%x(iq)
+       !V(iq)=Calc_pot(Q)
+      CALL sub_pot(mat_pot,Q)
+     END DO
+    !  DO iq=1,Basis%nq
+      !  V(iq) = Calc_pot(Basis%x(iq))
+      !END DO
     ! calculation of Op|b_i>
     DO ib=1,Basis%nb
-      OpPsi_g = V(1,1) * Basis%d0gb(:,ib) ! potential part
+      OpPsi_g = mat_pot(1,1) * Basis%d0gb(:,ib) ! potential part
       OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
       ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
       OpPsi_g = OpPsi_g * Basis%w
       Op%RMat(:,ib) = matmul(transpose(Basis%d0gb),OpPsi_g)
     END DO
 
-
-    ! calculation of a potential on the grid
-  !  allocate(V(Basis%nq))
-    !DO iq=1,Basis%nq
-  !    V(iq) = Calc_pot(Basis%x(iq))
-  !  END DO
-
-
-    ! calculation of Op|b_i>
-    !DO ib=1,Basis%nb
-      !OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
-    !  OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
-      ! !OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
-    !  OpPsi_g = OpPsi_g * Basis%w
-    !  Op%RMat(:,ib) = matmul(transpose(Basis%d0gb),OpPsi_g)
-    !END DO
-
-
     CALL write_Op(Op)
 
 
   END SUBROUTINE Set_Op
-
-
   SUBROUTINE calc_OpPsi(Op,Psi,OpPsi)
     USE psi_m, ONLY : psi_t
 

@@ -12,23 +12,15 @@ PROGRAM TD_SCHROD
   TYPE (op_t)            :: H
   TYPE(propa_t)          :: propa
   REAL(kind=Rk)          :: Norm ,E !,phase,sigma,k0,Q0,sig0
-  !COMPLEX(kind=Rk),    ALLOCATABLE   :: G(:)
-  !COMPLEX(kind=Rk),    ALLOCATABLE   :: B(:)
-
-
   TYPE(psi_t)                   :: G
   TYPE(psi_t)                   :: B
-  !INTEGER                       IQ , IB
-
-  !ALLOCATE(G(Basis%NQ), B(Basis%NB))
-
-  !====================================================================
+!====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
 
   CALL Read_Basis(Basis,nio=in_unitp)
 
-  !====================================================================
+!====================================================================
 
 
 
@@ -44,21 +36,23 @@ CALL init_psi(psi0,Basis,cplx=.TRUE.) ! to be changed
 CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
 CALL init_psi(G ,Basis,cplx=.TRUE.) ! to be changed
 CALL initial_wp(B,psi0,G)
+ !psi%RVec(:) = CZERO
+ !psi%RVec(4) = ONE
 
-psi%CVec(:,1) = B%CVec(:,1)
+psi%CVec(:) = B%CVec(:)
 CALL Write_psi(psi)
 
   write(out_unitp,*) ' | H | Psi > calculation'
   CALL Set_op(H,Basis) ! to be change
   CALL calc_OpPsi(H,psi,Hpsi)
-  !CALL ENERGY(B%CVec,H,E)
+  CALL ENERGY(B,H,E)
   WRITE(14,*) E
   CALL Write_psi(Hpsi)
 
-  psi0%CVec(:,1) = B%CVec(:,1)
+  psi0%CVec(:) = B%CVec(:)
 !  psi0%CVec(1) = ONE
   CALL Calc_Norm(psi0, Norm)
-  !Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
+  Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
   write(out_unitp,*) 'norm,psi0',Norm
   CALL read_propa(propa)
   CALL propagation(psif,psi0,H,propa)

@@ -31,12 +31,12 @@ CONTAINS
 
       TYPE(Basis_t),   intent(in)  :: Basis
       logical                      :: alloc
-      integer                      :: ib
+      integer                      :: i
 
       alloc = allocated(Basis%tab_basis)
       IF ( allocated(Basis%tab_basis)) THEN
-        Do ib=1,size(Basis%tab_basis)
-          alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(ib))
+        Do i=1,size(Basis%tab_basis)
+          alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
         END DO
       ELSE
         alloc =             allocated(Basis%x)
@@ -51,12 +51,12 @@ CONTAINS
 
         TYPE(Basis_t),   intent(in)  :: Basis
         logical                      :: alloc
-        integer                      :: ib
+        integer                      :: i
 
         alloc = allocated(Basis%tab_basis)
         IF ( allocated(Basis%tab_basis)) THEN
-          Do ib=1,size(Basis%tab_basis)
-            alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(ib))
+          Do i=1,size(Basis%tab_basis)
+            alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
           END DO
         ELSE
           alloc =             allocated(Basis%x)
@@ -538,10 +538,10 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
   USE UtilLib_m
 
   TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
-  COMPLEX(kind=Rk),        INTENT(INOUT)  :: B(:,:)
-  COMPLEX(kind=Rk),        INTENT(IN)     :: G(:,:)
-  integer                                 :: iq,ie,ib
-  logical,             parameter      :: debug = .true.
+  COMPLEX(kind=Rk),        INTENT(INOUT)  :: B(:)
+  COMPLEX(kind=Rk),        INTENT(IN)     :: G(:)
+  integer                                 :: IBB0,IBB1,ib2,IGB0,IGB1,ib,iq
+  logical,             parameter          :: debug = .true.
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING GridTOBasis_Basis'
@@ -556,32 +556,31 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
      write(out_unitp,*) " the basis is not allocated."
      STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
    END IF
+      IF(allocated(Basis%tab_basis)) THEN
 
+       IBB0 = 1
+       IGB0 = 1
 
-   IF(allocated(Basis%tab_basis)) THEN
-       B =CZERO
-     DO ie=1,Basis%tab_basis(2)%nb
-       Do ib=1,Basis%tab_basis(1)%nb
-       Do iq=1,Basis%tab_basis(1)%nq
+        DO ib2=1,Basis%tab_basis(2)%nb
+          IBB1 = IBB0 + Basis%tab_basis(1)%nb-1
+          IGB1 = IGB0 + Basis%tab_basis(2)%nb-1
 
-         B(ib,ie)=B(ib,ie)+Basis%tab_basis(1)%d0gb(iq,ib)*Basis%w(iq)*G(iq,ie)
-       END DO
-       END DO
-     END DO
-   ELSE
-        B = ZERO
-       DO ib=1,Basis%nb
-       DO iq=1,Basis%nq
-        B(ib,1)=B(ib,1)+Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq,1)
-       END DO
-       END DO
-   END IF
+          B(IBB0:IBB1) = matmul(transpose(Basis%tab_basis(1)%d0gb(:,:)) ,Basis%tab_basis(1)%w(:) * G(IGB0:IGB1) )
 
-   IF (debug) THEN
-    ! write(out_unitp,*) 'intent(OUTIN) :: B(:)',B
-     write(out_unitp,*) 'END GridTOBasis_Basis_cplx'
-     flush(out_unitp)
-   END IF
+          IBB0 = IBB1 + 1
+          IGB0 = IGB1 + 1
+
+        END DO
+
+      ELSE
+        B = matmul(transpose(Basis%d0gb),Basis%w*G)
+
+    END IF
+     IF (debug) THEN
+      ! write(out_unitp,*) 'intent(OUTIN) :: B(:)',B
+       write(out_unitp,*) 'END GridTOBasis_Basis'
+       flush(out_unitp)
+     END IF
 END  SUBROUTINE GridTOBasis_Basis_cplx
 
   !subroutine gridtobasis
@@ -589,57 +588,50 @@ SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
   USE UtilLib_m
 
     TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
-    COMPLEX(kind=Rk),        INTENT(IN)     :: B(:,:)
-    COMPLEX(kind=Rk),        INTENT(INOUT)  :: G(:,:)
-    integer                                 :: iq,ie,ib
-    logical,             parameter      :: debug = .true.
+    COMPLEX(kind=Rk),        INTENT(IN)     :: B(:)
+    COMPLEX(kind=Rk),        INTENT(INOUT)  :: G(:)
+    integer                                 ::  IBB0,IBB1,ib2,IGB0,IGB1,ib,iq
+    logical,             parameter          :: debug = .true.
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING BasisTOGrid_Basis'
-     write(out_unitp,*) 'intent(in) :: B(:,:)',B
+     write(out_unitp,*) 'intent(in) :: B(:)',B
     !   CALL Write_Basis(Basis)
     flush(out_unitp)
    END IF
 
- IF (.NOT. Basis_IS_allocated(Basis)) THEN
+  IF (.NOT. Basis_IS_allocated(Basis)) THEN
     write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
      write(out_unitp,*) " the basis is not allocated."
      STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
-END IF
+  END IF
+
+    IF(allocated(Basis%tab_basis)) THEN
+
+      IBB0 = 1
+      IGB0 = 1
+
+      DO ib2=1,Basis%tab_basis(2)%nb
+         IBB1 = IBB0 + Basis%tab_basis(1)%nb-1
+         IGB1 = IGB0 + Basis%tab_basis(1)%nq-1
+
+        G(IGB0:IGB1) = matmul(Basis%tab_basis(1)%d0gb(:,:) , B(IBB0:IBB1) )
+
+        IBB0 = IBB1 + 1
+        IGB0 = IGB1 + 1
+
+      END DO
+    ELSE
+    G = matmul(Basis%d0gb,B)
+    END IF
 
 
-IF(allocated(Basis%tab_basis)) THEN
-   G =ZERO
+ IF (debug) THEN
+     write(out_unitp,*) 'intent(OUTIN) :: G(:)',G
+     write(out_unitp,*) 'END BasisTOGrid_Basis'
+     flush(out_unitp)
+ END IF
 
-  DO ie=1,Basis%tab_basis(2)%nb
-
-  DO ib=1,Basis%tab_basis(1)%nb
-  DO iq=1,Basis%tab_basis(1)%nq
-     G(iq,ie) =G(iq,ie)+ Basis%tab_basis(1)%d0gb(iq,ib)*B(ib,ie)
- END DO
- END DO
- END DO
- ELSE
-       G =ZERO
- DO iq=1,Basis%nq
-    DO ib=1,Basis%nb
-      G(iq,1)= G(iq,1)+Basis%d0gb(iq,ib)*B(ib,1)
-    END DO
- END DO
-END IF
-
-IF (debug) THEN
- write(out_unitp,*) 'intent(OUTIN) :: G(:,:)',G
- write(out_unitp,*) 'END BasisTOGrid_Basis'
- flush(out_unitp)
-END IF
-    END  SUBROUTINE BasisTOGrid_Basis_cplx
-
-
-
-
-
-
-
+END  SUBROUTINE BasisTOGrid_Basis_cplx
 
 END MODULE Basis_m
