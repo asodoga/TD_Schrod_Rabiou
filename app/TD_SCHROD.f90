@@ -21,7 +21,7 @@ PROGRAM TD_SCHROD
   CALL Read_Basis(Basis,nio=in_unitp)
 
 !====================================================================
-
+print*,"Basis is allocated",Basis_IS_allocated(Basis)
 
 
 OPEN(unit=14,file = 'ENERGY' )
@@ -32,6 +32,7 @@ OPEN(unit=14,file = 'ENERGY' )
 !  CALL Write_psi(psi)
 write(out_unitp,*) 'Initialization of a complex psi'
 CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
+STOP
 CALL init_psi(psi0,Basis,cplx=.TRUE.) ! to be changed
 CALL init_psi(psif,Basis,cplx=.TRUE.) ! to be changed
 CALL init_psi(G ,Basis,cplx=.TRUE.) ! to be changed
@@ -43,7 +44,7 @@ psi%CVec(:) = B%CVec(:)
 CALL Write_psi(psi)
 
   write(out_unitp,*) ' | H | Psi > calculation'
-  CALL Set_op(H,Basis) ! to be change
+  CALL Set_op(H,G%CVec,Basis) ! to be change
   CALL calc_OpPsi(H,psi,Hpsi)
   CALL ENERGY(B,H,E)
   WRITE(14,*) E

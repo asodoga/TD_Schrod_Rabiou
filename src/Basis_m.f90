@@ -53,6 +53,12 @@ CONTAINS
         logical                      :: alloc
         integer                      :: i
 
+        IF( Basis%Basis_name == 'el'.AND. Basis%nb >0 )Then
+          alloc = .TRUE.
+          RETURN
+        END IF
+
+
         alloc = allocated(Basis%tab_basis)
         IF ( allocated(Basis%tab_basis)) THEN
           Do i=1,size(Basis%tab_basis)
@@ -66,6 +72,7 @@ CONTAINS
           alloc = alloc .AND. allocated(Basis%d2gb)
           alloc = alloc .AND. allocated(Basis%d1gg)
           alloc = alloc .AND. allocated(Basis%d2gg)
+
         END IF
 
       END FUNCTION Basis_IS_allocatedtot
@@ -180,7 +187,10 @@ CONTAINS
       END DO
       Basis%nb = product(Basis%tab_basis(:)%nb)
       Basis%nq = 0
-      !product(Basis%tab_basis(:)%nq) ! DML cette valeur sera fausse lorsqu'il y a une base électronique
+      DO i=1,nb_basis
+        IF (Basis%tab_basis(i)%nq == 0) CYCLE
+        Basis%nq = Basis%nq * Basis%tab_basis(i)%nq
+      END DO
 
     ELSE
       Basis%nb_basis  = nb_basis

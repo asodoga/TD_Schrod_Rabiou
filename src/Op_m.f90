@@ -58,50 +58,71 @@ contains
 
   END SUBROUTINE write_Op
 
-  SUBROUTINE Set_Op(Op,Basis)
+  SUBROUTINE Set_Op(Op,psi_in,Basis)
   USE Basis_m
   USE Molec_m
 
     TYPE(Op_t),     intent(inout)       :: Op
-    TYPE (Basis_t), intent(in),  target :: Basis
+    COMPLEX (kind=Rk), INTENT(IN)       :: psi_in(:)
+    TYPE (Basis_t), INTENT(IN)  ,target ::  Basis
+    logical,         parameter          :: debug = .false.
+    COMPLEX (kind=Rk), allocatable      :: OpPsi_gb(:),Psi_bb(:),Psi_gb(:),Psi_bb1(:,:)
+    COMPLEX (kind=Rk), allocatable      ::Psi_gb1(:,:),Vpsigb(:,:),Kpsigb(:,:)
+    real (kind=Rk), allocatable         :: Q(:),mat_pot_grid(:,:,:),  Vpsi_out(:),Kpsi_out(:)
+    integer                             :: ib,iq,iq1,iq2,jb,ib1,j2,i2,i1
+    nullify(Op%Basis)
 
-    real (kind=Rk), allocatable         :: V(:),OpPsi_g(:),Psi_b(:),Psi_g(:)
-    real (kind=Rk), allocatable         :: Q(:),mat_pot(:,:)
-    integer                             :: ib,iq,iq1,iq2,jb,ib1,ib2
-
-    IF (.NOT. Basis_IS_allocated(Basis)) THEN
-      STOP 'ERROR in Set_Op: the Basis is not initialized'
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING set_Op'
+      call write_Op(Op)
+      call write_basis(Op%Basis)
+      flush(out_unitp)
     END IF
+    allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
 
-    CALL alloc_Op(Op,Basis%nb)
 
-    Op%Basis => Basis
-
-    allocate(mat_pot(2,2))
      allocate(Q(1))
-     allocate(Psi_b(Basis%nb))
-     allocate(Psi_g(Basis%nq))
-     CALL sub_pot(mat_pot,Q)
-     Do iq=1,Basis%nq
-       Q=Basis%x(iq)
-       !V(iq)=Calc_pot(Q)
-      CALL sub_pot(mat_pot,Q)
+     allocate(Psi_gb(Op%Basis%nq))
+      allocate(OpPsi_gb(Op%Basis%nq))
+     allocate(Psi_gb1(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
+     allocate(mat_pot_grid(Op%Basis%nq,2,2))
+     Do iq=1,Basis%tab_basis(1)%nq
+       Q=Basis%tab_basis(1)%x(iq)
+      CALL sub_pot(mat_pot_grid,Q)
      END DO
-    !  DO iq=1,Basis%nq
-      !  V(iq) = Calc_pot(Basis%x(iq))
-      !END DO
-    ! calculation of Op|b_i>
-    DO ib=1,Basis%nb
-      OpPsi_g = mat_pot(1,1) * Basis%d0gb(:,ib) ! potential part
-      OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
-      ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
-      OpPsi_g = OpPsi_g * Basis%w
-      Op%RMat(:,ib) = matmul(transpose(Basis%d0gb),OpPsi_g)
+     Psi_gb1 = reshape(psi_in,[ Basis%tab_basis(1)%nq, Basis%tab_basis(2)%nb])
+    Vpsigb(:,:) = 0
+    DO i2=1,Basis%tab_basis(2)%nb
+    DO j2=1,Basis%tab_basis(2)%nb
+       Vpsigb(:,j2) = Vpsigb(:,j2) + DOT_PRODUCT(  mat_pot_grid(:,j2,i2), Psi_gb1(:,i2) )
+         DO i1=1,Basis%tab_basis(1)%nb
+            Kpsigb(:,i2) = -HALF/mass *DOT_PRODUCT( Basis%tab_basis(1)%d2gb(:,i1,1,1),Psi_gb1(:,i2))
+         END DO
+
     END DO
+    END DO
+
+    Kpsi_out(:) = reshape(Kpsigb,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
+    Vpsi_out(:) = reshape(Vpsigb,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
+    OpPsi_gb(:) =   Vpsi_out(:)+  Kpsi_out(:)
+    OpPsi_gb(:) = OpPsi_gb(:) * Basis%tab_basis(1)%w(:)
+         DO ib=1,Basis%nb
+            Op%RMat(:,ib) = matmul(transpose(Basis%d0gb),OpPsi_gb)
+         END DO
 
     CALL write_Op(Op)
 
+    deallocate(Op%RMat)
+    deallocate(Q)
+    deallocate(Psi_gb)
+    deallocate(OpPsi_gb)
+    deallocate(Psi_gb1)
+    deallocate(mat_pot_grid)
 
+    IF (debug) THEN
+      write(out_unitp,*) 'END set_Op'
+      flush(out_unitp)
+    END IF
   END SUBROUTINE Set_Op
   SUBROUTINE calc_OpPsi(Op,Psi,OpPsi)
     USE psi_m, ONLY : psi_t
