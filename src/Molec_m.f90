@@ -20,17 +20,17 @@ contains
 
   SUBROUTINE  sub_pot(Mat_V,Q)
        USE NumParameters_m
-       REAL(kind=Rk), intent(inout)   :: Mat_V(:,:,:)
+       REAL(kind=Rk), intent(inout)   :: Mat_V(:,:)
        REAL(kind=Rk), intent(in)      :: Q(:)
        !REAL(kind=Rk), intent(in)      :: Q
 
         !IF (size(Q) /= 1) STOP 'wrong dimension'
         !IF (size(Mat_V,dim=1) /= 2) STOP 'wrong number of electronic state'
 
-        Mat_V(Q(1),1,1) = (Q(1)+1)**2
-        Mat_V(Q(1),2,2) = (Q(1)-1)**2
-        Mat_V(Q(1),1,2) = 0.01*Q(1)
-        Mat_V(Q(1),2,1) = 0.01*Q(1)
+        Mat_V(1,1) = (Q(1)+1)**2
+        Mat_V(2,2) = (Q(1)-1)**2
+        Mat_V(1,2) = 0.01*Q(1)
+        Mat_V(2,1) = 0.01*Q(1)
 
   END SUBROUTINE sub_pot
 

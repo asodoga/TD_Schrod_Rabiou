@@ -103,17 +103,32 @@ contains
 
 
 
-  SUBROUTINE Calc_Norm_Grid(G, Norm)
+  SUBROUTINE Calc_Norm_Grid(G, Norm,Basis)
     USE UtilLib_m
-  TYPE (psi_t),  intent(in)     :: G
-  TYPE (psi_t)                  :: G1
-  !TYPE(Basis_t) , INTENT(IN)    :: Basis
-  REAL(kind = Rk),intent(inout) :: Norm
-  !INTEGER                       :: IB
-  Norm = dot_product(G%CVec(:)*G%Basis%W(:),G%CVec(:))
-  Norm = SQRT(Norm)
+    USE Basis_m
+    TYPE (psi_t),  intent(inout)                :: G
+    COMPLEX(KIND = Rk) , ALLOCATABLE           :: G1(:,:)
+    REAL(kind = Rk),intent(inout)              :: Norm
+      TYPE (Basis_t), INTENT(IN)  ,target      ::  Basis
+    REAL(KIND = Rk) , ALLOCATABLE              :: Norme(:)
+    INTEGER                                    :: ib2
 
+       !G%Basis => Basis
+       Norm = 0
 
+    ALLOCATE(Norme(2))
+    ALLOCATE(G1(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
+      G1(:,:) = RESHAPE(G%CVec,SHAPE= [Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb])
+
+     Do ib2 = 1,Basis%tab_basis(2)%nb
+            Norme(ib2) = sqrt(real(dot_product(G1(:,ib2)*Basis%tab_basis(1)%W,G1(:,ib2)), kind=Rk))
+        Norme(ib2) = SQRT(Norme(ib2))
+        Norm = Norm+Norme(ib2)
+     END DO
+
+     print*, Norm
+     DEALLOCATE(G1)
+      DEALLOCATE(Norme)
 END SUBROUTINE Calc_Norm_Grid
 
 end module psi_m

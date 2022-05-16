@@ -347,7 +347,7 @@ contains
           c4%CVec(:) = c2%CVec(:)/c3
           rho_ana%CVec(:) = c0*EXP(c1%CVec(:))*EXP(c4%CVec(:))
 
-          CALL Calc_Norm_Grid(rho_ana, Norm1)
+          CALL Calc_Norm_Grid(rho_ana, Norm1,rho_ana%Basis)
           rho_ana%CVec(:) = rho_ana%CVec(:)/Norm1
 
         END SUBROUTINE ana_wp
@@ -358,13 +358,14 @@ contains
 
 
 
-    SUBROUTINE initial_wp(B,psi0,G)
+    SUBROUTINE initial_wp(B,psi0,G,Basis)
       USE NumParameters_m
       USE Basis_m
       USE psi_m
 
       TYPE(psi_t),INTENT(INOUT)     :: B,G
       TYPE(psi_t),INTENT(IN)        :: psi0
+      TYPE(Basis_t)  ,INTENT(IN)    :: Basis
       INTEGER                       :: IQ , IB
 
        COMPLEX(KIND=Rk)             :: alpha0,gamma0
@@ -376,8 +377,8 @@ contains
       OPEN(unit=13,file = 'B' )
       !OPEN(unit=14,file = 'G1' )
 
-        CALL init_psi(G,psi0%Basis,cplx=.TRUE.)
-        CALL init_psi(B,psi0%Basis,cplx=.TRUE.)
+        !CALL init_psi(G,psi0%Basis,cplx=.TRUE.)
+        !CALL init_psi(B,psi0%Basis,cplx=.TRUE.)
         !sigma = HALF
       !  sig0 = TWO
         k0 = ONE
@@ -393,27 +394,31 @@ contains
         !G%CVec(:)  =SQRT(PI/alpha**2)*EXP(EYE*k0*(G%Basis%x(:)-Q0))*EXP(-(G%Basis%x(:)-Q0)**2/(FOUR*alpha**2))
         !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%x(:))
         !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+ EYE*phase)
-        G%CVec(2) = 1
+        ! G%CVec(:)  = CZERO
+         G%CVec(:) = CONE
+          !write(out_unitp,*) 'G',G
 
 
-         CALL Calc_Norm_Grid(G, Norm1)
-         G%CVec(:) = G%CVec(:)/Norm1
-         CALL Calc_Norm_Grid(G, Norm1)
+        !CALL Calc_Norm_Grid(G, Norm1,basis)
+        ! G%CVec(:) = G%CVec(:)/Norm1
+        !CALL Calc_Norm_Grid(G, Norm1,Basis)
          DO  IQ = 1, G%Basis%nq
-           write(12,*) G%Basis%x(IQ), ABS(G%CVec(IQ))**2
+          write(12,*) IQ, ABS(G%CVec(IQ))**2
          ENDDO
-       CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,G%Basis)
+       !CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,G%Basis)
+        !write(out_unitp,*) 'B',B
        CALL Calc_Norm(B, Norm)
        !B%CVec(:) = B%CVec(:)/Norm
        write(11,*) Norm1,Norm
        DO  IB = 1, B%Basis%nb
-           write(13,*) B%Basis%x(IB), ABS(B%CVec(IB))**2
+           write(13,*) IB, ABS(B%CVec(IB))**2
          ENDDO
-        ! call BasisTOGrid_Basis_cplx(G%CVec, B%CVec,B%Basis)
+        !call BasisTOGrid_Basis_cplx(G%CVec, B%CVec,B%Basis)
+            ! write(out_unitp,*) 'G',G
 
-          ! DO  IQ = 1, G%Basis%nq
-            ! write(14,*) G%Basis%x(IQ), ABS(B%CVec(IQ))**2
-          ! ENDDO
+           DO  IQ = 1, G%Basis%nq
+             write(14,*) G%Basis%x(IQ), ABS(B%CVec(IQ))**2
+          ENDDO
       END SUBROUTINE initial_wp
 
 

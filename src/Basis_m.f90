@@ -6,7 +6,7 @@ MODULE Basis_m
 
   PRIVATE
   PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis_cplx, GridTOBasis_Basis_cplx ,&
-  Basis_IS_allocatedtot
+  Basis_IS_allocatedtot,TRANSPOS
 
 
 
@@ -33,6 +33,12 @@ CONTAINS
       logical                      :: alloc
       integer                      :: i
 
+
+              IF( Basis%Basis_name == 'el'.AND. Basis%nb >0 )Then
+                alloc = .TRUE.
+                RETURN
+              END IF
+
       alloc = allocated(Basis%tab_basis)
       IF ( allocated(Basis%tab_basis)) THEN
         Do i=1,size(Basis%tab_basis)
@@ -53,10 +59,6 @@ CONTAINS
         logical                      :: alloc
         integer                      :: i
 
-        IF( Basis%Basis_name == 'el'.AND. Basis%nb >0 )Then
-          alloc = .TRUE.
-          RETURN
-        END IF
 
 
         alloc = allocated(Basis%tab_basis)
@@ -480,6 +482,10 @@ CONTAINS
     real(kind=Rk)                :: Sii,Sij
 
 
+    IF( Basis%Basis_name == 'el')Then
+      print*,''
+      RETURN
+    END IF
     IF (Basis_IS_allocated(Basis)) THEN
       d0bgw = transpose(Basis%d0gb)
       DO ib=1,Basis%nb
@@ -573,7 +579,7 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
 
         DO ib2=1,Basis%tab_basis(2)%nb
           IBB1 = IBB0 + Basis%tab_basis(1)%nb-1
-          IGB1 = IGB0 + Basis%tab_basis(2)%nb-1
+          IGB1 = IGB0 + Basis%tab_basis(1)%nq-1
 
           B(IBB0:IBB1) = matmul(transpose(Basis%tab_basis(1)%d0gb(:,:)) ,Basis%tab_basis(1)%w(:) * G(IGB0:IGB1) )
 
@@ -587,7 +593,7 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
 
     END IF
      IF (debug) THEN
-      ! write(out_unitp,*) 'intent(OUTIN) :: B(:)',B
+      write(out_unitp,*) 'intent(OUT) B(:)',B
        write(out_unitp,*) 'END GridTOBasis_Basis'
        flush(out_unitp)
      END IF
@@ -637,11 +643,29 @@ SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
 
 
  IF (debug) THEN
-     write(out_unitp,*) 'intent(OUTIN) :: G(:)',G
+     write(out_unitp,*) 'intent(OUT) :: G(:)',G
      write(out_unitp,*) 'END BasisTOGrid_Basis'
      flush(out_unitp)
  END IF
 
 END  SUBROUTINE BasisTOGrid_Basis_cplx
+
+
+
+SUBROUTINE TRANSPOS(d0bgw,Basis)
+  USE UtilLib_m
+  TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
+  COMPLEX(kind=Rk),        INTENT(INOUT)  :: d0bgw(:,:)
+  INTEGER                                 :: IB,IQ
+      IF(allocated(Basis%tab_basis)) THEN
+    d0bgw = TRANSPOSE(Basis%d0gb)
+    DO IB=1,Basis%nb
+      d0bgw(IB,:) = d0bgw(IB,:) * Basis%w(:)
+    END DO
+  ENDIF
+
+  END  SUBROUTINE TRANSPOS
+
+
 
 END MODULE Basis_m
