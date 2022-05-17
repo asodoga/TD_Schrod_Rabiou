@@ -1,5 +1,7 @@
 &basis_nd name='dp' nb_basis=2 /
    &basis_nd name='HO' nb=2 nq=2  /
-    &basis_nd name='el' nb=2 /
+    &basis_nd name= 'el' nb=2 /
+
+
     &prop t0  = 0  tf  = 12  delta_t = 0.01 eps= 0.0000000000001
       max_iter =  5000 propa_name = 'rk4'/

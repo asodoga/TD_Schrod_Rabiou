@@ -52,9 +52,11 @@ CALL test_basitogridgridtobasis(Basis,G%CVec,G1%CVec,B2%CVec,B1%CVec)
 !CALL Write_psi(psi)
 
   write(out_unitp,*) ' | H | Psi > calculation'
+   CALL Calc_Hpsi(G%CVec,Hpsi%CVec,Basis)
+
   CALL Set_op(H,Basis) ! to be change
-  CALL calc_OpPsi(H,psi,Hpsi)
-   CALL Write_psi(Hpsi)
+  !CALL calc_OpPsi(H,psi,Hpsi)
+  CALL Write_psi(Hpsi)
    STOP 'calcul de Hpsi est fait'
   CALL ENERGY(B,H,E)
   WRITE(14,*) E
