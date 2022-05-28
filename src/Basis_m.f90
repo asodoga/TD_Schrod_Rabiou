@@ -5,8 +5,8 @@ MODULE Basis_m
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis_cplx, GridTOBasis_Basis_cplx ,&
-  Basis_IS_allocatedtot,TRANSPOS
+  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_cplx, GridTOBasis_cplx
+  PUBLIC :: Calc_dngg_grid,Basis_IS_allocatedtot,Calc_tranpose_d0gb,test_basitogridgridtobasis
 
 
 
@@ -23,7 +23,8 @@ MODULE Basis_m
     real(kind=Rk),   allocatable :: d1gg(:,:,:)    ! basis functions d2gg(nq,nq,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
     real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
-    TYPE (Basis_t),  allocatable :: tab_basis(:)
+    real(kind=Rk),   allocatable :: d0bgw(:,:)     ! transpose of basis functions d0gb(nb,nq)
+    TYPE (Basis_t),  allocatable :: tab_basis(:)   !  for more than one Basis.
   END TYPE Basis_t
 
 CONTAINS
@@ -50,6 +51,7 @@ CONTAINS
         alloc = alloc .AND. allocated(Basis%d0gb)
         alloc = alloc .AND. allocated(Basis%d1gb)
         alloc = alloc .AND. allocated(Basis%d2gb)
+        !alloc = alloc .AND. allocated(Basis%d0bgw)
       END IF
     END FUNCTION Basis_IS_allocated
 
@@ -74,6 +76,7 @@ CONTAINS
           alloc = alloc .AND. allocated(Basis%d2gb)
           alloc = alloc .AND. allocated(Basis%d1gg)
           alloc = alloc .AND. allocated(Basis%d2gg)
+        !  alloc = alloc .AND. allocated(Basis%d0bgw)
 
         END IF
 
@@ -106,6 +109,13 @@ CONTAINS
            ELSE
              CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
            END IF
+
+           !write(out_unitp,*)
+          ! IF (.NOT.allocated(Basis%d0bgw)) THEN
+          !   write(out_unitp,*)' Basis table d0bgw is not allocated.'
+           !ELSE
+          !   CALL Write_RMat(Basis%d0bgw,out_unitp,5,name_info='d0gbw')
+          ! END IF
            write(out_unitp,*)
            IF (.NOT.allocated(Basis%d1gb)) THEN
              write(out_unitp,*)' Basis table d1gb is not allocated.'
@@ -219,6 +229,8 @@ CONTAINS
       END SELECT
       !  this part wil not have sens for 'el' basis
       CALL Scale_Basis(Basis,Q0,scaleQ)
+       CALL   Calc_tranpose_d0gb(Basis)
+      CALL Calc_dngg_grid(Basis)
       CALL CheckOrtho_Basis(Basis,nderiv=2)
     END IF
  END SUBROUTINE Read_Basis
@@ -241,6 +253,7 @@ CONTAINS
     allocate(Basis%d0gb(nq,nb))
     allocate(Basis%d1gb(nq,nb,1))
     allocate(Basis%d2gb(nq,nb,1,1))
+
 
     DO ib=1,nb
       Basis%d0gb(:,ib)     =          sin(Basis%x(:)*ib) / sqrt(pi*HALF)
@@ -483,7 +496,7 @@ CONTAINS
 
 
     IF( Basis%Basis_name == 'el')Then
-      print*,''
+      print*,'This routine is .not. possible Basis el'
       RETURN
     END IF
     IF (Basis_IS_allocated(Basis)) THEN
@@ -493,7 +506,7 @@ CONTAINS
       END DO
 
       S = matmul(d0bgw,Basis%d0gb)
-      IF (nderiv > -1) CALL Write_RMat(S,out_unitp,5,name_info='S')
+      !IF (nderiv > -1) CALL Write_RMat(S,out_unitp,5,name_info='S')
       !Sii = ZERO
       !Sij = ZERO
       DO ib=1,Basis%nb
@@ -501,7 +514,7 @@ CONTAINS
         S(ib,ib) = ZERO
       END DO
       Sij = maxval(S)
-      !write(out_unitp,*) 'Sii,Sij',Sii,Sij
+      write(out_unitp,*) 'Sii-1,Sij',Sii,Sij
 
       IF (nderiv > 0) THEN
       !  write(out_unitp,*)
@@ -550,7 +563,7 @@ CONTAINS
 
 
 !subroutine basistogrid
-SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
+SUBROUTINE GridTOBasis_cplx(B,G,Basis)
   USE UtilLib_m
 
   TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
@@ -561,7 +574,7 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING GridTOBasis_Basis'
-     write(out_unitp,*) 'intent(in) :: G(:,:)',G
+     write(out_unitp,*) 'intent(in) G(:)',G
      !CALL Write_Basis(Basis)
      flush(out_unitp)
    END IF
@@ -597,10 +610,10 @@ SUBROUTINE GridTOBasis_Basis_cplx(B,G,Basis)
        write(out_unitp,*) 'END GridTOBasis_Basis'
        flush(out_unitp)
      END IF
-END  SUBROUTINE GridTOBasis_Basis_cplx
+END  SUBROUTINE GridTOBasis_cplx
 
   !subroutine gridtobasis
-SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
+SUBROUTINE BasisTOGrid_cplx(G,B,Basis)
   USE UtilLib_m
 
     TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
@@ -611,7 +624,7 @@ SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING BasisTOGrid_Basis'
-     write(out_unitp,*) 'intent(in) :: B(:)',B
+     write(out_unitp,*) 'intent(in)  B(:)',B
     !   CALL Write_Basis(Basis)
     flush(out_unitp)
    END IF
@@ -643,28 +656,132 @@ SUBROUTINE BasisTOGrid_Basis_cplx(G,B,Basis)
 
 
  IF (debug) THEN
-     write(out_unitp,*) 'intent(OUT) :: G(:)',G
+     write(out_unitp,*) 'intent(OUT) G(:)',G
      write(out_unitp,*) 'END BasisTOGrid_Basis'
      flush(out_unitp)
  END IF
 
-END  SUBROUTINE BasisTOGrid_Basis_cplx
+END  SUBROUTINE BasisTOGrid_cplx
 
 
 
-SUBROUTINE TRANSPOS(d0bgw,Basis)
+SUBROUTINE Calc_tranpose_d0gb(Basis)
   USE UtilLib_m
-  TYPE(Basis_t)   ,        INTENT(IN)     :: Basis
-  COMPLEX(kind=Rk),        INTENT(INOUT)  :: d0bgw(:,:)
+  TYPE(Basis_t)   ,        INTENT(INOUT)     :: Basis
+  !real(kind=Rk),        INTENT(INOUT)  :: d0bgw(:,:)
   INTEGER                                 :: IB,IQ
-      IF(allocated(Basis%tab_basis)) THEN
-    d0bgw = TRANSPOSE(Basis%d0gb)
+  if(Basis%Basis_name == 'el')THEN
+    RETURN
+  end if
+  ALLOCATE(Basis%d0bgw(Basis%nb,Basis%nq))
+    Basis%d0bgw = TRANSPOSE(Basis%d0gb)
     DO IB=1,Basis%nb
-      d0bgw(IB,:) = d0bgw(IB,:) * Basis%w(:)
+      Basis%d0bgw(IB,:) = Basis%d0bgw(IB,:) * Basis%w(:)
     END DO
-  ENDIF
 
-  END  SUBROUTINE TRANSPOS
+  END  SUBROUTINE Calc_tranpose_d0gb
+
+
+
+
+
+  SUBROUTINE Calc_dngg_grid(Basis)
+USE UtilLib_m
+  TYPE(Basis_t), intent(inout)    :: Basis
+  integer                         :: ib
+  logical,         parameter     ::debug = .false.
+
+
+  IF (debug) THEN
+    write(out_unitp,*) 'BEGINNING Calc_dngg_grid'
+    CALL Write_Basis(Basis)
+    flush(out_unitp)
+  END IF
+
+  allocate(Basis%d1gg(Basis%nq,Basis%nq,1))
+  allocate(Basis%d2gg(Basis%nq,Basis%nq,1,1))
+
+  IF (debug) THEN
+    CALL Write_RMat(Basis%d0bgw(:,:),out_unitp,5,name_info='d0bgw')
+    write(out_unitp,*)
+  END IF
+
+  if(Basis%Basis_name == 'el')THEN
+    RETURN
+  end if
+
+  Basis%d1gg(:,:,1)   = matmul(Basis%d1gb(:,:,1),Basis%d0bgw)
+  Basis%d2gg(:,:,1,1) = matmul(Basis%d2gb(:,:,1,1),Basis%d0bgw)
+
+  IF (debug) THEN
+    CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+    write(out_unitp,*)
+    CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+    CALL Write_Basis(Basis)
+    write(out_unitp,*) 'END Calc_dngg_grid'
+    flush(out_unitp)
+  END IF
+
+END SUBROUTINE Calc_dngg_grid
+
+
+  SUBROUTINE test_basitogridgridtobasis(Basis)
+  USE NumParameters_m
+  USE UtilLib_m
+    TYPE(Basis_t),    intent(in)    :: Basis
+    logical,          parameter     :: debug = .true.
+    COMPLEX(kind=Rk),    allocatable   :: G1(:),B1(:)!,G(:), Hpsi(:)
+    COMPLEX(kind=Rk),    allocatable   :: G2(:),B2(:)
+    COMPLEX(kind=Rk),    allocatable   :: B(:)
+    REAL(kind=Rk),    allocatable   :: diff_g(:),diff_b(:)
+    !REAL(KIND=Rk)                      :: Norm0,Norm1,min_diff,max_diff
+    integer                         :: iq
+
+
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING Test'
+      flush(out_unitp)
+    END IF
+
+    allocate(B(Basis%nb))
+    allocate(G1(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+  !  allocate(G(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+    !allocate(Hpsi(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+    allocate(diff_g(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+    allocate(diff_b(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
+    allocate(G2(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+    allocate(B1(Basis%nb))
+    allocate(B2(Basis%nb))
+
+    B1(:)=CONE
+    G1(:)=CONE
+
+    Call GridTOBasis_cplx(B,G1,Basis)
+    Call BasisTOGrid_cplx(G2,B,Basis)
+    diff_g(:) = ABS(G1(:)-G2(:))
+      print*,'##############################################################'
+     Write(out_unitp,*) 'maxval(diff_g(:))=',maxval(diff_g(:))
+     Write(out_unitp,*) 'MINVAL(diff_g(:))=',MINVAL(diff_g(:))
+       print*,'##############################################################'
+
+      Call BasisTOGrid_cplx(G1,B1,Basis)
+      Call GridTOBasis_cplx(B2,G1,Basis)
+      diff_b(:) = ABS(B1(:)-B2(:))
+
+
+      print*,'##############################################################'
+     Write(out_unitp,*) 'maxval(diff_b(:))=',maxval(diff_b(:))
+     Write(out_unitp,*) 'MINVAL(diff_b(:))=',MINVAL(diff_b(:))
+       print*,'##############################################################'
+
+
+
+    IF (debug) THEN
+      write(out_unitp,*) 'END Test'
+      flush(out_unitp)
+    END IF
+
+END SUBROUTINE test_basitogridgridtobasis
 
 
 

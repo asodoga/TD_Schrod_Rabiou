@@ -14,12 +14,12 @@ module psi_m
    public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm, Calc_Norm_Grid
   ! operation on psi has to be defined: psi=psi1, psi1+psi2, psi=psi1*cte ...
 contains
-  SUBROUTINE init_psi(psi,Basis,cplx)
+  SUBROUTINE init_psi(psi,Basis,cplx,grid)
   USE Basis_m
 
     TYPE(psi_t),    intent(inout)      :: psi
     TYPE (Basis_t), intent(in), target :: Basis
-    logical,        intent(in)         :: cplx
+    logical,        intent(in)         :: cplx,grid
 
     CALL dealloc_psi(psi)
 
@@ -29,10 +29,24 @@ contains
     IF (Basis%nb < 1) STOP 'ERROR in init_psi: Basis%nb < 1!'
 
     psi%Basis => Basis
-
+  If(grid)THEN   !grid
     IF (cplx) THEN
      IF(allocated(Basis%tab_basis))THEN
-      allocate(psi%CVec(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
+      allocate(psi%CVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+     else
+      allocate(psi%CVec(Basis%nq))
+     END IF
+    ELSE
+      IF(allocated(Basis%tab_basis))THEN
+        allocate(psi%RVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+      ELSE
+        allocate(psi%RVec(Basis%nq))
+      END IF
+    END IF
+  ELSE ! grid
+    IF (cplx) THEN
+     IF(allocated(Basis%tab_basis))THEN
+      allocate(psi%CVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
      else
       allocate(psi%CVec(Basis%nb))
      END IF
@@ -43,6 +57,7 @@ contains
         allocate(psi%RVec(Basis%nb))
       END IF
     END IF
+  END IF
   END SUBROUTINE init_psi
 
   SUBROUTINE dealloc_psi(psi)
@@ -61,6 +76,7 @@ contains
 
   SUBROUTINE write_psi(psi)
     TYPE(psi_t), intent(in) :: psi
+    integer                 :: i
 
     IF (associated(psi%Basis)) THEN
       write(out_unitp,*) ' The basis is linked to psi.'
@@ -73,7 +89,9 @@ contains
     END IF
     IF (allocated(psi%CVec)) THEN
       write(out_unitp,*) 'Writing psi (complex):'
-      write(out_unitp,*) psi%CVec
+      do i=1, size(psi%CVec)
+      write(out_unitp,*) i, psi%CVec(i)
+      end do
       write(out_unitp,*) 'END Writting psi'
     END IF
 
@@ -106,26 +124,26 @@ contains
   SUBROUTINE Calc_Norm_Grid(G, Norm,Basis)
     USE UtilLib_m
     USE Basis_m
-    TYPE (psi_t),  intent(inout)                :: G
+    COMPLEX(KIND=Rk),  intent(in)                :: G(:)
     COMPLEX(KIND = Rk) , ALLOCATABLE           :: G1(:,:)
     REAL(kind = Rk),intent(inout)              :: Norm
-      TYPE (Basis_t), INTENT(IN)  ,target      ::  Basis
+    TYPE (Basis_t), INTENT(IN)  ,target      ::  Basis
     REAL(KIND = Rk) , ALLOCATABLE              :: Norme(:)
     INTEGER                                    :: ib2
 
-       !G%Basis => Basis
        Norm = 0
 
     ALLOCATE(Norme(2))
     ALLOCATE(G1(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
-      G1(:,:) = RESHAPE(G%CVec,SHAPE= [Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb])
+      G1(:,:) = RESHAPE(G,SHAPE= [Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb])
 
      Do ib2 = 1,Basis%tab_basis(2)%nb
             Norme(ib2) = sqrt(real(dot_product(G1(:,ib2)*Basis%tab_basis(1)%W,G1(:,ib2)), kind=Rk))
-        Norme(ib2) = SQRT(Norme(ib2))
-        Norm = Norm+Norme(ib2)
-     END DO
 
+        Norm = Norm+Norme(ib2)
+
+     END DO
+      Norm = SQRT(Norm)
      print*, Norm
      DEALLOCATE(G1)
       DEALLOCATE(Norme)

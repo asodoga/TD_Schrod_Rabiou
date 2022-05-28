@@ -1,6 +1,7 @@
 module Propa_m
      USE NumParameters_m
      USE psi_m
+     USE Basis_m
 
      implicit none
 
@@ -17,14 +18,14 @@ module Propa_m
     public ::mEyeHPsi,write_propa,initial_wp,ana_wp,spectrum
     public :: ENERGY
 contains
-    SUBROUTINE propagation(psif,psi0,H,propa)
+    SUBROUTINE propagation(psif,psi0,propa,Basis)
        USE op_m
        USE psi_m
        USE Basis_m
 
        TYPE (psi_t),  intent(inout) :: psif
        TYPE (psi_t),  intent(in)    :: psi0
-       TYPE(Op_t),    intent(inout) :: H
+       TYPE(Basis_t),    intent(in) :: Basis
        TYPE (psi_t)                 :: G,rho_num ,rho
 
 
@@ -52,12 +53,12 @@ contains
 
        nt = int((propa%tf-propa%t0)/propa%delta_t)
 
-       CALL init_psi(psi,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(G,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(rho_num,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(rho,psi0%Basis,cplx=.TRUE.) ! to be changed
-       CALL init_psi(rho_ana,psi0%Basis,cplx=.TRUE.) ! to be changed
+       CALL init_psi(psi,psi0%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
+       CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
+       CALL init_psi(G,psi0%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
+       CALL init_psi(rho_num,psi0%Basis,cplx=.TRUE.,grid =.false.) ! to be changed
+       CALL init_psi(rho,psi0%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
+       CALL init_psi(rho_ana,psi0%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
 
 
         psi%CVec = psi0%CVec
@@ -68,7 +69,7 @@ contains
             t_deltat = t + propa%delta_t
       write(out_unitp,*) propa%propa_name,i,t,t_deltat
 
-            CALL march(psi,psi_dt,H,t,propa)
+            CALL march(psi,psi_dt,t,propa,Basis)
 
             psi%CVec(:) = psi_dt%CVec(:)
 
@@ -80,12 +81,12 @@ contains
 
             IF(   MOD(i,nf) == 0  )Then
              OPEN(unit=i+10)
-             CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
-             rho_num%CVec(:)= G%CVec(:)
+             !CALL BasisTOGrid_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
+             !rho_num%CVec(:)= G%CVec(:)
              !CALL ana_wp(rho_ana,t)
              !CALL calc_rho(rho_ana,rho_num,rho)
-             DO  IQ = 1, psi_dt%Basis%nq
-             WRITE(i+10,*) G%Basis%x(IQ), ABS(rho_num%CVec(IQ))**2, ABS(rho%CVec(IQ)),ABS(rho_ana%CVec(IQ))**2
+             DO  IQ = 1,Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
+            WRITE(i+10,*) Basis%tab_basis(1)%x(IQ), ABS(psi_dt%CVec(IQ))**2
              ENDDO
               CLOSE(UNIT=i+10)
             ENDIF
@@ -93,7 +94,7 @@ contains
 
        END DO
        psif%CVec(:) = psi%CVec(:)
-       CALL Calc_Norm(psi_dt, Norm)
+       CALL Calc_Norm_Grid(psi_dt%CVec, Norm,Basis)
 
        CALL dealloc_psi(psi)
        CALL dealloc_psi(psi_dt)
@@ -109,15 +110,15 @@ contains
 
     END SUBROUTINE propagation
 
-    SUBROUTINE march_taylor(psi,psi_dt,H,t,propa)
+    SUBROUTINE march_taylor(psi,psi_dt,t,propa,Basis)
        USE op_m
        USE psi_m
        USE Basis_m
 
        TYPE (psi_t)  , INTENT(INOUT):: psi_dt
        TYPE (psi_t)  ,INTENT(INOUT) :: psi
-       TYPE(Op_t)    ,INTENT(IN)    :: H
-       TYPE (psi_t)                 :: Hpsi,G
+       TYPE(Basis_t)    ,INTENT(IN) :: Basis
+       TYPE (psi_t)                 :: Hpsi
        TYPE(propa_t) ,INTENT(IN)    :: propa
        real(kind=Rk) , INTENT(IN)   :: t
 
@@ -126,6 +127,7 @@ contains
 
        real(kind=Rk)                :: Rkk, Norm
        integer                      :: kk
+     CALL init_psi(Hpsi ,Basis,  cplx=.TRUE.   ,grid =.true. ) ! to be changed
 
 
 
@@ -153,13 +155,13 @@ contains
 
         psi_dt%CVec    = psi%CVec
         Do  kk = 1,propa%max_iter,1
-            CALL mEyeHPsi(H,psi,Hpsi)
+            CALL mEyeHPsi(psi,Hpsi,Basis)
             Rkk = Rkk*(propa%delta_t/kk)
             psi_dt%CVec(:) = psi_dt%CVec(:) +Rkk*Hpsi%CVec(:)
 
             !CALL Calc_Norm(psi_dt, Norm)
             !write(out_unitp,*) 'norm,psi_dt',Norm
-            CALL Calc_Norm(Hpsi, Norm)
+            CALL Calc_Norm_Grid(Hpsi%CVec,Norm,Basis)
             Norm =   Rkk*Norm
             write(out_unitp,*) 'norm,Hpsi',kk,Norm
 
@@ -169,10 +171,10 @@ contains
             else
                 psi%CVec(:)    = Hpsi%CVec(:)
             Endif
-              CALL BasisTOGrid_Basis_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
+              !CALL BasisTOGrid_cplx(G%CVec,psi_dt%CVec,psi_dt%Basis)
         Enddo
 
-       CALL Calc_Norm(psi_dt, Norm)
+       CALL Calc_Norm_Grid(psi_dt%CVec, Norm,Basis)
         write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',abs(Norm-ONE)
        write(out_unitp,*) 'psi_dt',psi_dt%CVec
         write(out_unitp,*) 'END march_taylor'
@@ -180,36 +182,41 @@ contains
     END SUBROUTINE march_taylor
 
 
-    SUBROUTINE marh_RK4th(psi,psi_dt,H,t,propa)
+    SUBROUTINE marh_RK4th(psi,psi_dt,t,propa,Basis)
        USE op_m
        USE psi_m
        USE Basis_m
 
-       TYPE (psi_t),  intent(inout) :: psi_dt
-       TYPE (psi_t),  intent(in)    :: psi
-       TYPE(Op_t),    intent(in)    :: H
-       TYPE (psi_t)                 :: K1,K2,K3,K4 ,psi_inter
-       TYPE(propa_t), intent(in)    :: propa
+       TYPE (psi_t),  intent(inout)    :: psi_dt
+       TYPE (psi_t),  intent(in)       :: psi
+       TYPE(Basis_t),    intent(in)    :: basis
+       TYPE (psi_t)       :: K1,K2,K3,K4 ,psi_inter
+       TYPE(propa_t), intent(in)        :: propa
 
        real(kind=Rk), intent(in)    :: t
        real(kind=Rk)                ::  Norm, Norm0
        !  variables locales
 
+       call init_psi(K1,basis,cplx = .true.,grid = .true.)
+         call init_psi(K2,basis,cplx = .true.,grid = .true.)
+           call init_psi(K3,basis,cplx = .true.,grid = .true.)
+             call init_psi(K4,basis,cplx = .true.,grid = .true.)
+               call init_psi(psi_inter,basis,cplx = .true.,grid = .true.)
        write(out_unitp,*) 'BEGINNIG march_RK4th',t,propa%delta_t
        write(out_unitp,*) 'psi',psi%CVec
 
        psi_dt%CVec    = psi%CVec
-       CALL mEyeHPsi(H,psi,K1)
+       CALL mEyeHPsi(psi,K1,basis)
 
        psi_inter%CVec = psi%CVec+(propa%delta_t/2._Rk)*K1%CVec
-       CALL mEyeHPsi(H,psi_inter,K2)
+       CALL mEyeHPsi(psi_inter,K2,basis)
        psi_inter%CVec = psi%CVec+(propa%delta_t/2._Rk)*K2%CVec
-       CALL mEyeHPsi(H,psi_inter,K3)
+       CALL mEyeHPsi(psi_inter,K3,basis)
        psi_inter%CVec = psi%CVec+propa%delta_t*K3%CVec
-       CALL mEyeHPsi(H,psi_inter,K4)
+       CALL mEyeHPsi(psi_inter,K4,basis)
        psi_dt%CVec(:) = psi_dt%CVec(:)+(propa%delta_t/6._Rk)*(K1%CVec(:)+2*K2%CVec(:)+2*K3%CVec(:)+K4%CVec(:))
-       CALL Calc_Norm(psi_dt, Norm)
-       CALL Calc_Norm(psi,Norm0)
+       CALL Calc_Norm_Grid(psi_dt%CVec, Norm,basis)
+       CALL Calc_Norm_Grid(psi%CVec,Norm0,basis)
        write(out_unitp,*) 'norm,psi_dt',Norm , 'Norm precision =',ABS(ONE-Norm)
        write(out_unitp,*) 'psi_dt',psi_dt%CVec
        write(out_unitp,*) 'END marh_RK4th'
@@ -251,27 +258,28 @@ contains
       propa%propa_name = propa_name
 
     END SUBROUTINE read_propa
-    SUBROUTINE mEyeHPsi (H,psi_in,psi_out) !calcul de -iHpsi
+    SUBROUTINE mEyeHPsi (psi_in,psi_out,Basis) !calcul de -iHpsi
        USE op_m
        USE psi_m
 
        TYPE (psi_t),  intent(in)   :: psi_in
        TYPE (psi_t),  intent(inout):: psi_out
-       TYPE(Op_t)  ,  intent(in)   :: H
+       TYPE(Basis_t)  ,  intent(in)   :: Basis
 
 
 
-       CALL calc_OpPsi(H,psi_in,psi_out)
+       !CALL calc_OpPsi(H,psi_in,psi_out)
+       CALL Calc_Hpsi(psi_in%CVec,psi_out%CVec,basis)
 
        psi_out%CVec(:)    = - EYE*psi_out%CVec(:)
 
 
     END SUBROUTINE mEyeHPsi
 
-    SUBROUTINE march(psi,psi_dt,H,t,propa)
+    SUBROUTINE march(psi,psi_dt,t,propa,Basis)
        USE op_m
        USE psi_m
-       TYPE(Op_t)     , INTENT(IN)     :: H
+       TYPE(Basis_t)     , INTENT(IN)   :: Basis
        TYPE (propa_t) , INTENT(IN)     :: propa
        TYPE (psi_t)   , INTENT(INOUT)  :: psi
        TYPE (psi_t)   , INTENT(INOUT)  :: psi_dt
@@ -279,12 +287,12 @@ contains
 
 
 
-
+       !ALLOCATE(psi_dt%CVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb  ))
        select case (propa%propa_name)
             case ('rk4')
-            CALL marh_RK4th(psi,psi_dt,H,t,propa)
+            CALL marh_RK4th(psi,psi_dt,t,propa,Basis)
             case ('taylor')
-            CALL  march_taylor(psi,psi_dt,H,t,propa)
+            CALL  march_taylor(psi,psi_dt,t,propa,Basis)
             case default
             write(out_unitp,*) 'name is not in the list'
        end select
@@ -335,10 +343,10 @@ contains
           w0    = (hbar*k0*k0)/(TWO*mass)
           v     = (hbar*k0)/mass
 
-          CALL init_psi(rho_ana,rho_ana%Basis,cplx=.TRUE.) ! to be changed
-          CALL init_psi(c1,c1%Basis,cplx=.TRUE.) ! to be changed
-          CALL init_psi(c2,c2%Basis,cplx=.TRUE.) ! to be changed
-          CALL init_psi(c4,c4%Basis,cplx=.TRUE.) ! to be changed
+          CALL init_psi(rho_ana,rho_ana%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
+          CALL init_psi(c1,c1%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
+          CALL init_psi(c2,c2%Basis,cplx=.TRUE. ,grid =.true.) ! to be changed
+          CALL init_psi(c4,c4%Basis,cplx=.TRUE.,grid =.true.) ! to be changed
 
           c0 = SQRT(PI/(alpha*alpha + EYE*(hbar*t)/(TWO*mass)))
           c1%CVec(:) = EYE*(k0*rho_ana%Basis%x(:)-w0*t)
@@ -347,7 +355,7 @@ contains
           c4%CVec(:) = c2%CVec(:)/c3
           rho_ana%CVec(:) = c0*EXP(c1%CVec(:))*EXP(c4%CVec(:))
 
-          CALL Calc_Norm_Grid(rho_ana, Norm1,rho_ana%Basis)
+          CALL Calc_Norm_Grid(rho_ana%CVec, Norm1,rho_ana%Basis)
           rho_ana%CVec(:) = rho_ana%CVec(:)/Norm1
 
         END SUBROUTINE ana_wp
@@ -364,12 +372,13 @@ contains
       USE psi_m
 
       TYPE(psi_t),INTENT(INOUT)     :: B,G
+      COMPLEX(KIND=Rk), ALLOCATABLE :: g1(:,:)
       TYPE(psi_t),INTENT(IN)        :: psi0
       TYPE(Basis_t)  ,INTENT(IN)    :: Basis
       INTEGER                       :: IQ , IB
 
        COMPLEX(KIND=Rk)             :: alpha0,gamma0
-       REAL(KIND= Rk)               :: k,mass, omega,Norm,Norm1
+       REAL(KIND= Rk)               :: k,mass, omega,Norm,Norm1,aa,bb
        REAL(kind=Rk)                 ::alpha,k0,phase,Q0,sig0,sigma
 
       OPEN(unit=11,file = 'norm' )
@@ -377,32 +386,44 @@ contains
       OPEN(unit=13,file = 'B' )
       !OPEN(unit=14,file = 'G1' )
 
-        !CALL init_psi(G,psi0%Basis,cplx=.TRUE.)
-        !CALL init_psi(B,psi0%Basis,cplx=.TRUE.)
-        !sigma = HALF
-      !  sig0 = TWO
+        sigma = HALF
+        sig0 = TWO
         k0 = ONE
-      !  phase = ZERO
+        phase = ZERO
         Q0 = ZERO
         alpha= TWO
-       !omega = SQRT(k/mass)
-       !alpha0 = HALF*EYE*mass*SQRT(k*mass)
+        mass = ONE
+
+        bb = (aa/PI)**(.25_Rk)
+        omega = SQRT(k/mass)
+        aa = mass*omega
+        alpha0 = HALF*EYE*mass*SQRT(k*mass)
+
+        ALLOCATE(g1(Basis%tab_basis(1)%nq, Basis%tab_basis(2)%nb))
+        gamma0     = -EYE*LOG((SQRT(mass*omega)/PI)**0.25_Rk)
+       ! g1(:,1) =bb*EXP(-0.5_Rk*(SQRT(aa)*(Basis%tab_basis(1)%x(:)-Q0))**2)
+        !g1(:,2) = g1(:,1)*Basis%tab_basis(1)%x(:)*SQRT(2*aa)
+        !G%CVec(:) = reshape( g1,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
+        G%CVec(:) =exp(-0.5_Rk*((Basis%tab_basis(1)%x(:)-Q0))**2)
+      !* EXP(EYE*k0*Basis%tab_basis(1)%x(:))
+        !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
+        !G%CVec(:) = G%CVec(:)/Norm
+       ! G%CVec(:)  = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-ONE)**2+EYE*gamma0))
+       ! G%CVec(:)  = SQRT(PI/alpha**2)*EXP(EYE*k0*((Basis%tab_basis(1)%x(:)-Q0)))
+        !G%CVec(:)  = G%CVec(:)*EXP(-((Basis%tab_basis(1)%x(:)-Q0)**2/(FOUR*alpha**2)))
+        !G%CVec(:)  = EXP(-((Basis%tab_basis(1)%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%tab_basis(1)%x(:))
+        !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
+        !G%CVec(:) = G%CVec(:)/Norm
+         !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%tab_basis(1)%x(:)-Q0))**2)
+         !G%CVec(:)  = G%CVec(:)*EXP(EYE*k0*(Basis%tab_basis(1)%x(:)-Q0)+ EYE*phase)
+        !G%CVec(:)  = CZERO
+         !G%CVec(:) = CONE
 
 
-      !  gamma0     = -EYE*LOG((SQRT(mass*omega)/PI)**0.25)
-        !G%CVec(:)  = EXP(EYE*alpha0*(G%Basis%x(:)-ONE)**2+EYE*gamma0)
-        !G%CVec(:)  =SQRT(PI/alpha**2)*EXP(EYE*k0*(G%Basis%x(:)-Q0))*EXP(-(G%Basis%x(:)-Q0)**2/(FOUR*alpha**2))
-        !G%CVec(:)  = EXP(-((Basis%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%x(:))
-        !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%x(:)-Q0)/sigma)**2)*EXP(EYE*k0*(Basis%x(:)-Q0)+ EYE*phase)
-        ! G%CVec(:)  = CZERO
-         G%CVec(:) = CONE
-          !write(out_unitp,*) 'G',G
-
-
-        !CALL Calc_Norm_Grid(G, Norm1,basis)
+        !CALL Calc_Norm_Grid(G%CVec, Norm1,basis)
         ! G%CVec(:) = G%CVec(:)/Norm1
-        !CALL Calc_Norm_Grid(G, Norm1,Basis)
-         DO  IQ = 1, G%Basis%nq
+        CALL Calc_Norm_Grid(G%CVec, Norm1,Basis)
+         DO  IQ = 1, Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
           write(12,*) IQ, ABS(G%CVec(IQ))**2
          ENDDO
        !CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,G%Basis)

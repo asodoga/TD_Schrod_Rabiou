@@ -11,7 +11,7 @@ module Op_m
     real (kind=Rk),    allocatable :: RMat(:,:)
   END TYPE Op_t
 
-  public :: Op_t,write_Op,Set_Op,dealloc_Op,calc_OpPsi,test_basitogridgridtobasis,Calc_Hpsi
+  public :: Op_t,write_Op,Set_Op,dealloc_Op,calc_OpPsi,Calc_Hpsi
 
 contains
   SUBROUTINE alloc_Op(Op,nb)
@@ -66,12 +66,13 @@ contains
 
    TYPE(Op_t),     intent(inout)       :: Op
    TYPE (Basis_t), intent(in),  target :: Basis
-   COMPLEX(kind=Rk)  ,ALLOCATABLE      :: d0bgw(:,:)
+   REAL(kind=Rk)  ,ALLOCATABLE      :: d0bgw(:,:)
 
 
    integer :: ib,iq,i2,j2
 
    real (kind=Rk), allocatable :: mat_pot_grid(:,:,:),OpPsi_g(:),OpPsi_ge(:,:),Q(:),V(:,:)
+    REAL(kind=Rk)              :: Q1
 
    IF (.NOT. Basis_IS_allocated(Basis)) THEN
      STOP 'ERROR in Set_Op: the Basis is not initialized'
@@ -89,13 +90,22 @@ contains
 
          Do iq=1,Basis%tab_basis(1)%nq
             Q=Basis%tab_basis(1)%x(iq)
-
-             CALL sub_pot(mat_pot_grid(iq,:,:),Q)
+            CALL sub_pot(mat_pot_grid(iq,:,:),Q)
          END DO
          DO iq=1,Op%Basis%nq
             Q = Op%Basis%x(iq)
             CALL sub_pot(V,Q)
          END DO
+
+    !=================================PRINT V(:,1,1)
+
+  Do iq=1,Basis%tab_basis(1)%nq
+
+
+write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,2),  mat_pot_grid(iq,2,2)
+ END DO
+
+  ! ==============================END PRINT V(:,1,1)
       allocate(  OpPsi_g(Basis%nb) ,  OpPsi_ge( Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb ) )
       OpPsi_g(:)   = 0
       OpPsi_ge( :,: ) = 0
@@ -116,8 +126,8 @@ contains
           DO iq=1,Basis%nq
              OpPsi_g(iq) = OpPsi_g(iq) - HALF/mass * Basis%tab_basis(1)%d2gb(iq,ib,1,1) ! -1/2mass d2./dx2 part
           END DO
-        CALL TRANSPOS(d0bgw,Basis%tab_basis(1))
-      Op%RMat(:,ib) = matmul(d0bgw,OpPsi_g)
+      !  CALL TRANSPOS(d0bgw,Basis%tab_basis(1))
+      Op%RMat(:,ib) = matmul(Basis%d0bgw,OpPsi_g)
     END DO
 
    CALL write_Op(Op)
@@ -152,77 +162,17 @@ contains
   END SUBROUTINE calc_OpPsi
 
 
-
-
-
-
-
-
-
-  SUBROUTINE test_basitogridgridtobasis(Basis,G,G1,B2,B1)
-  USE Basis_m
-  USE Molec_m
-    COMPLEX(kind=Rk),ALLOCATABLE            ::B(:),G2(:),G3(:)
-    COMPLEX(kind = Rk)   , INTENT(INOUT)    ::  G(:),G1(:),B2(:),B1(:)
-    TYPE(Basis_t),INTENT(IN)                :: Basis
-    logical,         parameter              :: debug = .false.
-    integer                                 :: ib,iq
-
-    IF (debug) THEN
-      write(out_unitp,*) 'test_basitogridgridtobasis'
-      flush(out_unitp)
-    END IF
-    open(unit=99, file='file_testgrid')
-      open(unit=100, file='file_testbasis')
-
-
-      allocate(  B(Basis%nb)  , G2( Basis%nq ) , G3( Basis%nq )   )
-
-      B(:) = CZERO
-      G2(:) = CZERO
-               print*, "=================================="
-
-      CALL GridTOBasis_Basis_cplx(B,G,Basis)
-               print*, "=================================="
-      CALL BasisTOGrid_Basis_cplx(G1,B,Basis)
-
-      !do iq = 1,Basis%nq
-        !   WRITE(99,*) iq,G(iq),G1(iq)
-        !end do
-              print*, "=================================="
-              !B1(:) = CZERO
-       CALL BasisTOGrid_Basis_cplx(G1,B2,Basis)
-           print*, "=================================="
-       CALL GridTOBasis_Basis_cplx(B2,G1,Basis)
-              print*, "=================================="
-      deallocate(B)
-      !deallocate(B1)
-      IF (debug) THEN
-        write(out_unitp,*) 'test_basitogridgridtobasis'
-        flush(out_unitp)
-      END IF
-  END SUBROUTINE test_basitogridgridtobasis
-
-
-
-
-
-
-
-
-
-
   SUBROUTINE Calc_Hpsi(psi_in,psi_out,Basis)
     USE Basis_m
     USE Molec_m
 
     COMPLEX(kind=Rk),intent(in)                   :: psi_in(:)
-      COMPLEX(kind=Rk),intent(inout) ,ALLOCATABLE :: psi_out(:)
+    COMPLEX(kind=Rk),intent(inout)              :: psi_out(:)
     TYPE (Basis_t), intent(in),  target           :: Basis
     COMPLEX(kind=Rk),ALLOCATABLE                  ::VPSI(:),KPSI(:), VPSIGB_E(:,:), KPSIGB_E(:,:),PSIGB_E(:,:)
-    COMPLEX(kind=Rk),ALLOCATABLE                  ::PSIBB_E(:,:),PSIBB(:),KPSIGB(:)
     REAL(kind=Rk), allocatable                    :: V(:,:,:), Q(:)
-    INTEGER                                       :: ib,iq,i2,j2,ib1
+    INTEGER                                       ::iq,i2,j2,i1
+     REAL(kind=Rk)                                :: Q1
 
 
       IF(.not. allocated(Basis%tab_basis)) THEN
@@ -231,54 +181,52 @@ contains
 
 
    ! calculation of action a potential VPSI_E.PSI
-     ALLOCATE(psi_out( Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
-     ALLOCATE(PSIBB(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+    ! ALLOCATE(psi_out( Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
      ALLOCATE(VPSI(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
      ALLOCATE(VPSIGB_E(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
-     ALLOCATE(KPSI(Basis%nb),KPSIGB(Basis%nb))
+     ALLOCATE(KPSI(  Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb  ))
      ALLOCATE(KPSIGB_E(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
      ALLOCATE(PSIGB_E(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
-     ALLOCATE(PSIBB_E(Basis%tab_basis(1)%nb,Basis%tab_basis(2)%nb))
      ALLOCATE(Q(1))
      ALLOCATE(V(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb,Basis%tab_basis(2)%nb))
+     write(*,*) "Basis%tab_basis(1)%nq",Basis%tab_basis(1)%nq
+
     Do iq=1,Basis%tab_basis(1)%nq
       Q=Basis%tab_basis(1)%x(iq)
 
       CALL sub_pot(V(iq,:,:),Q)
     END DO
-       CALL GridTOBasis_Basis_cplx(PSIBB,psi_in,Basis)
+
+
+    
       PSIGB_E(:,:)= reshape( psi_in,[Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb])
 
       VPSIGB_E(:,:) = 0
       KPSIGB_E(:,:) =0
-
-      PSIBB_E(:,:)= reshape( PSIBB,[Basis%tab_basis(1)%nb,Basis%tab_basis(2)%nb])
-
-    DO ib=1,Basis%nb
+        
         DO i2=1,Basis%tab_basis(2)%nb
         DO j2=1,Basis%tab_basis(2)%nb
-          DO ib1=1,Basis%tab_basis(2)%nb
-            WRITE(out_unitp,*) SHAPE(V(:,j2,i2)),SHAPE(PSIGB_E(:,i2))
-           VPSIGB_E(:,j2) = VPSIGB_E(:,j2) +  DOT_PRODUCT(  V(:,j2,i2), PSIGB_E(:,i2) )
-           KPSIGB_E(:,i2) = -HALF/mass * Basis%tab_basis(1)%d2gb(:,ib1,1,1)*PSIBB_E(ib1,i2)
 
 
-        END DO
-      END DO
-
+           VPSIGB_E(:,i2) = VPSIGB_E(:,i2) +   V(:,i2,j2)*PSIGB_E(:,j2)
 
         END DO
 
+        END DO
+       
+     DO i1=1,Basis%tab_basis(1)%nq
+     DO i2=1,Basis%tab_basis(2)%nb
+     KPSIGB_E(i1,i2) = -HALF/mass *DOT_PRODUCT( Basis%tab_basis(1)%d2gg(i1,:,1,1),PSIGB_E(:,i2))
 
+     END DO
 
-   END DO
+     END DO
+
+  !print*,  'SHAPE(VPSI(:))=',SHAPE(VPSI(:)),'SHAPE(KPSI(:))=',SHAPE(KPSI(:)),'SHAPE(psi_out(:))=',SHAPE(psi_out(:))
+    !STOP
      VPSI(:)= reshape( VPSIGB_E,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
-     KPSI(:)= reshape( KPSIGB_E,[Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb])
-     CALL BasisTOGrid_Basis_cplx(KPSIGB,KPSI,Basis%tab_basis(1))
-     psi_out(:) = VPSI(:)+KPSIGB(:)
-
-
-       !CALL Write_psi(psi_out)
+     KPSI(:)= reshape( KPSIGB_E,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
+     psi_out(:) = VPSI(:)+KPSI(:)
 
 
    DEALLOCATE(VPSI)
@@ -286,10 +234,7 @@ contains
    DEALLOCATE(KPSI)
    DEALLOCATE(KPSIGB_E)
    DEALLOCATE(PSIGB_E)
-   DEALLOCATE(PSIBB_E)
-   DEALLOCATE(psi_out)
-   DEALLOCATE(PSIBB)
-   DEALLOCATE(KPSIGB)
+   !DEALLOCATE(psi_out)
    DEALLOCATE(Q)
 
 
