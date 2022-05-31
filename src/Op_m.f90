@@ -92,20 +92,11 @@ contains
             Q=Basis%tab_basis(1)%x(iq)
             CALL sub_pot(mat_pot_grid(iq,:,:),Q)
          END DO
-         DO iq=1,Op%Basis%nq
-            Q = Op%Basis%x(iq)
-            CALL sub_pot(V,Q)
-         END DO
 
-    !=================================PRINT V(:,1,1)
-
-  Do iq=1,Basis%tab_basis(1)%nq
-
-
-write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,2),  mat_pot_grid(iq,2,2)
- END DO
-
-  ! ==============================END PRINT V(:,1,1)
+   ! ==============================END PRINT V(:,1,1)
+   do iq = 1,Basis%tab_basis(1)%nq
+           write(25,*) Basis%tab_basis(1)%x(iq),mat_pot_grid(iq,1,1)
+   end do
       allocate(  OpPsi_g(Basis%nb) ,  OpPsi_ge( Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb ) )
       OpPsi_g(:)   = 0
       OpPsi_ge( :,: ) = 0
@@ -162,7 +153,7 @@ write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,
   END SUBROUTINE calc_OpPsi
 
 
-  SUBROUTINE Calc_Hpsi(psi_in,psi_out,Basis)
+     SUBROUTINE Calc_Hpsi(psi_in,psi_out,Basis)
     USE Basis_m
     USE Molec_m
 
@@ -189,7 +180,7 @@ write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,
      ALLOCATE(PSIGB_E(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
      ALLOCATE(Q(1))
      ALLOCATE(V(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb,Basis%tab_basis(2)%nb))
-     write(*,*) "Basis%tab_basis(1)%nq",Basis%tab_basis(1)%nq
+     !write(*,*) "Basis%tab_basis(1)%nq",Basis%tab_basis(1)%nq
 
     Do iq=1,Basis%tab_basis(1)%nq
       Q=Basis%tab_basis(1)%x(iq)
@@ -198,12 +189,12 @@ write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,
     END DO
 
 
-    
+
       PSIGB_E(:,:)= reshape( psi_in,[Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb])
 
       VPSIGB_E(:,:) = 0
       KPSIGB_E(:,:) =0
-        
+
         DO i2=1,Basis%tab_basis(2)%nb
         DO j2=1,Basis%tab_basis(2)%nb
 
@@ -213,7 +204,7 @@ write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,
         END DO
 
         END DO
-       
+
      DO i1=1,Basis%tab_basis(1)%nq
      DO i2=1,Basis%tab_basis(2)%nb
      KPSIGB_E(i1,i2) = -HALF/mass *DOT_PRODUCT( Basis%tab_basis(1)%d2gg(i1,:,1,1),PSIGB_E(:,i2))
@@ -239,7 +230,6 @@ write(25,*)  Basis%tab_basis(1)%x(iq),  mat_pot_grid(iq,1,1), mat_pot_grid(iq,1,
 
 
   END SUBROUTINE Calc_Hpsi
-
 
 
 

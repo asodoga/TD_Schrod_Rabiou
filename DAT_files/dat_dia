@@ -1,6 +1,6 @@
 &basis_nd name='dp' nb_basis=2  /
-   &basis_nd name='boxAB' nb=25 nq=25 A = -10 B = 10/
+   &basis_nd name='HO' nb = 150 nq=150/
     &basis_nd name= 'el' nb=1/
 
-    &prop t0  = 0  tf  = 40  delta_t = 0.0001 eps= 0.0000000000001
+    &prop t0  = 0  tf  = 80 delta_t = 0.0001 eps= 0.0000000000001
       max_iter =  5000 propa_name = 'rk4'/

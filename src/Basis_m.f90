@@ -574,7 +574,7 @@ SUBROUTINE GridTOBasis_cplx(B,G,Basis)
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING GridTOBasis_Basis'
-     write(out_unitp,*) 'intent(in) G(:)',G
+    ! write(out_unitp,*) 'intent(in) G(:)',G
      !CALL Write_Basis(Basis)
      flush(out_unitp)
    END IF
@@ -606,7 +606,7 @@ SUBROUTINE GridTOBasis_cplx(B,G,Basis)
 
     END IF
      IF (debug) THEN
-      write(out_unitp,*) 'intent(OUT) B(:)',B
+      !write(out_unitp,*) 'intent(OUT) B(:)',B
        write(out_unitp,*) 'END GridTOBasis_Basis'
        flush(out_unitp)
      END IF
@@ -624,7 +624,7 @@ SUBROUTINE BasisTOGrid_cplx(G,B,Basis)
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING BasisTOGrid_Basis'
-     write(out_unitp,*) 'intent(in)  B(:)',B
+     !write(out_unitp,*) 'intent(in)  B(:)',B
     !   CALL Write_Basis(Basis)
     flush(out_unitp)
    END IF
@@ -656,7 +656,7 @@ SUBROUTINE BasisTOGrid_cplx(G,B,Basis)
 
 
  IF (debug) THEN
-     write(out_unitp,*) 'intent(OUT) G(:)',G
+    ! write(out_unitp,*) 'intent(OUT) G(:)',G
      write(out_unitp,*) 'END BasisTOGrid_Basis'
      flush(out_unitp)
  END IF

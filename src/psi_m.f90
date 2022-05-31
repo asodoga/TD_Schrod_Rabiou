@@ -139,11 +139,10 @@ contains
 
      Do ib2 = 1,Basis%tab_basis(2)%nb
             Norme(ib2) = sqrt(real(dot_product(G1(:,ib2)*Basis%tab_basis(1)%W,G1(:,ib2)), kind=Rk))
-
-        Norm = Norm+Norme(ib2)
+          Norm = Norm+Norme(ib2)
 
      END DO
-      Norm = SQRT(Norm)
+
      print*, Norm
      DEALLOCATE(G1)
       DEALLOCATE(Norme)

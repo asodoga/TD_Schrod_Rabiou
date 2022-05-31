@@ -12,10 +12,9 @@ PROGRAM TD_SCHROD
   TYPE(propa_t)          :: propa
   REAL(kind=Rk)          :: Norm ,E !,phase,sigma,k0,Q0,sig0
   TYPE(psi_t)                   :: G
-  TYPE(psi_t)                   :: B
-  integer                        :: iq
-  real(kind=Rk) , allocatable     :: V(:,:,:)
-!====================================================================
+  TYPE(psi_t)                   :: B ,diff
+  integer                       :: iq
+ !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
 
@@ -38,7 +37,7 @@ CALL init_psi(psif,Basis,  cplx=.TRUE.   ,grid =.true.) ! to be changed
 CALL init_psi(G   ,Basis,  cplx=.TRUE.   ,grid =.true.) ! to be changed
 CALL init_psi(B   ,Basis,  cplx=.TRUE.   ,grid =.false.) ! to be changed
 CALL init_psi(Hpsi   ,Basis,  cplx=.TRUE.,grid =.true.) ! to be changed
-allocate( V(Basis%tab_basis(1)%nq,2,2))
+  CALL init_psi(diff   ,Basis,  cplx=.TRUE.,grid =.true.) ! to be changed
  CALL initial_wp(B,psi0,G,Basis)
 
  CALL Write_psi(G)
@@ -46,22 +45,27 @@ allocate( V(Basis%tab_basis(1)%nq,2,2))
 
 
 
-  write(out_unitp,*) ' | H | Psi > calculation'
-   CALL Calc_Hpsi(G%CVec,Hpsi%CVec,Basis)
+ write(out_unitp,*) ' | H | Psi > calculation'
+  CALL Calc_Hpsi(G%CVec,Hpsi%CVec,Basis)
+  CALL Write_psi(Hpsi)
+  CALL Calc_average_energy(G,Basis,E)
   !CALL Set_op(H,Basis) ! to be change
   !CALL calc_OpPsi(H,psi,Hpsi)
-  CALL Write_psi(Hpsi)
-STOP 'calcul de Hpsi est fait'
-  !CALL ENERGY(B,H,E)
+  write(out_unitp,*) ' diff  calculation'
+  do iq = 1, Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
+      diff%CVec(iq) = Hpsi%CVec(iq)- E*G%CVec(iq)
+      write(*,*) iq , diff%CVec(iq)
+  end do
+
+!STOP 'calcul de Hpsi est fait'
+
  ! WRITE(14,*) E
-
-
   psi0%CVec(:) = G%CVec(:)
 
  ! Norm = sqrt(real(dot_product(psi0%CVec,psi0%CVec), kind=Rk))
 
   CALL read_propa(propa)
-  CALL propagation(psif,psi0,propa,Basis)
+ CALL propagation(psif,psi0,propa,Basis)
   CALL Write_psi(psif)
 
 

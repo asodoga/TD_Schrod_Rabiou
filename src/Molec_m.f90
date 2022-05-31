@@ -30,7 +30,7 @@ contains
                 Mat_V(:,:) = 0
             do i = 1, size(Mat_V(1,:))
 
-               Mat_V(i,i) = (Q(1)+i)**2
+               Mat_V(i,i) = 0.5_Rk*(Q(1)+i-1)**2
                 do j = 1, size(Mat_V(:,1))
                     if (abs(i-j)== 1) then
 

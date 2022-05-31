@@ -2,6 +2,7 @@ module Propa_m
      USE NumParameters_m
      USE psi_m
      USE Basis_m
+     USE Op_m
 
      implicit none
 
@@ -16,7 +17,7 @@ module Propa_m
 
     public :: propagation,march_taylor,marh_RK4th,read_propa,autocor_func
     public ::mEyeHPsi,write_propa,initial_wp,ana_wp,spectrum
-    public :: ENERGY
+    public :: Calc_average_energy
 contains
     SUBROUTINE propagation(psif,psi0,propa,Basis)
        USE op_m
@@ -393,10 +394,11 @@ contains
         Q0 = ZERO
         alpha= TWO
         mass = ONE
+        k = ONE
 
         bb = (aa/PI)**(.25_Rk)
         omega = SQRT(k/mass)
-        aa = mass*omega
+        aa = sqrt(mass*omega)
         alpha0 = HALF*EYE*mass*SQRT(k*mass)
 
         ALLOCATE(g1(Basis%tab_basis(1)%nq, Basis%tab_basis(2)%nb))
@@ -404,11 +406,13 @@ contains
        ! g1(:,1) =bb*EXP(-0.5_Rk*(SQRT(aa)*(Basis%tab_basis(1)%x(:)-Q0))**2)
         !g1(:,2) = g1(:,1)*Basis%tab_basis(1)%x(:)*SQRT(2*aa)
         !G%CVec(:) = reshape( g1,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
-        G%CVec(:) =exp(-0.5_Rk*((Basis%tab_basis(1)%x(:)-Q0))**2)
-      !* EXP(EYE*k0*Basis%tab_basis(1)%x(:))
+       ! G%CVec(:) =bb*exp(-0.5_Rk*((aa*Basis%tab_basis(1)%x(:)-Q0))**2)
+      !* EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
         !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
         !G%CVec(:) = G%CVec(:)/Norm
-       ! G%CVec(:)  = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-ONE)**2+EYE*gamma0))
+        G%CVec(:)  = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-Q0)**2+EYE*gamma0))*EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
+        Call Calc_Norm_Grid(G%CVec,Norm, Basis)
+        G%CVec(:) = G%CVec(:)/Norm
        ! G%CVec(:)  = SQRT(PI/alpha**2)*EXP(EYE*k0*((Basis%tab_basis(1)%x(:)-Q0)))
         !G%CVec(:)  = G%CVec(:)*EXP(-((Basis%tab_basis(1)%x(:)-Q0)**2/(FOUR*alpha**2)))
         !G%CVec(:)  = EXP(-((Basis%tab_basis(1)%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%tab_basis(1)%x(:))
@@ -443,20 +447,22 @@ contains
       END SUBROUTINE initial_wp
 
 
-      SUBROUTINE ENERGY(psi,H,E)
+      SUBROUTINE Calc_average_energy(psi,Basis,E)
         USE UtilLib_m
-        USE op_m
         USE psi_m
 
         TYPE (psi_t),  intent(in)       :: psi
-        TYPE(Op_t)  ,  intent(in)       :: H
         REAL(KIND= Rk)                  :: E
         TYPE (psi_t)                    :: Hpsi
+        Type(Basis_t), intent(in)       :: Basis
+        CALL init_psi(Hpsi   ,Basis,  cplx=.TRUE.,grid =.true.) ! to be changed
 
-            CALL calc_OpPsi(H,psi,Hpsi)
-            E= REAL(dot_product(psi%CVec(:),Hpsi%CVec(:)),KIND= Rk)
+            CALL Calc_Hpsi(psi%CVec,Hpsi%CVec,Basis)
+           ! E= REAL(dot_product(psi%CVec(:),Hpsi%CVec(:)),KIND= Rk)
+        Call Calc_Norm_Grid(Hpsi%CVec, E,Basis)
+          !write(*,*) 'average energy', E
 
-      End SUBROUTINE ENERGY
+      End SUBROUTINE Calc_average_energy
       SUBROUTINE autocor_func(psi_in,psi_out,ki,argki)
         USE UtilLib_m
         USE op_m
