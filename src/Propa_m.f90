@@ -396,9 +396,9 @@ contains
         mass = ONE
         k = ONE
 
-        bb = (aa/PI)**(.25_Rk)
+       ! bb = (aa/PI)**(.25_Rk)
         omega = SQRT(k/mass)
-        aa = sqrt(mass*omega)
+       ! aa = sqrt(mass*omega)
         alpha0 = HALF*EYE*mass*SQRT(k*mass)
 
         ALLOCATE(g1(Basis%tab_basis(1)%nq, Basis%tab_basis(2)%nb))

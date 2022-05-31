@@ -57,7 +57,7 @@ CALL init_psi(Hpsi   ,Basis,  cplx=.TRUE.,grid =.true.) ! to be changed
       write(*,*) iq , diff%CVec(iq)
   end do
 
-!STOP 'calcul de Hpsi est fait'
+STOP 'calcul de Hpsi est fait'
 
  ! WRITE(14,*) E
   psi0%CVec(:) = G%CVec(:)
