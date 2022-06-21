@@ -16,8 +16,8 @@ module Propa_m
     END TYPE propa_t
 
     public :: propagation,march_taylor,marh_RK4th,read_propa,autocor_func
-    public ::mEyeHPsi,write_propa,initial_wp,ana_wp,spectrum
-    public :: Calc_average_energy
+    public :: mEyeHPsi,write_propa,initial_wp,ana_wp,spectrum
+
 contains
     SUBROUTINE propagation(psif,psi0,propa,Basis)
        USE op_m
@@ -87,7 +87,7 @@ contains
              !CALL ana_wp(rho_ana,t)
              !CALL calc_rho(rho_ana,rho_num,rho)
              DO  IQ = 1,Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
-            WRITE(i+10,*) Basis%tab_basis(1)%x(IQ), ABS(psi_dt%CVec(IQ))**2
+            WRITE(i+10,*) iQ, ABS(psi_dt%CVec(IQ))**2
              ENDDO
               CLOSE(UNIT=i+10)
             ENDIF
@@ -236,11 +236,6 @@ contains
       !character(len=:),ALLOCATABLE   :: propa_name
       integer                        ::  max_iter
 
-
-
-
-
-
       namelist /prop/ t0,tf,delta_t ,eps,max_iter, propa_name
       t0  = ZERO
       tf  = 10._Rk
@@ -379,9 +374,9 @@ contains
       INTEGER                       :: IQ , IB
 
        COMPLEX(KIND=Rk)             :: alpha0,gamma0
-       REAL(KIND= Rk)               :: k,mass, omega,Norm,Norm1,aa,bb
+       REAL(KIND= Rk)               :: k,mass, omega,Norm1,aa,bb,dot_prdct,Norm
        REAL(kind=Rk)                 ::alpha,k0,phase,Q0,sig0,sigma
-
+        REAL(kind=Rk)                 :: Norm0(2)
       OPEN(unit=11,file = 'norm' )
       OPEN(unit=12,file = 'G' )
       OPEN(unit=13,file = 'B' )
@@ -403,16 +398,21 @@ contains
 
         ALLOCATE(g1(Basis%tab_basis(1)%nq, Basis%tab_basis(2)%nb))
         gamma0     = -EYE*LOG((SQRT(mass*omega)/PI)**0.25_Rk)
-       ! g1(:,1) =bb*EXP(-0.5_Rk*(SQRT(aa)*(Basis%tab_basis(1)%x(:)-Q0))**2)
-        !g1(:,2) = g1(:,1)*Basis%tab_basis(1)%x(:)*SQRT(2*aa)
-        !G%CVec(:) = reshape( g1,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
+        g1(:,1)    = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-Q0)**2+EYE*gamma0))*EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
+        g1(:,2)    =  g1(:,1)
+
+        G%CVec(:)  = reshape( g1,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
+        CALL Calc_dot_product(G%CVec,dot_prdct,Basis,.true.,.false.)
+        G%CVec(:)  =  G%CVec(:)/SQRT(dot_prdct)
+        CALL Calc_dot_product(G%CVec,dot_prdct,Basis,.true.,.true.)
        ! G%CVec(:) =bb*exp(-0.5_Rk*((aa*Basis%tab_basis(1)%x(:)-Q0))**2)
       !* EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
         !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
+       ! G%CVec(:) = G%CVec(:)/Norm
+        !G%CVec(:)  = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-Q0)**2+EYE*gamma0))*EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
+
+        !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
         !G%CVec(:) = G%CVec(:)/Norm
-        G%CVec(:)  = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-Q0)**2+EYE*gamma0))*EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
-        Call Calc_Norm_Grid(G%CVec,Norm, Basis)
-        G%CVec(:) = G%CVec(:)/Norm
        ! G%CVec(:)  = SQRT(PI/alpha**2)*EXP(EYE*k0*((Basis%tab_basis(1)%x(:)-Q0)))
         !G%CVec(:)  = G%CVec(:)*EXP(-((Basis%tab_basis(1)%x(:)-Q0)**2/(FOUR*alpha**2)))
         !G%CVec(:)  = EXP(-((Basis%tab_basis(1)%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%tab_basis(1)%x(:))
@@ -426,43 +426,60 @@ contains
 
         !CALL Calc_Norm_Grid(G%CVec, Norm1,basis)
         ! G%CVec(:) = G%CVec(:)/Norm1
-        CALL Calc_Norm_Grid(G%CVec, Norm1,Basis)
-         DO  IQ = 1, Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
-          write(12,*) IQ, ABS(G%CVec(IQ))**2
-         ENDDO
+        !CALL Calc_Norm_Grid(G%CVec, Norm1,Basis)
+        ! DO  IQ = 1, Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
+         !! ENDDO
        !CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,G%Basis)
         !write(out_unitp,*) 'B',B
-       CALL Calc_Norm(B, Norm)
+       !CALL Calc_Norm(B, Norm)
        !B%CVec(:) = B%CVec(:)/Norm
-       write(11,*) Norm1,Norm
-       DO  IB = 1, B%Basis%nb
-           write(13,*) IB, ABS(B%CVec(IB))**2
-         ENDDO
+       !write(11,*) Norm1,Norm
+       !DO  IB = 1, B%Basis%nb
+       !    write(13,*) IB, ABS(B%CVec(IB))**2
+        ! ENDDO
         !call BasisTOGrid_Basis_cplx(G%CVec, B%CVec,B%Basis)
             ! write(out_unitp,*) 'G',G
 
-           DO  IQ = 1, G%Basis%nq
-             write(14,*) G%Basis%x(IQ), ABS(B%CVec(IQ))**2
-          ENDDO
+          ! DO  IQ = 1, G%Basis%nq
+            ! write(14,*) G%Basis%x(IQ), ABS(B%CVec(IQ))**2
+          !ENDDO
       END SUBROUTINE initial_wp
 
 
-      SUBROUTINE Calc_average_energy(psi,Basis,E)
-        USE UtilLib_m
-        USE psi_m
 
-        TYPE (psi_t),  intent(in)       :: psi
-        REAL(KIND= Rk)                  :: E
-        TYPE (psi_t)                    :: Hpsi
-        Type(Basis_t), intent(in)       :: Basis
-        CALL init_psi(Hpsi   ,Basis,  cplx=.TRUE.,grid =.true.) ! to be changed
 
-            CALL Calc_Hpsi(psi%CVec,Hpsi%CVec,Basis)
-           ! E= REAL(dot_product(psi%CVec(:),Hpsi%CVec(:)),KIND= Rk)
-        Call Calc_Norm_Grid(Hpsi%CVec, E,Basis)
-          !write(*,*) 'average energy', E
 
+      SUBROUTINE Calc_average_energy(psi_in,Basis,E)
+      !======================================================
+      !
+      !     E = <Psi | H | Psi>
+      !
+      !======================================================
+      USE UtilLib_m
+      USE psi_m
+      USE Basis_m
+
+      TYPE (psi_t),  intent(in)                    :: psi_in
+      REAL(KIND= Rk) ,intent(inout)                :: E
+      TYPE (psi_t)                                 :: Hpsi,B,B1
+      Type(Basis_t), intent(in)                    :: Basis
+      REAL(KIND= Rk)                               :: dott
+
+      CALL init_psi(Hpsi,Basis,  cplx=.TRUE.,grid =.true.)
+      CALL init_psi(B ,Basis,    cplx=.TRUE.,grid   =.false.)
+      CALL init_psi(B1,Basis,    cplx=.TRUE.,grid   =.false.)
+
+      CALL Calc_Hpsi(psi_in%CVec,Hpsi%CVec,Basis)
+      CALL GridTOBasis_cplx(B%CVec,Hpsi%CVec,Basis)
+      CALL GridTOBasis_cplx(B1%CVec,psi_in%CVec,Basis)
+           dott =  real( dot_product(B1%CVec,B1%CVec),kind=Rk)
+
+           E = real( dot_product(B%CVec,B1%CVec),kind=Rk)
+           E = E/dott
+
+      print*,' E = <Psi | H | Psi> =',E, '<Psi | Psi> =',dott
       End SUBROUTINE Calc_average_energy
+
       SUBROUTINE autocor_func(psi_in,psi_out,ki,argki)
         USE UtilLib_m
         USE op_m
