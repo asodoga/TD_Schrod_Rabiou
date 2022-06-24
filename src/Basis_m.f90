@@ -1,5 +1,6 @@
 MODULE Basis_m
   USE NumParameters_m
+  USE NDindex_m
 
 
   IMPLICIT NONE
@@ -14,7 +15,6 @@ MODULE Basis_m
     integer                      :: nb_basis   = 0
     integer                      :: nb         = 0
     integer                      :: nq         = 0
-
     character(len=:),allocatable :: Basis_name
     real(kind=Rk),   allocatable :: x(:)
     real(kind=Rk),   allocatable :: w(:)
@@ -24,6 +24,8 @@ MODULE Basis_m
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
     real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
     real(kind=Rk),   allocatable :: d0bgw(:,:)     ! transpose of basis functions d0gb(nb,nq)
+    TYPE(NDindex_t)              :: NDindexq
+    TYPE(NDindex_t)              :: NDindexb
     TYPE (Basis_t),  allocatable :: tab_basis(:)   !  for more than one Basis.
   END TYPE Basis_t
 
@@ -156,6 +158,8 @@ CONTAINS
    !logical,             parameter      ::debug = .false.
     TYPE(Basis_t),       intent(inout)  :: Basis
     integer,             intent(in)     :: nio
+    integer, allocatable                :: NDend_q(:)
+    integer, allocatable                :: NDend_b(:)
     integer                             :: err_io,nb,nq,i,j,nb_basis
     character (len=Name_len)            :: name
     real(kind=Rk)                       :: A,B,scaleQ,Q0,d0,d2,X1,W1
@@ -194,6 +198,8 @@ CONTAINS
       Basis%Basis_name     = 'Dp'
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
       allocate(Basis%tab_basis(nb_basis))
+      allocate(NDend_q(nb_basis))
+      allocate(NDend_b(nb_basis))
       DO i=1,nb_basis
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
@@ -203,6 +209,13 @@ CONTAINS
         IF (Basis%tab_basis(i)%nq == 0) CYCLE
         Basis%nq = Basis%nq * Basis%tab_basis(i)%nq
       END DO
+
+      DO i=1,nb_basis
+        NDend_q(i)=Basis%tab_basis(i)%nq
+        NDend_b(i)=Basis%tab_basis(i)%nb
+      END DO
+      CALL Init_NDindex(Basis%NDindexq,NDend_q,nb_basis)
+      CALL Init_NDindex(Basis%NDindexb,NDend_b,nb_basis)
 
     ELSE
       Basis%nb_basis  = nb_basis
@@ -603,7 +616,6 @@ SUBROUTINE GridTOBasis_cplx(B,G,Basis)
 
       ELSE
         B = matmul(transpose(Basis%d0gb),Basis%w*G)
-
     END IF
      IF (debug) THEN
       !write(out_unitp,*) 'intent(OUT) B(:)',B

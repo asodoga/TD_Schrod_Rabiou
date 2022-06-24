@@ -27,11 +27,12 @@ SUBROUTINE Read_GWPmnD(paragwp,nio,ndim,nb_GWP)
 
 
    namelist/defGWP /I_ElecChannel ,Coef
-    I_ElecChannel=2 ;
-    Coef=CONE;
+
         allocate(paragwp%mnD(nb_GWP ))
         allocate(paragwp%Coef(nb_GWP ))
    do i = 1,nb_GWP,1
+       I_ElecChannel=1
+       Coef=CONE
         read(nio,nml=defGWP ,IOSTAT=err_io)
         paragwp%Coef(i) = Coef
        CALL Read_GWPnD(paragwp%mnD(i),nio,ndim)

@@ -16,7 +16,7 @@ module Propa_m
     END TYPE propa_t
 
     public :: propagation,march_taylor,marh_RK4th,read_propa,autocor_func
-    public :: mEyeHPsi,write_propa,initial_wp,ana_wp,spectrum
+    public :: mEyeHPsi,write_propa,ana_wp,spectrum
 
 contains
     SUBROUTINE propagation(psif,psi0,propa,Basis)
@@ -313,13 +313,6 @@ contains
     END SUBROUTINE write_propa
 
 
-
-
-
-
-
-
-
       SUBROUTINE ana_wp(rho_ana,t)
         USE NumParameters_m
           USE op_m
@@ -355,98 +348,6 @@ contains
           rho_ana%CVec(:) = rho_ana%CVec(:)/Norm1
 
         END SUBROUTINE ana_wp
-
-
-
-
-
-
-
-    SUBROUTINE initial_wp(B,psi0,G,Basis)
-      USE NumParameters_m
-      USE Basis_m
-      USE psi_m
-
-      TYPE(psi_t),INTENT(INOUT)     :: B,G
-      COMPLEX(KIND=Rk), ALLOCATABLE :: g1(:,:)
-      TYPE(psi_t),INTENT(IN)        :: psi0
-      TYPE(Basis_t)  ,INTENT(IN)    :: Basis
-      INTEGER                       :: IQ , IB
-
-       COMPLEX(KIND=Rk)             :: alpha0,gamma0
-       REAL(KIND= Rk)               :: k,mass, omega,Norm1,aa,bb,dot_prdct,Norm
-       REAL(kind=Rk)                 ::alpha,k0,phase,Q0,sig0,sigma
-        REAL(kind=Rk)                 :: Norm0(2)
-      OPEN(unit=11,file = 'norm' )
-      OPEN(unit=12,file = 'G' )
-      OPEN(unit=13,file = 'B' )
-      !OPEN(unit=14,file = 'G1' )
-
-        sigma = HALF
-        sig0 = TWO
-        k0 = ONE
-        phase = ZERO
-        Q0 = ZERO
-        alpha= TWO
-        mass = ONE
-        k = ONE
-
-       ! bb = (aa/PI)**(.25_Rk)
-        omega = SQRT(k/mass)
-       ! aa = sqrt(mass*omega)
-        alpha0 = HALF*EYE*mass*SQRT(k*mass)
-
-        ALLOCATE(g1(Basis%tab_basis(1)%nq, Basis%tab_basis(2)%nb))
-        gamma0     = -EYE*LOG((SQRT(mass*omega)/PI)**0.25_Rk)
-        g1(:,1)    = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-Q0)**2+EYE*gamma0))*EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
-        g1(:,2)    =  g1(:,1)
-
-        G%CVec(:)  = reshape( g1,[Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb])
-        CALL Calc_dot_product(G%CVec,dot_prdct,Basis,.true.,.false.)
-        G%CVec(:)  =  G%CVec(:)/SQRT(dot_prdct)
-        CALL Calc_dot_product(G%CVec,dot_prdct,Basis,.true.,.true.)
-       ! G%CVec(:) =bb*exp(-0.5_Rk*((aa*Basis%tab_basis(1)%x(:)-Q0))**2)
-      !* EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
-        !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
-       ! G%CVec(:) = G%CVec(:)/Norm
-        !G%CVec(:)  = EXP(EYE*alpha0*((Basis%tab_basis(1)%x(:)-Q0)**2+EYE*gamma0))*EXP(EYE*k0*aa*Basis%tab_basis(1)%x(:))
-
-        !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
-        !G%CVec(:) = G%CVec(:)/Norm
-       ! G%CVec(:)  = SQRT(PI/alpha**2)*EXP(EYE*k0*((Basis%tab_basis(1)%x(:)-Q0)))
-        !G%CVec(:)  = G%CVec(:)*EXP(-((Basis%tab_basis(1)%x(:)-Q0)**2/(FOUR*alpha**2)))
-        !G%CVec(:)  = EXP(-((Basis%tab_basis(1)%x(:)-Q0)/(2d0*sig0))**2)* EXP(EYE*k0*Basis%tab_basis(1)%x(:))
-        !Call Calc_Norm_Grid(G%CVec,Norm, Basis)
-        !G%CVec(:) = G%CVec(:)/Norm
-         !G%CVec(:)  = EXP(-(ONETENTH**3)*((Basis%tab_basis(1)%x(:)-Q0))**2)
-         !G%CVec(:)  = G%CVec(:)*EXP(EYE*k0*(Basis%tab_basis(1)%x(:)-Q0)+ EYE*phase)
-        !G%CVec(:)  = CZERO
-         !G%CVec(:) = CONE
-
-
-        !CALL Calc_Norm_Grid(G%CVec, Norm1,basis)
-        ! G%CVec(:) = G%CVec(:)/Norm1
-        !CALL Calc_Norm_Grid(G%CVec, Norm1,Basis)
-        ! DO  IQ = 1, Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb
-         !! ENDDO
-       !CALL GridTOBasis_Basis_cplx(B%CVec,G%CVec,G%Basis)
-        !write(out_unitp,*) 'B',B
-       !CALL Calc_Norm(B, Norm)
-       !B%CVec(:) = B%CVec(:)/Norm
-       !write(11,*) Norm1,Norm
-       !DO  IB = 1, B%Basis%nb
-       !    write(13,*) IB, ABS(B%CVec(IB))**2
-        ! ENDDO
-        !call BasisTOGrid_Basis_cplx(G%CVec, B%CVec,B%Basis)
-            ! write(out_unitp,*) 'G',G
-
-          ! DO  IQ = 1, G%Basis%nq
-            ! write(14,*) G%Basis%x(IQ), ABS(B%CVec(IQ))**2
-          !ENDDO
-      END SUBROUTINE initial_wp
-
-
-
 
 
       SUBROUTINE Calc_average_energy(psi_in,Basis,E)
