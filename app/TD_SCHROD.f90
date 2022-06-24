@@ -1,8 +1,11 @@
 PROGRAM TD_SCHROD
   USE NumParameters_m
   USE Basis_m
-  USE psi0_m
+  USE GWP1D_m
+  USE GWPnD_m
+  USE GWPmnD_m
   USE psi_m
+  USE psi0_m
   USE op_m
   USE Propa_m
   IMPLICIT NONE
@@ -12,9 +15,8 @@ PROGRAM TD_SCHROD
   TYPE(propa_t)               :: propa
   TYPE(psi_t)                 :: G
   TYPE(psi_t)                 :: B
-  real(Kind = Rk)             :: E,dot_prdct
-  TYPE(para_psi0_t)           :: paragwp0
-  integer                     :: nio
+  real(Kind = Rk)             :: E
+
  !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
@@ -31,13 +33,9 @@ CALL init_psi(psif,   Basis,    cplx=.TRUE.   ,grid =.true.) ! to be changed
 CALL init_psi(G   ,   Basis,    cplx=.TRUE.   ,grid =.true.) ! to be changed
 CALL init_psi(B   ,   Basis,    cplx=.TRUE.   ,grid =.false.) ! to be changed
 CALL init_psi(Hpsi   ,Basis,    cplx=.TRUE.   ,grid =.false.) ! to be changed
-   call Read_psi0(paragwp0,nio=in_unitp)
-  call write_psi0(paragwp0, in_unitp)
-
-   !call  GWP0(psi0,paragwp0,Basis)
-
-! call GWP0(psi0,para_psi0,Basis)
-  !CALL Calc_average_energy(psi0,Basis,E)
+call init_psi0(psi0,Basis,I_ElecChannel=3,ndim=1, nb_GWP= 3)
+  CALL Calc_average_energy(psi0,Basis,E)
+   !CALL Write_psi1(psi0,no=1)
 STOP 'calcul de Hpsi est fait'
 
   CALL read_propa(propa)

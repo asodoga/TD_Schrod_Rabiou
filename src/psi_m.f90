@@ -8,21 +8,6 @@ module psi_m
     real (kind=Rk),    allocatable :: RVec(:)
     complex (kind=Rk), allocatable :: CVec(:)
   END TYPE psi_t
-   TYPE  :: psi0_t
-     real(KIND=Rk)      ::Q0
-     real(KIND=Rk)      ::K
-     real(KIND=Rk)      ::phase
-     real(KIND=Rk)      ::dQ
-     integer            ::nb_GWP
-     integer            :: ndim
-     real(KIND=Rk)      :: Coef
-     integer            ::  I_ElecChannel
-     TYPE(psi0_t),allocatable   :: nd_psi0(:)
-
-   END TYPE  psi0_t
-
-
-
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm, Calc_Norm_Grid,Norm_psi,Calc_dot_product
   ! operation on psi has to be defined: psi=psi1, psi1+psi2, psi=psi1*cte ...
@@ -59,7 +44,7 @@ contains
   ELSE ! grid
     IF (cplx) THEN
      IF(allocated(Basis%tab_basis))THEN
-      allocate(psi%CVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+      allocate(psi%CVec(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
      else
       allocate(psi%CVec(Basis%nb))
      END IF

@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/src/GWP1D_m.f90/GWP1D_m.f90.iml" filepath="$PROJECT_DIR$/src/GWP1D_m.f90/GWP1D_m.f90.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/TD_Schrod_Rabiou.iml" filepath="$PROJECT_DIR$/.idea/TD_Schrod_Rabiou.iml" />
     </modules>
   </component>

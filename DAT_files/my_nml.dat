@@ -1,4 +1,0 @@
-&paragwp  nb_GWP = 1    ndim= 1/
-       &defGWP I_ElecChannel=2  scalar_coef=(1.,0.) /
-        &defWP0 DQ=0.2 Q0=0.0 k=0.0 phase=0. /
-         #&defWP0 DQ=0.2 Q0=0.0 k=0.0 phase=0. /
