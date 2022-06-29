@@ -10,6 +10,7 @@ module psi_m
   END TYPE psi_t
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,Calc_Norm, Calc_Norm_Grid,Norm_psi,Calc_dot_product
+   public :: write_psi1
   ! operation on psi has to be defined: psi=psi1, psi1+psi2, psi=psi1*cte ...
 contains
   SUBROUTINE init_psi(psi,Basis,cplx,grid)
@@ -27,30 +28,30 @@ contains
     IF (Basis%nb < 1) STOP 'ERROR in init_psi: Basis%nb < 1!'
 
     psi%Basis => Basis
-  If(grid)THEN
+  If(grid)THEN !allocation on grid
     IF (cplx) THEN
      IF(allocated(Basis%tab_basis))THEN
-      allocate(psi%CVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+      allocate(psi%CVec(Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb))
      else
       allocate(psi%CVec(Basis%nq))
      END IF
     ELSE
       IF(allocated(Basis%tab_basis))THEN
-        allocate(psi%RVec(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
+        allocate(psi%RVec(Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb))
       ELSE
         allocate(psi%RVec(Basis%nq))
       END IF
     END IF
-  ELSE ! grid
+  ELSE ! allocation on basis
     IF (cplx) THEN
      IF(allocated(Basis%tab_basis))THEN
-      allocate(psi%CVec(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
+      allocate(psi%CVec(Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb))
      else
       allocate(psi%CVec(Basis%nb))
      END IF
     ELSE
       IF(allocated(Basis%tab_basis))THEN
-        allocate(psi%RVec(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nb))
+        allocate(psi%RVec(Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb))
       ELSE
         allocate(psi%RVec(Basis%nb))
       END IF
@@ -225,6 +226,33 @@ SUBROUTINE Calc_dot_product(G, dot_prdct,Basis,grid,yes)
 
 
 END SUBROUTINE Calc_dot_product
+
+
+
+
+     SUBROUTINE write_psi1(psi,nio)
+    TYPE(psi_t), intent(in)  :: psi
+    integer,   intent(in)    :: nio
+    integer                   :: i
+
+    IF (associated(psi%Basis)) THEN
+      write(out_unitp,*) ' The basis is linked to psi.'
+    END IF
+
+    IF (allocated(psi%RVec)) THEN
+      write(nio,*) 'Writing psi (real):'
+      write(nio,*) psi%RVec
+      write(nio,*) 'END Writing psi'
+    END IF
+    IF (allocated(psi%CVec)) THEN
+      !write(nio,*) 'Writing psi (complex):'
+      do i=1, size(psi%CVec)
+      write(nio,*) i, abs(psi%CVec(i))**2
+      end do
+      !write(nio,*) 'END Writting psi'
+    END IF
+
+  END SUBROUTINE write_psi1
 
 
 end module psi_m

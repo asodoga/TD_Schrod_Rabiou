@@ -8,6 +8,7 @@ MODULE Basis_m
   PRIVATE
   PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_cplx, GridTOBasis_cplx
   PUBLIC :: Calc_dngg_grid,Basis_IS_allocatedtot,Calc_tranpose_d0gb,test_basitogridgridtobasis
+  PUBLIC:: BGnD_Basis_cplx,GBnD_Basis_cplx
 
 
 
@@ -203,10 +204,11 @@ CONTAINS
       DO i=1,nb_basis
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
-      Basis%nb = product(Basis%tab_basis(:)%nb)
-      Basis%nq = 0
-      DO i=1,nb_basis
-        IF (Basis%tab_basis(i)%nq == 0) CYCLE
+
+       Basis%nb =1
+       Basis%nq =1
+      DO i=1,nb_basis-1
+        Basis%nb = Basis%nb * Basis%tab_basis(i)%nb
         Basis%nq = Basis%nq * Basis%tab_basis(i)%nq
       END DO
 
@@ -331,16 +333,16 @@ CONTAINS
     real(kind = Rk):: pl0,pl1,pl2,norme,x
     integer        :: i,l
 
-    IF ( l .LT. 0 ) THEN
+    IF ( l < 0 ) THEN
        Write(out_unitp,*) 'Bad arguments in poly_hermite :'
        Write(out_unitp,*) ' l < 0 : ',l
        STOP
     END IF
        norme  =  sqrt(PI)
 
-    IF (l .EQ. 0) THEN
+    IF (l == 0) THEN
        poly_Hermite = ONE/sqrt(norme)
-    ELSE IF (l .EQ. 1) THEN
+    ELSE IF (l == 1) THEN
        norme = norme * TWO
        poly_Hermite = TWO * x/sqrt(norme)
     ELSE
@@ -366,7 +368,7 @@ CONTAINS
     real(kind = Rk)  :: a
     integer          :: i,n
 
-    IF (n .LE. 0) THEN
+    IF (n <= 0) THEN
        write(out_unitp,*) 'ERROR: gamma( n<=0)',n
        STOP
     END IF
@@ -415,7 +417,7 @@ CONTAINS
         CALL herrec ( p2, dp2, p1, x, nq )
         d = p2 / dp2
         x = x - d
-        IF ( ABS ( d ) .LE. eps * ( ABS ( x ) + ONE ) ) THEN
+        IF ( ABS ( d ) <= eps * ( ABS ( x ) + ONE ) ) THEN
           RETURN
         END IF
 
@@ -434,13 +436,13 @@ CONTAINS
    S = ( TWO * dble (real(nq,Kind=Rk) ) + ONE )**( SIXTH )
 
    DO i = 1, ( nq + 1 ) / 2
-     IF ( i .EQ. 1 ) THEN
+     IF ( i == 1 ) THEN
        x = s**3 - 1.85575_Rk / s
-     ELSE IF ( i .EQ. 2 ) THEN
+     ELSE IF ( i == 2 ) THEN
        x = x - 1.14_Rk * ( ( dble ( nq ) )**0.426_Rk ) / x
-     ELSE IF ( i .EQ. 3 ) THEN
+     ELSE IF ( i == 3 ) THEN
        x = 1.86_Rk * x - 0.86_Rk * xp(1)
-     ELSE IF ( i .EQ. 4 ) THEN
+     ELSE IF ( i == 4 ) THEN
        x = 1.91_Rk * x - 0.91_Rk * xp(2)
      ELSE
        x = TWO * x - xp(i-2)
@@ -470,13 +472,13 @@ CONTAINS
 
    IF (deriv) THEN
       d0gb = poly_Hermite( x,l)
-      IF (l .EQ. 0) THEN
+      IF (l == 0) THEN
         d1gb     = ZERO
         d2gb     = ZERO
-      ELSE IF (l .EQ. 1) THEN
+      ELSE IF (l == 1) THEN
         d1gb = sqrt(TWO)*poly_Hermite( x,0)
         d2gb = ZERO
-      ELSE IF (l .EQ. 2) THEN
+      ELSE IF (l == 2) THEN
         d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
         d2gb = TWO*( x*d1gb-d0gb *l)
       ELSE
@@ -600,10 +602,10 @@ SUBROUTINE GridTOBasis_cplx(B,G,Basis)
    END IF
       IF(allocated(Basis%tab_basis)) THEN
 
-       IBB0 = 1
-       IGB0 = 1
+       IBB0 = 1 !index on electronic state
+       IGB0 = 1 !index on electronic state
 
-        DO ib2=1,Basis%tab_basis(2)%nb
+        DO ib2=1,Basis%tab_basis(size(Basis%tab_basis))%nb
           IBB1 = IBB0 + Basis%tab_basis(1)%nb-1
           IGB1 = IGB0 + Basis%tab_basis(1)%nq-1
 
@@ -674,6 +676,97 @@ SUBROUTINE BasisTOGrid_cplx(G,B,Basis)
  END IF
 
 END  SUBROUTINE BasisTOGrid_cplx
+
+
+    SUBROUTINE BGnD_Basis_cplx(G,B,Basis)
+  USE UtilLib_m
+  USE NDindex_m
+    !logical,           parameter        :: debug = .true.
+    logical,          parameter          :: debug = .false.
+    TYPE(Basis_t),     intent(in)        :: Basis
+    complex(kind=Rk),     intent(in)     :: B(:)
+    complex(kind=Rk),     intent(inout)  :: G(:)
+    real(kind=Rk)                        :: W
+    logical                              :: Endloop_q
+    logical                              :: Endloop_b
+    integer,         allocatable         :: tab_iq(:)
+    integer,         allocatable         :: tab_ib(:)
+    integer                              :: ib,iq,nq,nb,inb
+    integer                              :: jb,jb1,jb2
+
+     Allocate(Tab_ib( size(Basis%tab_basis )-1))
+     Allocate(Tab_iq(size(Basis%tab_basis)-1))
+     Call Init_tab_ind(Tab_iq,Basis%NDindexq)
+     Iq=0
+     DO
+      Iq=Iq+1
+      CALL increase_NDindex(Tab_iq,Basis%NDindexq,Endloop_q)
+      IF (Endloop_q) exit
+      G(iq)=ZERO
+      Call Init_tab_ind(Tab_ib,Basis%NDindexb)
+      Ib=0
+      DO
+       Ib=Ib+1
+       CALL increase_NDindex(Tab_ib,Basis%NDindexb,Endloop_b)
+       IF (Endloop_b) exit
+       W=ONE
+       DO inb=1,size(Basis%tab_basis) -1
+        W=W* Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+       END DO
+       G(iq) =G(iq)+W*B(ib)
+      END DO
+     END DO
+     Deallocate(Tab_ib)
+     Deallocate(Tab_iq)
+  END SUBROUTINE BGnD_Basis_cplx
+
+  SUBROUTINE GBnD_Basis_cplx(B,G,Basis)
+  USE UtilLib_m
+    !logical,          parameter         :: debug = .true.
+    logical,         parameter           :: debug = .false.
+    TYPE(Basis_t),    intent(in)         :: Basis
+    complex(kind=Rk),    intent(in)      :: G(:)
+    complex(kind=Rk),    intent(inout)   :: B(:)
+    logical                              :: Endloop_q
+    logical                              :: Endloop_b
+    real(kind=Rk)                        :: WT,W
+    integer,        allocatable          :: tab_iq(:)
+    integer,        allocatable          :: tab_ib(:)
+    integer                              :: ib,iq,iq1,iq2,inb
+    integer                              :: jb,ib1,ib2,jb1,jb2
+
+
+      Allocate(Tab_ib(size(Basis%tab_basis)-1))
+     Allocate(Tab_iq(size(Basis%tab_basis)-1))
+     Call Init_tab_ind(Tab_ib,Basis%NDindexb)
+     Ib=0
+     DO
+      Ib=Ib+1
+      CALL increase_NDindex(Tab_ib,Basis%NDindexb,Endloop_b)
+      IF (Endloop_b) exit
+      B(ib)=ZERO
+      Call Init_tab_ind(Tab_iq,Basis%NDindexq)
+      Iq=0
+      DO
+        Iq=Iq+1
+        CALL increase_NDindex(Tab_iq,Basis%NDindexq,Endloop_q)
+        IF (Endloop_q) exit
+        WT=1
+        W=1
+        DO inb=1,size(Basis%tab_basis)-1
+         WT= WT *Basis%tab_basis(inb)%w(tab_iq(inb))
+         W=W*Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+        END DO
+        B(ib)=B(ib)+W*WT*G(iq)
+      END DO
+     END DO
+     Deallocate(Tab_ib)
+     Deallocate(Tab_iq)
+
+
+  END SUBROUTINE GBnD_Basis_cplx
+
+
 
 
 
