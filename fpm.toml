@@ -8,5 +8,6 @@ copyright = "Copyright 2022, Jane Doe"
 auto-executables = true
 auto-tests = true
 auto-examples = true
+link = ["blas", "lapack"]
 [install]
 library = false

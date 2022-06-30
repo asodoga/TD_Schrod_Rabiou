@@ -1,3 +1,9 @@
+
+&potential
+  pot_name='Morse' ! potential surface name
+  option=1
+/
+
 &basis_nd name='dp' nb_basis=2/
    &basis_nd name='HO' nb = 50 nq=100/
 

@@ -889,5 +889,43 @@ END SUBROUTINE Calc_dngg_grid
 END SUBROUTINE test_basitogridgridtobasis
 
 
+    SUBROUTINE Calc_d0ndgb(d0ngb,w_t,Basis)
+
+        real(kind=Rk),   allocatable,intent(inout)    :: d0ngb(:,:)
+        real(kind=Rk),   allocatable,intent(inout)    :: w_t(:)
+        Type(Basis_t),intent(in)                      :: Basis
+       logical                                        :: Endloop_q
+       logical                                        :: Endloop_b
+       integer,        allocatable                    :: tab_iq(:)
+       integer,        allocatable                    :: tab_ib(:)
+       integer                                        :: ib,iq,inb
+       
+          Allocate(Tab_ib(size(Basis%tab_basis)-1))
+          Allocate(Tab_iq(size(Basis%tab_basis)-1))
+          Allocate(d0ngb(Basis%nq,Basis%nb))
+          Allocate(w_t(Basis%nq))
+          Call Init_tab_ind(Tab_ib,Basis%NDindexb)
+          Ib=0
+          DO
+             Ib=Ib+1
+             CALL increase_NDindex(Tab_ib,Basis%NDindexb,Endloop_b)
+             IF (Endloop_b) exit
+                 Call Init_tab_ind(Tab_iq,Basis%NDindexq)
+                 Iq=0
+               DO
+                 Iq=Iq+1
+                 CALL increase_NDindex(Tab_iq,Basis%NDindexq,Endloop_q)
+                 IF (Endloop_q) exit
+                    w_t=1
+                    d0ngb(:,:) = 1
+                    DO inb=1,size(Basis%tab_basis)-1
+                        w_t(iq)= w_t(iq) *Basis%tab_basis(inb)%w(tab_iq(inb))
+                        d0ngb(iq,ib)= d0ngb(iq,ib)*Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+                    END DO
+               END DO
+          END DO
+          Deallocate(Tab_ib)
+          Deallocate(Tab_iq)
+    END SUBROUTINE Calc_d0ndgb
 
 END MODULE Basis_m

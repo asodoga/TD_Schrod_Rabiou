@@ -3,6 +3,7 @@ PROGRAM TD_SCHROD
   USE GWPnD_m
   USE Basis_m
   USE psi_m
+  Use Molec_m
   !USE psi0_m
   USE Propa_m
   IMPLICIT NONE
@@ -11,8 +12,28 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)                :: psi0,psif
   TYPE(propa_t)               :: propa
   real(Kind = Rk)             :: E
- ! type(GWPnD_t)               paragwp
+   REAL(kind=Rk),allocatable  :: Mat_V(:,:)
 
+!====================================================================
+  ! for QML
+  integer :: ndim,nsurf,option
+  logical :: adiabatic
+  character (len=16)                  :: pot_name
+
+  ndim      = 0
+  nsurf     = 0
+  pot_name  = 'read_model'
+  adiabatic = .FALSE.
+  option    = 1
+  CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
+   write(out_unitp,*)'ndim,nsurf',ndim,nsurf
+  write(out_unitp,*) 'pot_name',pot_name
+
+  allocate(Mat_V(nsurf,nsurf))
+  call sub_pot(Mat_V,[1._Rk])
+  write(out_unitp,*) 'pot_name',pot_name
+
+stop
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module

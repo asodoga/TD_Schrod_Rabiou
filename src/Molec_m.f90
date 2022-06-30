@@ -4,6 +4,7 @@ module Molec_m
   private
 
   real(kind=Rk) :: mass = ONE
+  integer :: potential_type = 1 !0 internal,1 QLM,2 options
 
   public :: Calc_pot,mass,sub_pot
 
@@ -25,8 +26,13 @@ contains
        INTEGER                        :: i,j
        !REAL(kind=Rk), intent(in)      :: Q
 
+
         !IF (size(Q) /= 1) STOP 'wrong dimension'
         !IF (size(Mat_V,dim=1) /= 2) STOP 'wrong number of electronic state'
+
+       SELECT CASE (potential_type)
+   CASE (0)
+
                 Mat_V(:,:) = 0
             do i = 1, size(Mat_V(1,:))
 
@@ -40,12 +46,13 @@ contains
                  end do
             end do
 
-               !Mat_V(1,1) = (Q(1)-1)**2
-
-               !Mat_V(2,2) = (Q(1)+1)**2
-
-              ! Mat_V(1,2) = 0.001*Q(1)
-               !Mat_V(2,1) = 0.001*Q(1)
+   CASE (1) !QML
+     CALL sub_Qmodel_V(Mat_V,Q)
+   CASE (2)!QML
+      stop "ERROR potential_type=2 not define"
+      CASE DEFAULT
+      stop "no default in sub_pot"
+END SELECT
 
 
   END SUBROUTINE sub_pot
