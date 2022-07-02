@@ -33,7 +33,7 @@ PROGRAM TD_SCHROD
   call sub_pot(Mat_V,[1._Rk])
   write(out_unitp,*) 'pot_name',pot_name
 
-stop
+!stop
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
@@ -45,7 +45,7 @@ CALL init_psi(psi0,   Basis,    cplx=.TRUE.   ,grid =.true.)
 CALL init_psi(psif,   Basis,    cplx=.TRUE.   ,grid =.true.)
 CALL init_psi(Hpsi   ,Basis,    cplx=.TRUE.   ,grid =.false.)
  !call Init_GWP_parameters(Mparagwp,Basis,nb_GWP=2,nio=in_unitp)
- call  init_psi0_nD(psi0%CVec,Basis,NDend=[100],nio=in_unitp)
+ call  init_psi0_nD(psi0%CVec,Basis,Basis%NDindexq%NDend,nio=in_unitp)
     call write_psi1(psi0,1)
  call Calc_average_energy(psi0,Basis,E)
 STOP 'calcul de Hpsi est fait'

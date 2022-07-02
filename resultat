@@ -1,1 +1,0 @@
- + gfortran  -fopenmp /home/elprof/QuantumModelLib/libpot.a  build/gfortran_E4EA1B9005DB79BA/TD_SCHROD/app_TD_SCHROD.f90.o build/gfortran_E4EA1B9005DB79BA/TD_SCHROD/libTD_SCHROD.a -lblas -llapack -o build/gfortran_E4EA1B9005DB79BA/app/TD_SCHROD
