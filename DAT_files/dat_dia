@@ -4,11 +4,10 @@
   option=1
    /
 
-&basis_nd name='dp' nb_basis=2/
+&basis_nd name='dp' nb_basis=3/
    &basis_nd name='HO' nb = 5 nq=5/
-
-
-    &basis_nd name= 'el' nb=1/
+   &basis_nd name='HO' nb = 5 nq=5/
+          &basis_nd name= 'el' nb=1/
 
 
    &defGWP I_ElecChannel=2 Coef=(1.,0.) /

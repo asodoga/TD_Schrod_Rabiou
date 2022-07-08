@@ -195,23 +195,23 @@ SUBROUTINE Calc_dot_product(G, dot_prdct,Basis,grid,yes)
   REAL(kind = Rk),intent(inout)                :: dot_prdct
   LOGICAL                                      :: grid,yes
   TYPE (Basis_t), INTENT(IN)                   ::  Basis
-  INTEGER                                      :: i_state
+  INTEGER                                      :: i_state,Ndim
 
 
   !=====================================<psi|psi>======================================
 
   !===================================allocation========================================
-
+    Ndim = size(Basis%tab_basis)-1
     if(grid)THEN
-        ALLOCATE(G1(Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb))
-        G1(:,:) = RESHAPE(G,SHAPE= [Basis%tab_basis(1)%nq,Basis%tab_basis(2)%nb])
+        ALLOCATE(G1(Basis%nq,Basis%tab_basis(Ndim+1)%nb))
+        G1(:,:) = RESHAPE(G,SHAPE= [Basis%nq,Basis%tab_basis(Ndim+1)%nb])
 
 
-  !================================Calculation dot_product for each state=================
+    !================================Calculation dot_product for each state=================
         dot_prdct= ZERO
 
-            Do i_state = 1,Basis%tab_basis(2)%nb
-              dot_prdct = dot_prdct+real(dot_product(G1(:,i_state)*Basis%tab_basis(1)%W,G1(:,i_state)), kind=Rk)
+            Do i_state = 1,Basis%tab_basis(Ndim+1)%nb
+              dot_prdct = dot_prdct+real(dot_product(G1(:,i_state)*Basis%W,G1(:,i_state)), kind=Rk)
 
             END DO
 

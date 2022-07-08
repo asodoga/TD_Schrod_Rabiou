@@ -11,7 +11,7 @@ TYPE  ::  GWPnD_t ! gaussian nD (ndim)
      integer                         :: ndim
      type(GWP1D_t),allocatable       :: nD(:) ! ndim
 END TYPE   GWPnD_t
-public::  Read_GWPnD,Write_GWPnD ,Tab_GWPnD,Calc_Q_grid,init_psi0_nD
+public::  Read_GWPnD,Write_GWPnD ,Tab_GWPnD,init_psi0_nD
 
 
 contains
@@ -64,28 +64,11 @@ END SUBROUTINE Read_GWPnD
         psi0nD = product(TabGWPnD)
         END SUBROUTINE Tab_GWPnD
 
-
-
-    SUBROUTINE Calc_Q_grid(Q,Basis,Tab_iq,ndim)
-        implicit none
-        TYPE (Basis_t)  ,intent(in)                        :: Basis
-        integer ,intent(in)                                :: Tab_iq(:)
-         integer                                           :: i
-         integer     ,intent(in)                           :: ndim
-         real(Kind = Rk), intent(inout)                    ::Q(:)
-
-
-        do i = 1,ndim
-          Q(i) = Basis%tab_basis(i)%X(Tab_iq(i))
-        end do
-
-    END SUBROUTINE Calc_Q_grid
-
     SUBROUTINE init_psi0_nD(psi0_nD,Basis,NDend,nio)
         implicit none
         TYPE (Basis_t)  ,intent(in)                          :: Basis
         complex(Kind = Rk), intent(inout)                    ::psi0_nD(:)
-         real(Kind= Rk), allocatable                         ::Q(:)
+         real(Kind= Rk), allocatable                         ::Q(:,:)
          type(GWPnD_t)                                       :: paragwp
         TYPE (NDindex_t)                                     :: NDindex
         complex(kind=Rk)                                     :: psi0nD
@@ -94,11 +77,11 @@ END SUBROUTINE Read_GWPnD
          logical                                             ::Endloop
          integer ,allocatable                                :: Tab_iq(:)
         integer,intent(in)                                   :: NDend(:)
-
+        call calc_Q_grid(Q,Basis)
         call    Read_GWPnD(paragwp,nio,Basis)
         call    Write_GWPnD(paragwp)
         allocate(Tab_iq(paragwp%ndim))
-        allocate(Q(paragwp%ndim))
+       ! allocate(Q(paragwp%ndim))
         CALL Init_NDindex(NDindex,NDend,paragwp%ndim)
        Call Init_tab_ind(Tab_iq,NDindex)
        Iq=0
@@ -106,8 +89,7 @@ END SUBROUTINE Read_GWPnD
            Iq=Iq+1
            CALL increase_NDindex(Tab_iq,NDindex,Endloop)
            IF (Endloop) exit
-           call calc_Q_grid(Q,Basis,Tab_iq,paragwp%ndim)
-           call Tab_GWPnD(paragwp,Q,psi0_nD(iq))
+           call Tab_GWPnD(paragwp,Q(iq,:),psi0_nD(iq))
 
           END DO
 
