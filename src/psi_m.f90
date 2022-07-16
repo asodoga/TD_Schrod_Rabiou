@@ -1,6 +1,6 @@
 module psi_m
   USE NumParameters_m
-  USE Basis_m, only : Basis_t
+  USE Basis_m
   implicit none
 
   TYPE :: psi_t
@@ -97,24 +97,15 @@ contains
   END SUBROUTINE write_psi
 
 
-  SUBROUTINE Calc_Norm(psi, Norm)
-  TYPE (psi_t),  intent(in)     :: psi
+  SUBROUTINE Calc_Norm(psi_g, Norm,Basis)
+  TYPE (psi_t),  intent(in)     :: psi_g
+  TYPE (Basis_t),  intent(in)   :: Basis
+   type(Psi_t)                  ::psi_b
   real(kind = Rk),intent(inout) :: Norm
-
-  !IF (allocated(psi%CVec)) THEN
-  !Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
-  !END IF
-
-  IF (allocated(psi%CVec)) THEN
-   Norm = sqrt(real(dot_product(psi%CVec,psi%CVec), kind=Rk))
-  END IF
-
-
-  !IF (allocated(psi%RVec)) THEN
-   !Norm = sqrt(dot_product(psi%RVec,psi%RVec), kind=Rk)
-  !END IF
-  !write(out_unitp,*) 'norm,psi',Norm
-
+  CALL init_psi(Psi_b,   Basis,    cplx=.TRUE.   ,grid =.false.)
+   call GridTOBasis_nD_cplx(Psi_b%CVec,Psi_g%CVec,Basis)
+  Norm = sqrt(real(dot_product(psi_b%CVec,psi_b%CVec), kind=Rk))
+ ! write(out_unitp,*) 'norm,psi',Norm
   END SUBROUTINE Calc_Norm
 
 
@@ -201,16 +192,16 @@ SUBROUTINE Calc_dot_product(G, dot_prdct,Basis,grid,yes)
   !=====================================<psi|psi>======================================
 
   !===================================allocation========================================
-    Ndim = size(Basis%tab_basis)-1
+    Ndim = size(Basis%tab_basis)
     if(grid)THEN
-        ALLOCATE(G1(Basis%nq,Basis%tab_basis(Ndim+1)%nb))
-        G1(:,:) = RESHAPE(G,SHAPE= [Basis%nq,Basis%tab_basis(Ndim+1)%nb])
+        ALLOCATE(G1(Basis%nq,Basis%tab_basis(Ndim)%nb))
+        G1(:,:) = RESHAPE(G,SHAPE= [Basis%nq,Basis%tab_basis(Ndim)%nb])
 
 
     !================================Calculation dot_product for each state=================
         dot_prdct= ZERO
 
-            Do i_state = 1,Basis%tab_basis(Ndim+1)%nb
+            Do i_state = 1,Basis%tab_basis(Ndim)%nb
               dot_prdct = dot_prdct+real(dot_product(G1(:,i_state)*Basis%W,G1(:,i_state)), kind=Rk)
 
             END DO

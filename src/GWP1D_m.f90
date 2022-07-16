@@ -61,7 +61,8 @@ contains
         complex(kind=Rk),intent(inout)                      :: psi01D
         real(kind=Rk) ,intent(in)                           :: Q
 
-         psi01D= exp(-((Q-paragwp1D%Q0)/paragwp1D%DQ)**2 + EYE*paragwp1D%K*(Q-paragwp1D%Q0) +EYE*paragwp1D%phase)
+         psi01D= sqrt(2/(PI*paragwp1D%DQ**2))*exp(-((Q-paragwp1D%Q0)/paragwp1D%DQ)**2 + &
+                 &EYE*paragwp1D%K*(Q-paragwp1D%Q0) +EYE*paragwp1D%phase)
     END SUBROUTINE GWP01D
 
 end module GWP1D_m

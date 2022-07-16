@@ -11,12 +11,7 @@ MODULE Basis_m
   PUBLIC :: GridTOBasis_nD_cplx,BasisTOGrid_nD_cplx
   PUBLIC ::  BasisTOGrid_1D_cplx, GridTOBasis_1D_cplx
   PUBLIC::   gb2D,bg2D,Calc_Q_grid
-  type :: phi_t1
-      complex(kind=Rk),   allocatable :: psi(:)
-  end type phi_t1
-  type :: phi_t
-       complex(kind=Rk), pointer:: psi_xxx(:,:,:)
-  end type phi_t
+  PUBLIC::Calc_iqib
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -747,15 +742,15 @@ END SUBROUTINE Calc_dngg_grid
   SUBROUTINE test_basitogridgridtobasis(Basis)
   USE NumParameters_m
   USE UtilLib_m
-    TYPE(Basis_t),    intent(in)    :: Basis
-    logical,          parameter     :: debug = .true.
+    TYPE(Basis_t),    intent(in)       :: Basis
+    logical,          parameter        :: debug = .true.
     COMPLEX(kind=Rk),    allocatable   :: G1(:),B1(:)!,G(:), Hpsi(:)
     COMPLEX(kind=Rk),    allocatable   :: G2(:),B2(:)
     COMPLEX(kind=Rk),    allocatable   :: B(:)
-    REAL(kind=Rk),    allocatable   :: diff_g(:),diff_b(:)
+    REAL(kind=Rk),    allocatable       :: diff_g(:),diff_b(:)
     !REAL(KIND=Rk)                      :: Norm0,Norm1,min_diff,max_diff
-    integer                         :: iq,ndim
-   ndim = size(Basis%tab_basis)
+    integer                             :: iq,ndim
+    ndim = size(Basis%tab_basis)
 
 
     IF (debug) THEN
@@ -764,12 +759,7 @@ END SUBROUTINE Calc_dngg_grid
     END IF
 
     allocate(B(Basis%nb*Basis%tab_basis(ndim)%nb))
-  !print*,"shape(B)=",shape(B)
-
-
     allocate(G1(Basis%nq*Basis%tab_basis(ndim)%nb))
-  !  allocate(G(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
-    !allocate(Hpsi(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb))
     allocate(diff_g(Basis%nq*Basis%tab_basis(ndim)%nb))
     allocate(diff_b(Basis%nb*Basis%tab_basis(ndim)%nb))
     allocate(G2(Basis%nq*Basis%tab_basis(ndim)%nb))
@@ -780,16 +770,9 @@ END SUBROUTINE Calc_dngg_grid
     B1(:)=CONE
     G1(:)=CONE
     G2(:)=CZERO
-
-     do iq =1, Basis%nq
-             write(*,*) iq, G1(iq)
-     end do
-    Call gb2D(B,G1,Basis)
-   Call bg2D(G2,B,Basis)
+    Call GridTOBasis_nD_cplx(B,G1,Basis)
+   Call BasisTOGrid_nD_cplx(G2,B,Basis)
    print*,'##############################################################'
-     do iq =1, Basis%nq
-      write(*,*) iq, G2(iq)
-     end do
 
     diff_g(:) = ABS(G1(:)-G2(:))
 
@@ -797,15 +780,12 @@ END SUBROUTINE Calc_dngg_grid
      Write(out_unitp,*) 'maxval(diff_g(:))=',maxval(diff_g(:))
      Write(out_unitp,*) 'MINVAL(diff_g(:))=',MINVAL(diff_g(:))
        print*,'##############################################################'
-
-      !Call BasisTOGrid_nD_cplx(G1,B1,Basis)
       G2(:)=CZERO
-      B(:)=CONE
-      B1(:)=CZERO
-      Call bg2D(G2,B,Basis)
-      Call gb2D(B1,G2,Basis)
-      !Call GridTOBasis_nD_cplx(B2,G1,Basis)
-      diff_b(:) = ABS(B1(:)-B(:))
+      B2(:)=CZERO
+      B1(:)=CONE
+      Call BasisTOGrid_nD_cplx(G2,B1,Basis)
+      Call GridTOBasis_nD_cplx(B2,G2,Basis)
+      diff_b(:) = ABS(B2(:)-B1(:))
 
 
       print*,'##############################################################'
@@ -863,87 +843,82 @@ END SUBROUTINE test_basitogridgridtobasis
     END SUBROUTINE Calc_d0ndgb
 
 
- SUBROUTINE BasisTOGrid_1D_cplx(Psi_ggb,Psi_bbb,Basis)
-  USE UtilLib_m
-  TYPE(Basis_t)    , intent(in),target     :: Basis
-  complex (kind=Rk), intent(inout)         :: Psi_ggb(:,:,:)
-  complex (kind=Rk), intent(in)            :: Psi_bbb(:,:,:)
-  real (kind=Rk)   , pointer               :: d0gb(:,:)
-  logical          , parameter             :: debug = .false.
-  integer                                  ::i1,i3
+    SUBROUTINE BasisTOGrid_1D_cplx(Psi_ggb,Psi_bbb,Basis)
+            USE UtilLib_m
+            TYPE(Basis_t)    , intent(in),target     :: Basis
+            complex (kind=Rk), intent(inout)         :: Psi_ggb(:,:,:)
+            complex (kind=Rk), intent(in)            :: Psi_bbb(:,:,:)
+           !complex (kind=Rk), target,allocatable    :: Psi_b(:)
+           !complex (kind=Rk), target  ,allocatable  :: Psi_b(:)
+            logical          , parameter             :: debug = .true.
+            integer                                  ::i1,i3
 
 
-  IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING Psi_bg1D'
-   flush(out_unitp)
-  END IF
+            IF (debug) THEN
+              !write(out_unitp,*) 'BEGINNING GridTOBasis_1D_cplx'
+             flush(out_unitp)
+            END IF
+                !Psi_ggb(i1,:,i3)= 0
+              DO i3=1,ubound(Psi_bbb,dim=3)
+              DO i1=1,ubound(Psi_bbb,dim=1)
 
-    d0gb(1:Basis%nq,1:Basis%nb)=>Basis%d0gb
+                 Psi_ggb(i1,:,i3) =  matmul( Basis%d0gb  ,Psi_bbb(i1,:,i3))
+                  !write(*,*) i1,i3 ,   Psi_ggb(i1,:,i3)
 
-    DO i3=1,ubound(Psi_bbb,dim=3)
-    DO i1=1,ubound(Psi_bbb,dim=1)
+              END DO
+              END DO
 
-       Psi_ggb(i1,:,i3) =  Psi_ggb(i1,:,i3) + matmul(d0gb,Psi_bbb(i1,:,i3))
+            IF (debug) THEN
+            	!write(out_unitp,*) 'END GridTOBasis_1D_cplx'
+            	flush(out_unitp)
+            END IF
 
-    END DO
-    END DO
-
-  IF (debug) THEN
-  	write(out_unitp,*) 'END Psi_1bgD'
-  	flush(out_unitp)
-  END IF
-
-END SUBROUTINE  BasisTOGrid_1D_cplx
+    END SUBROUTINE  BasisTOGrid_1D_cplx
 
     SUBROUTINE  GridTOBasis_1D_cplx(Psi_bbb,Psi_ggb,Basis)
-USE UtilLib_m
-  TYPE(Basis_t)    , intent(in),target     :: Basis
-  complex (kind=Rk), intent(inout)         :: Psi_bbb(:,:,:)
-  complex (kind=Rk), intent(in)            :: Psi_ggb(:,:,:)
-  real (kind=Rk)   , pointer               :: d0bgw(:,:)
-  logical          , parameter             :: debug = .false.
-  integer                                  ::i1,i3
+           USE UtilLib_m
+          TYPE(Basis_t)    , intent(in),target     :: Basis
+          complex (kind=Rk), intent(inout)         :: Psi_bbb(:,:,:)
+          complex (kind=Rk), intent(in)            :: Psi_ggb(:,:,:)
+          logical          , parameter             :: debug = .true.
+          integer                                  ::i1,i3
 
 
-  IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING  GridTOBasis_1D_cplx'
-   flush(out_unitp)
-  END IF
+          IF (debug) THEN
+           ! write(out_unitp,*) 'BEGINNING  GridTOBasis_1D_cplx'
+            flush(out_unitp)
+          END IF
 
-    d0bgw(1:Basis%nb,1:Basis%nq)=> Basis%d0bgw
+            DO i3=1,ubound(Psi_ggb,dim=3)
+               DO i1=1,ubound(Psi_ggb,dim=1)
 
-    DO i3=1,ubound(Psi_ggb,dim=3)
-    DO i1=1,ubound(Psi_ggb,dim=1)
+                   Psi_bbb(i1,:,i3) =  matmul( Basis%d0bgw  ,Psi_ggb(i1,:,i3))
 
-       Psi_bbb(i1,:,i3) =  Psi_bbb(i1,:,i3) + matmul(d0bgw,Psi_ggb(i1,:,i3))
+               END DO
+            END DO
 
-    END DO
-    END DO
+          IF (debug) THEN
+          	!write(out_unitp,*) 'END  GridTOBasis_1D_cplx'
+          	flush(out_unitp)
+          END IF
 
-  IF (debug) THEN
-  	write(out_unitp,*) 'END  GridTOBasis_1D_cplx'
-  	flush(out_unitp)
-  END IF
-
-END SUBROUTINE  GridTOBasis_1D_cplx
-
-
-
-
-
+    END SUBROUTINE  GridTOBasis_1D_cplx
 
    SUBROUTINE bg2D(Psi_g,Psi_b,Basis)
        USE UtilLib_m
-       TYPE(Basis_t),     intent(in),target       ::Basis
-       complex(kind=Rk),  intent(in) ,target      :: Psi_b(:)
-       complex(kind=Rk),  intent(inout),target    :: Psi_g(:)
-       complex(kind=Rk), allocatable,target       :: Psi_x(:)
-       complex(kind=Rk), pointer                  :: Psi_ggb(:,:,:)
-       complex(kind=Rk), pointer                  :: Psi_bbb(:,:,:)
-       complex(kind=Rk), pointer                  :: Psi_xxx(:,:,:)
-       logical,         parameter                 :: debug = .false.
-       integer                                    :: iq,i1,i3
-
+       TYPE(Basis_t),     intent(in),target        ::Basis
+       complex(kind=Rk),  intent(in) ,target       :: Psi_b(:)
+       complex(kind=Rk),  intent(inout),target     :: Psi_g(:)
+       complex(kind=Rk),  allocatable,target       :: Psi_x(:)
+       complex(kind=Rk),  pointer                  :: Psi_ggb(:,:,:)
+       complex(kind=Rk),  pointer                  :: Psi_bbb(:,:,:)
+       complex(kind=Rk),  pointer                  :: Psi_xxx(:,:,:)
+       logical,           parameter                :: debug = .false.
+       integer                                     :: iq,i1,i3
+      write(*,*) "Psi_b"
+      do iq = 1, size(Psi_b)
+      write(*,*) iq, Psi_b(iq)
+         end do
         Psi_bbb(1:1,1:Basis%tab_basis(1)%nb,1:Basis%tab_basis(2)%nb*Basis%tab_basis(3)%nb) => Psi_b
         allocate(Psi_x(Basis%tab_basis(1)%nq*Basis%tab_basis(2)%nb*Basis%tab_basis(3)%nb))
         Psi_xxx(1:1,1:Basis%tab_basis(1)%nq,1:Basis%tab_basis(2)%nb*Basis%tab_basis(3)%nb)   => Psi_x
@@ -953,24 +928,28 @@ END SUBROUTINE  GridTOBasis_1D_cplx
 
        Psi_ggb(1:Basis%tab_basis(1)%nq,1:Basis%tab_basis(2)%nq,1:Basis%tab_basis(3)%nb)=> Psi_g
        Psi_xxx(1:Basis%tab_basis(1)%nq,1:Basis%tab_basis(2)%nb,1:Basis%tab_basis(3)%nb)   => Psi_x
-       call BasisTOGrid_1D_cplx(Psi_ggb,Psi_xxx,Basis%tab_basis(2))
+         call BasisTOGrid_1D_cplx(Psi_ggb,Psi_xxx,Basis%tab_basis(2))
+      write(*,*) "Psi_g"
+       do iq = 1, size(Psi_g)
+       write(*,*) iq, Psi_g(iq)
+          end do
    END SUBROUTINE bg2D
-
-
 
     SUBROUTINE gb2D(Psi_b,Psi_g,Basis)
         USE UtilLib_m
         TYPE(Basis_t),     intent(in),target      ::Basis
         complex(kind=Rk), intent(in) ,target      :: Psi_g(:)
-        complex(kind=Rk), intent(inout),target   :: Psi_b(:)
-         complex(kind=Rk), allocatable,target    :: Psi_x(:)
-        complex(kind=Rk), pointer                :: Psi_ggb(:,:,:)
-        complex(kind=Rk), pointer                :: Psi_bbb(:,:,:)
-        complex(kind=Rk), pointer                :: Psi_xxx(:,:,:)
-         real(kind=Rk), pointer                  :: d0bgw(:,:)
-        logical,         parameter              :: debug = .false.
-        integer                                 :: iq,i1,i3
-
+        complex(kind=Rk), intent(inout),target    :: Psi_b(:)
+        complex(kind=Rk), allocatable,target      :: Psi_x(:)
+        complex(kind=Rk), pointer                 :: Psi_ggb(:,:,:)
+        complex(kind=Rk), pointer                 :: Psi_bbb(:,:,:)
+        complex(kind=Rk), pointer                 :: Psi_xxx(:,:,:)
+        logical,         parameter                :: debug = .true.
+        integer                                   :: iq,i1,i3
+        write(*,*) "Psi_g"
+         do iq = 1, size(Psi_g)
+        write(*,*) iq, Psi_g(iq)
+          end do
         Psi_ggb(1:1,1:Basis%tab_basis(1)%nq,1:Basis%tab_basis(2)%nq*Basis%tab_basis(3)%nb)   => Psi_g
         allocate(Psi_x(Basis%tab_basis(1)%nb*Basis%tab_basis(2)%nq*Basis%tab_basis(3)%nb))
         Psi_xxx(1:1,1:Basis%tab_basis(1)%nb,1:Basis%tab_basis(2)%nq*Basis%tab_basis(3)%nb)   => Psi_x
@@ -981,115 +960,177 @@ END SUBROUTINE  GridTOBasis_1D_cplx
          Psi_bbb(1:Basis%tab_basis(1)%nb,1:Basis%tab_basis(2)%nb,1:Basis%tab_basis(3)%nb)   => Psi_b
         Psi_xxx(1:Basis%tab_basis(1)%nb,1:Basis%tab_basis(2)%nq,1:Basis%tab_basis(3)%nb)   => Psi_x
          call GridTOBasis_1D_cplx(Psi_bbb,Psi_xxx,Basis%tab_basis(1))
+        write(*,*) "Psi_b"
+       do iq = 1, size(Psi_b)
+        write(*,*) iq, Psi_b(iq)
+            end do
     END SUBROUTINE gb2D
 
+    !++++++++++++++++++++++++++++++++++++++++nD++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    SUBROUTINE Psi_permut(Psi_2,Psi_1)
+        complex(kind=Rk),  intent(inout) ,target       :: Psi_1(:)
+        complex(kind=Rk),  intent(inout),target        :: Psi_2(:)
+        Psi_1(:) = Psi_2(:)
+        Psi_2(:) = CZERO
+    END SUBROUTINE Psi_permut
+    SUBROUTINE Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,Basis)
+         TYPE(Basis_t),     intent(in),target ::Basis
+        integer,intent(inout) , allocatable   :: Ib1(:),Ib2(:),Iq3(:),Iq1(:),Iq2(:),Ib3(:)
+        integer,intent(in)                    :: Ndim
+         integer                              :: inb
+         allocate(Ib3(Ndim-1))
+         allocate(Ib2(Ndim-1))
+         allocate(Ib1(Ndim-1))
 
+         allocate(Iq3(Ndim-1))
+         allocate(Iq2(Ndim-1))
+         allocate(Iq1(Ndim-1))
 
-    SUBROUTINE GridTOBasis_nD_cplx(Psi_b,Psi_g,Basis)
+        DO inb = 1,Ndim-1
+            if (inb == 1)then
+                 Ib3(1) = Product(Basis%tab_basis(2:Ndim-1)%nb)*Basis%tab_basis(Ndim)%nb
+                 Iq3(1) =  Product(Basis%tab_basis(2:Ndim-1)%nq)*Basis%tab_basis(Ndim)%nb
+
+                 Iq2(1) =  Basis%tab_basis(1)%nq
+                 Ib2(1) =  Basis%tab_basis(1)%nb
+
+                 Iq1(1) = 1
+                 Ib1(1) = 1
+
+                elseif(inb == Ndim-1)then
+
+                 Ib3(inb) =  Basis%tab_basis(Ndim)%nb
+                 Iq3(inb) =  Basis%tab_basis(Ndim)%nb
+
+                 Ib2(inb) =  Basis%tab_basis(Ndim-1)%nb
+                 Iq2(inb) =  Basis%tab_basis(Ndim-1)%nq
+
+                 Iq1(inb) =  Product(Basis%tab_basis(1:Ndim-2)%nq)
+                 Ib1(inb) =  Product(Basis%tab_basis(1:Ndim-2)%nb)
+
+                 else
+         Ib3(inb) = Product(Basis%tab_basis(inb+1:Ndim-1)%nb)*Basis%tab_basis(Ndim)%nb
+         Iq3(inb) = Product(Basis%tab_basis(inb+1:Ndim-1)%nq)*Basis%tab_basis(Ndim)%nb
+         Iq2(inb) = Basis%tab_basis(inb)%nq
+         Ib2(inb) = Basis%tab_basis(inb)%nb
+         Iq1(inb) = Product(Basis%tab_basis(1:inb-1)%nq)
+         Ib1(inb) = Product(Basis%tab_basis(1:inb-1)%nb)
+                 end if
+         END DO
+    END SUBROUTINE Calc_iqib
+      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+         SUBROUTINE GridTOBasis_nD_cplx(Psi_b,Psi_g,Basis)
         USE UtilLib_m
-        TYPE(Basis_t),   intent(in),target             :: Basis
-        complex (kind=Rk), intent(in) ,target          :: Psi_g(:)
-        complex (kind=Rk), intent(inout),target        :: Psi_b(:)
-        complex (kind=Rk), pointer                     :: Psi_ggb(:,:,:)
-        type(phi_t1),allocatable,target                ::Psi_x(:)
-        type(phi_t),allocatable                        ::Psi_xxx(:)
-        complex (kind=Rk), pointer                     :: Psi_bbb(:,:,:)
-        logical,         parameter                     :: debug = .false.
-        integer                                        :: ib,i1,i3,inb,Ndim,qmax
-        integer , allocatable                          :: Ib1(:),Ib2(:),Iq3(:)
+        TYPE(Basis_t),   intent(in),target                      :: Basis
+        complex (kind=Rk), intent(in) ,target                   :: Psi_g(:)
+        complex (kind=Rk), intent(inout),target                 :: Psi_b(:)
+        complex (kind=Rk), pointer                              :: Psi_ggb(:,:,:)
+        complex(kind=Rk) , allocatable  ,target                 :: Psi_x1(:),Psi_x2(:)
+        complex (kind=Rk), pointer                              :: Psi_bbb(:,:,:)
+        logical,         parameter                              :: debug = .true.
+        integer                                                 :: ib,i1,i3,inb,Ndim,iq
+        integer , allocatable                                   :: Ib1(:),Ib2(:),Iq3(:),Iq1(:),Iq2(:),Ib3(:)
 
         IF (debug) THEN
-          write(out_unitp,*) 'BEGINNING GridTOBasis_dnD_cplx'
+         !write(out_unitp,*) 'BEGINNING GridTOBasis_dnD_cplx'
+         !write(*,*) "Psi_g"
+         !do iq = 1, size(Psi_g)
+         !write(*,*) iq, Psi_g(iq)
+         !end do
           flush(out_unitp)
         END IF
-          Ndim =size(Basis%tab_basis)
-          qmax = product(Basis%tab_basis(2:Ndim)%nq)
+           Ndim = size(Basis%tab_basis)
 
-        allocate(Ib2(Ndim-1))
-        allocate(Ib1(Ndim-1))
-        allocate(Iq3(Ndim-1))
-
-        allocate(Psi_x(Ndim-1))
-        allocate(Psi_xxx(Ndim-1))
-        allocate(Psi_x(1)%Psi(Basis%tab_basis(1)%nb*qmax))
-
-        Psi_ggb(1:1,1:Basis%tab_basis(1)%nq,1:qmax) => Psi_g
-        Psi_xxx(1)%Psi_xxx( 1:1,1:Basis%tab_basis(1)%nb,1:qmax ) => Psi_x(1)%Psi
-        call GridTOBasis_1D_cplx(Psi_xxx(1)%Psi_xxx,Psi_ggb,Basis%tab_basis(1))
-
-         If (Ndim<= 2)then
-           Psi_b(:) = Psi_x(1)%Psi (:)
+           call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,Basis)
+        If (Ndim<= 2)then
+            Psi_ggb(1:iq1(1),1:iq2(1),1:iq3(1)) => Psi_g
+            Psi_bbb(1:ib1(1),1:ib2(1),1:ib3(1)) => Psi_b
+            call GridTOBasis_1D_cplx(Psi_bbb,Psi_ggb,Basis%tab_basis(1))
         else
-        DO inb = 2,Ndim-1
-          Ib1(inb) = Product(Basis%tab_basis(1:inb-1)%nb)
-          Ib2(inb) = Basis%tab_basis(inb)%nb
-          Iq3(inb) = Product(Basis%tab_basis(size(Basis%tab_basis)-1:inb+1:-1)%nq)
-
-           allocate(Psi_x(inb)%Psi(Ib1(inb)*Ib2(inb)*Iq3(inb)))
-           Psi_xxx(inb)%Psi_xxx(1:Ib1(Inb),1:Ib2(inb),1:Iq3(inb)) =>Psi_x(inb)%Psi
-           call GridTOBasis_1D_cplx(Psi_xxx(inb)%Psi_xxx,Psi_xxx(inb-1)%Psi_xxx,Basis%tab_basis(inb))
-       END DO
-              Psi_b(:) = Psi_x(Ndim-1)%Psi (:)
+            allocate(Psi_x1(ib1(1)*ib2(1)*iq3(1)))
+            Psi_bbb( 1:ib1(1),1:ib2(1),1:iq3(1))  => Psi_x1
+            Psi_ggb(1:iq1(1),1:iq2(1),1:iq3(1))    => Psi_g
+            call GridTOBasis_1D_cplx(Psi_bbb,Psi_ggb,Basis%tab_basis(1))
+            DO inb = 2,Ndim-2
+                allocate(Psi_x2(ib1(inb)*ib2(inb)*iq3(inb)))
+                Psi_bbb( 1:ib1(inb),1:ib2(inb),1:iq3(inb))   => Psi_x2
+                Psi_ggb( 1:ib1(inb),1:ib2(inb),1:iq3(inb))    => Psi_x1
+                call GridTOBasis_1D_cplx(Psi_bbb,Psi_ggb,Basis%tab_basis(inb))
+                deallocate(Psi_x1)
+                allocate(Psi_x1(ib1(inb)*ib2(inb)*iq3(inb)))
+                call Psi_permut(Psi_x2,Psi_x1)
+                deallocate(Psi_x2)
+            END DO
+            Psi_ggb(1:iq1(Ndim-1),1:iq2(Ndim-1),1:iq3(Ndim-1)) => Psi_x1
+            Psi_bbb(1:ib1(Ndim-1),1:ib2(Ndim-1),1:ib3(Ndim-1)) => Psi_b
+            call GridTOBasis_1D_cplx(Psi_bbb,Psi_ggb,Basis%tab_basis(Ndim-1))
        End If
        IF (debug) THEN
-       	write(out_unitp,*) 'END GridTOBasis_nD_cplx'
-       	flush(out_unitp)
+          !write(out_unitp,*) 'END GridTOBasis_nD_cplx'
+          !write(*,*) "Psi_b"
+          !do iq = 1, size(Psi_b)
+          !  write(*,*) iq, Psi_b(iq)
+          !end do
+          	flush(out_unitp)
        END IF
-
+       deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
     END SUBROUTINE GridTOBasis_nD_cplx
 
     SUBROUTINE BasisTOGrid_nD_cplx(Psi_g,Psi_b,Basis)
         USE UtilLib_m
-        TYPE(Basis_t),   intent(in),target             :: Basis
-        complex (kind=Rk), intent(in) ,target          :: Psi_b(:)
-        complex (kind=Rk), intent(inout),target        :: Psi_g(:)
-        complex (kind=Rk), pointer                     :: Psi_bbb(:,:,:)
-        type(phi_t1),allocatable,target                ::Psi_x(:)
-        type(phi_t),allocatable                        ::Psi_xxx(:)
-        complex (kind=Rk), pointer                     :: Psi_ggb(:,:,:)
-        logical,         parameter                     :: debug = .false.
-        integer                                        :: ib,i1,i3,inb,Ndim,bmax
-        integer , allocatable                          ::Ib3(:),Iq1(:),Iq2(:)
+        TYPE(Basis_t),   intent(in),target                   :: Basis
+        complex (kind=Rk), intent(in) ,target                :: Psi_b(:)
+        complex (kind=Rk), intent(inout),target              :: Psi_g(:)
+        complex (kind=Rk), pointer                           :: Psi_bbb(:,:,:)
+        complex (kind=Rk) ,allocatable,target                 ::Psi_x1(:),Psi_x2(:)
+        complex (kind=Rk), pointer                           :: Psi_ggb(:,:,:)
+        logical,         parameter                           :: debug = .true.
+        integer                                              :: ib,i1,i3,inb,Ndim,iq
+        integer , allocatable                                ::Ib3(:),Iq1(:),Iq2(:),ib1(:),ib2(:),iq3(:)
 
         IF (debug) THEN
-          write(out_unitp,*) 'BEGINNING BasisTOGrid_dnD_cplx'
+         ! write(out_unitp,*) 'BEGINNING BasisTOGrid_dnD_cplx'
+        !write(*,*) "Psi_b"
+        !do iq = 1, size(Psi_b)
+        !   write(*,*) iq, Psi_b(iq)
+        !end do
           flush(out_unitp)
         END IF
        Ndim =size(Basis%tab_basis)
-       bmax = product(Basis%tab_basis(2:Ndim)%nb)
-
-       allocate(Ib3(Ndim-1))
-       allocate(Iq2(Ndim-1))
-       allocate(Iq1(Ndim-1))
-       allocate(Psi_x(Ndim-1))
-        allocate(Psi_xxx(Ndim-1))
-
-          allocate(Psi_x(1)%Psi(Basis%tab_basis(1)%nq*bmax))
-          Psi_bbb(1:1,1:Basis%tab_basis(1)%nb,1:bmax) => Psi_b
-          Psi_xxx(1)%Psi_xxx( 1:1,1:Basis%tab_basis(1)%nq,1:bmax ) =>Psi_x(1)%Psi
-          call BasisTOGrid_1D_cplx(Psi_xxx(1)%Psi_xxx,Psi_bbb,Basis%tab_basis(1))
-
-         If (Ndim<= 2)then
-           Psi_g(:) = Psi_x(1)%Psi (:)
+       call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,Basis)
+        If (Ndim<= 2)then
+          Psi_bbb(1:ib1(1),1:ib2(1),1:ib3(1)) => Psi_b
+          Psi_ggb(1:iq1(1),1:iq2(1),1:iq3(1)) => Psi_g
+          call BasisTOGrid_1D_cplx(Psi_ggb,Psi_bbb,Basis%tab_basis(1))
         else
-         DO inb = 2,Ndim-1
-         Ib3(inb) = Product(Basis%tab_basis(Ndim:inb+1:-1)%nb)
-         Iq1(inb) = Product(Basis%tab_basis(1:inb-1)%nq)
-         Iq2(inb) = Basis%tab_basis(inb)%nq
-
-         allocate(Psi_x(inb)%Psi(Iq1(inb)*Iq2(inb)*Ib3(inb)))
-        Psi_xxx(inb)%Psi_xxx(1:Iq1(Inb),1:Iq2(inb),1:Ib3(inb)) =>Psi_x(inb)%Psi
-        call BasisTOGrid_1D_cplx(Psi_xxx(inb)%Psi_xxx,Psi_xxx(inb-1)%Psi_xxx,Basis%tab_basis(inb))
-       END DO
-              Psi_g(:) = Psi_x(Ndim-1)%Psi (:)
+          allocate(Psi_x1(iq1(1)*iq2(1)*ib3(1)))
+          Psi_bbb(1:ib1(1),1:ib2(1),1:ib3(1)) => Psi_b
+          Psi_ggb(1:iq1(1),1:iq2(1),1:ib3(1)) => Psi_x1
+          call BasisTOGrid_1D_cplx(Psi_ggb,Psi_bbb,Basis%tab_basis(1))
+             DO inb = 2,Ndim-2
+                allocate(Psi_x2(iq1(inb)*iq2(inb)*ib3(inb)))
+                Psi_bbb(1:ib1(Inb),1:ib2(inb),1:ib3(inb)) => Psi_x1
+                Psi_ggb(1:iq1(inb),1:iq2(inb),1:ib3(inb)) => Psi_x2
+                call BasisTOGrid_1D_cplx(Psi_ggb,Psi_bbb,Basis%tab_basis(inb))
+                deallocate(Psi_x1)
+                allocate(Psi_x1(iq1(inb)*iq2(inb)*ib3(inb)))
+                call Psi_permut(Psi_x2,Psi_x1)
+                deallocate(Psi_x2)
+             END DO
+          Psi_ggb(1:iq1(Ndim-1),1:iq2(Ndim-1),1:iq3(Ndim-1)) => Psi_g
+          Psi_bbb(1:ib1(Ndim-1),1:ib2(Ndim-1),1:ib3(Ndim-1)) => Psi_x1
+          call BasisTOGrid_1D_cplx(Psi_ggb,Psi_bbb,Basis%tab_basis(Ndim-1))
        End If
-      IF (debug) THEN
-      	write(out_unitp,*) 'END BasisTOGrid_dnD_cplx'
-      	flush(out_unitp)
-      END IF
-
+       IF (debug) THEN
+       	  !write(out_unitp,*) 'END BasisTOGrid_dnD_cplx'
+          !  write(*,*) "Psi_g"
+          !  do iq = 1, size(Psi_g)
+          !  write(*,*) iq, Psi_g(iq)
+          ! end do
+       	  flush(out_unitp)
+       END IF
+       deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
     END SUBROUTINE BasisTOGrid_nD_cplx
-
 
     SUBROUTINE Calc_Q_grid(Q,Basis)
 
@@ -1100,25 +1141,25 @@ END SUBROUTINE  GridTOBasis_1D_cplx
        real(Kind = Rk), intent(inout),ALLOCATABLE          ::Q(:,:)
        TYPE (NDindex_t)                                    :: NDindex
        logical                                             ::Endloop
-
        ndim = SIZE(Basis%tab_basis)-1
-       allocate(Tab_iq(ndim))
-       allocate(NDend(ndim))
-       allocate(Q(Basis%nq,ndim))
+       allocate(Tab_iq(Ndim))
+       allocate(NDend(Ndim))
+       allocate(Q(Basis%nq,Ndim))
 
-       do inb= 1, ndim
+       do inb= 1, Ndim
            NDend(inb) = Basis%NDindexq%NDend(inb)
        end do
       CALL Init_NDindex(NDindex,NDend,Ndim)
       Call Init_tab_ind(Tab_iq,NDindex)
       Iq=0
       DO
-        q=Iq+1
+        Iq=Iq+1
         CALL increase_NDindex(Tab_iq,NDindex,Endloop)
          IF (Endloop) exit
-          do inb = 1,ndim
+          do inb = 1,Ndim
             Q(iq,inb) = Basis%tab_basis(inb)%X(Tab_iq(inb))
           end do
+       ! print*, IQ,Q(iq,:)
       END DO
     END SUBROUTINE Calc_Q_grid
 

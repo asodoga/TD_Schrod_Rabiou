@@ -1,23 +1,19 @@
 
 &potential
   pot_name='morse' ! potential surface name
-  option=1
+  option=0
    /
-
 &basis_nd name='dp' nb_basis=3/
-   &basis_nd name='HO' nb = 5 nq=5/
-   &basis_nd name='HO' nb = 5 nq=5/
-          &basis_nd name= 'el' nb=1/
+   &basis_nd name='HO' nb = 100 nq=100/
+    &basis_nd name='HO' nb = 100 nq=100/
+   &basis_nd name= 'el' nb=1/
 
 
    &defGWP I_ElecChannel=2 Coef=(1.,0.) /
     &defWP0 DQ=1.41421356237 Q0=0.0 k=0.0 phase=0.286 /
-    #&defWP0 DQ=1.41421356237 Q0=0.0 k=0.0 phase=0.286 /
+     &defWP0 DQ=1.41421356237 Q0=0.0 k=0.0 phase=0.286 /
 
 
-      &defGWP I_ElecChannel=2 Coef=(1.,0.) /
-      &defWP0 DQ=1.41421356237 Q0=0.0 k=0.0 phase=0.286 /
-      &defWP0 DQ=1.41421356237 Q0=0.0 k=0.0 phase=0.286 /
 
 
       &prop t0  = 0  tf  = 80 delta_t = 0.0001 eps= 0.0000000000001

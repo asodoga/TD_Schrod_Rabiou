@@ -1,6 +1,7 @@
 module Op_m
   USE NumParameters_m
   USE Basis_m, only : Basis_t
+  USE Molec_m
   implicit none
   private
 
@@ -90,7 +91,7 @@ contains
 
          Do iq=1,Basis%tab_basis(1)%nq
             Q=Basis%tab_basis(1)%x(iq)
-            CALL sub_pot(mat_pot_grid(iq,:,:),Q)
+            CALL sub_pot(mat_pot_grid(iq,:,:),Q,1)
          END DO
 
    ! ==============================END PRINT V(:,1,1)
@@ -150,105 +151,83 @@ contains
     END IF
 
   END SUBROUTINE calc_OpPsi
-  SUBROUTINE Calc_Hpsi(psi_in,psi_out,Basis)
+  SUBROUTINE Calc_Hpsi(psi_g,HPsi_g,Basis)
         USE Basis_m
+        USE Psi_m
         USE Molec_m
 
-        COMPLEX(kind=Rk),intent(in)                   :: psi_in(:)
-        COMPLEX(kind=Rk),intent(inout)                :: psi_out(:)
-        TYPE (Basis_t), intent(in),  target           :: Basis
-        COMPLEX(kind=Rk),ALLOCATABLE                  ::VPSI(:),KPSI(:), VPSIGB_E(:,:), KPSIGB_E(:,:),PSIGB_E(:,:)
-        REAL(kind=Rk), allocatable                    :: V(:,:,:), Q(:,:)
+        complex(kind=Rk),intent(in) ,target           :: Psi_g(:)
+        complex(kind=Rk),intent(inout)                :: HPsi_g(:)
+        type (Basis_t), intent(in),  target           :: Basis
+        complex(kind=Rk),allocatable,target           ::VPsi_g(:),KPsi_g(:)
+        complex(kind=Rk), pointer                     :: VPsi_gb(:,:),Psi_gb(:,:)
+        real(kind=Rk), allocatable                    :: V(:,:,:), Q(:,:)
         INTEGER                                       ::iq,i2,j2,i1 ,Ndim
         IF(.not. allocated(Basis%tab_basis)) THEN
             STOP 'ERROR in Set_Op: the Basis%tab_bais is not initialized'
         END IF
-        ! calculation of action a potential VPSI_E.PSI
-         Ndim = size(Basis%tab_basis)-1
-          ALLOCATE(VPSI(Basis%nq*Basis%tab_basis(Ndim+1)%nb))
-          ALLOCATE(VPSIGB_E(Basis%nq,Basis%tab_basis(Ndim+1)%nb))
-          ALLOCATE(KPSI(  Basis%nq*Basis%tab_basis(Ndim+1)%nb  ))
-          ALLOCATE(KPSIGB_E(Basis%nq,Basis%tab_basis(Ndim+1)%nb))
-          ALLOCATE(PSIGB_E(Basis%nq,Basis%tab_basis(Ndim+1)%nb))
-          ALLOCATE(Q(Basis%nq,Ndim))
-          ALLOCATE(V(Basis%nq,Basis%tab_basis(Ndim+1)%nb,Basis%tab_basis(Ndim+1)%nb))
-
+        ! action potential V|Psi_g>
+          Ndim = size(Basis%tab_basis)
+          allocate(VPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
+          allocate(KPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb ))
+          allocate(V(Basis%nq,Basis%tab_basis(Ndim)%nb,Basis%tab_basis(Ndim)%nb))
           call Calc_Q_grid(Q,Basis)
           Do iq=1,Basis%nq
-              CALL sub_pot(V(iq,:,:),Q(iq,:))
+              CALL sub_pot(V(iq,:,:),Q(iq,:),0)
           END DO
-          PSIGB_E(:,:)= reshape( psi_in,[Basis%nq,Basis%tab_basis(Ndim+1)%nb])
+           VPsi_gb(1:Basis%nq,1:Basis%tab_basis(Ndim)%nb)  =>    VPsi_g
+           Psi_gb(1:Basis%nq,1:Basis%tab_basis(Ndim)%nb)   =>    Psi_g
 
-          VPSIGB_E(:,:) = 0
-          KPSIGB_E(:,:) =0
-
-          DO i2=1,Basis%tab_basis(Ndim+1)%nb
-             DO j2=1,Basis%tab_basis(Ndim+1)%nb
-                 VPSIGB_E(:,i2) = VPSIGB_E(:,i2) + V(:,i2,j2)*PSIGB_E(:,j2)
+          DO i2=1,Basis%tab_basis(Ndim)%nb
+             DO j2=1,Basis%tab_basis(Ndim)%nb
+                 VPsi_gb(:,i2) = VPsi_gb(:,i2) + V(:,i2,j2)*Psi_gb(:,j2)
              END DO
 
           END DO
-          VPSI(:)= reshape( VPSIGB_E,[Basis%nq*Basis%tab_basis(Ndim+1)%nb])
-          call Kpsi_nD(KPsi,psi_in,Basis)
-          psi_out(:) = VPSI(:)+KPSI(:)
+          ! action potential K|Psi_g>
+          call Kpsi_nD(KPsi_g,Psi_g,Basis)
+          HPsi_g(:) =  VPsi_g(:)+KPsi_g(:)
 
-          DEALLOCATE(VPSI)
-          DEALLOCATE(VPSIGB_E)
-          DEALLOCATE(KPSI)
-          DEALLOCATE(KPSIGB_E)
-          DEALLOCATE(PSIGB_E)
+          DEALLOCATE(VPsi_g)
+          DEALLOCATE(KPsi_g)
           DEALLOCATE(Q)
   END SUBROUTINE Calc_Hpsi
 
-  SUBROUTINE Kpsi_nD(KPsi,psi,Basis)
+  SUBROUTINE Kpsi_nD(KPsi_g,Psi_g,Basis)
       USE Basis_m
       USE UtilLib_m
       USE Molec_m
       TYPE(Basis_t),        intent(in),target      :: Basis
-      complex (kind=Rk), intent(in) ,target        :: Psi(:)
-      complex (kind=Rk), intent(inout),target      :: KPsi(:)
-      complex (kind=Rk), pointer                   :: GGB(:,:,:)
+      complex (kind=Rk), intent(in) ,target        :: Psi_g(:)
+      complex (kind=Rk), intent(inout),target      :: KPsi_g(:)
+      complex (kind=Rk), pointer                   :: Psi_ggb(:,:,:)
       real (kind=Rk),    pointer                   :: d2gg(:,:)
-      complex (kind=Rk), pointer                   :: KGGB(:,:,:)
-      logical,           parameter                 :: debug = .false.
-      integer                                      :: iq,i1,i3,inb
-      integer , allocatable                        :: Iq1(:),Iq2(:),Iq3(:),ndim
-
+      complex (kind=Rk), pointer                   :: KPsi_ggb(:,:,:)
+      logical,           parameter                 :: debug = .true.
+      integer                                      :: iq,i1,i3,inb,ndim
+      integer , allocatable                        :: Iq1(:),Iq2(:),Iq3(:),Ib1(:),Ib2(:),Ib3(:)
 
       IF (debug) THEN
         write(out_unitp,*) 'BEGINNING Kpsi'
         flush(out_unitp)
       END IF
-      ndim = size(Basis%tab_basis)-1
-
-      allocate(Iq3(ndim))
-      allocate(Iq2(ndim))
-      allocate(Iq1(ndim))
-
-      Kpsi(:) = CZERO
-      DO inb = 1,ndim
-
-        Iq1(inb) = Product(Basis%tab_basis(1:inb-1)%nq)
-        Iq2(inb) = Basis%tab_basis(inb)%nq
-        Iq3(inb) = Product(Basis%tab_basis(ndim:inb+1:-1)%nq)
-        KGGB(1:Iq1(inb),1:Iq2(inb),1:iq3(inb))=> KPsi
-        GGB(1:Iq1(inb),1:Iq2(inb),1:iq3(inb))  => Psi
-        d2gg(1:Basis%tab_basis(inb)%nq,1:Basis%tab_basis(inb)%nq)=>Basis%tab_basis(inb)%d2gg
-
-        DO i3=1,ubound(GGB,dim=3)
-           DO i1=1,ubound(GGB,dim=1)
-
-              KGGB(i1,:,i3) =  KGGB(i1,:,i3) -(HALF/mass)*matmul(d2gg,GGB(i1,:,i3))
-
+      Ndim = size(Basis%tab_basis)
+      call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,Basis)
+       KPsi_g(:) = CZERO
+      DO inb = 1,ndim-1
+        KPsi_ggb(1:Iq1(inb),1:Iq2(inb),1:iq3(inb))=> KPsi_g
+        Psi_ggb(1:Iq1(inb),1:Iq2(inb),1:iq3(inb))  => Psi_g
+        d2gg(1:Iq2(inb),1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
+        DO i3=1,ubound(Psi_ggb,dim=3)
+           DO i1=1,ubound(Psi_ggb,dim=1)
+              KPsi_ggb(i1,:,i3) =   -(HALF/mass)*matmul(d2gg,Psi_ggb(i1,:,i3))
            END DO
         END DO
       END DO
-
-       IF (debug) THEN
+      IF (debug) THEN
        	write(out_unitp,*) 'END KPsi_nD'
        	flush(out_unitp)
-       END IF
-
+      END IF
   END SUBROUTINE  Kpsi_nD
 
 end module Op_m

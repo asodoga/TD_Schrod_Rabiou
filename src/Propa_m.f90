@@ -364,7 +364,7 @@ contains
       REAL(KIND= Rk) ,intent(inout)                :: E
       TYPE (psi_t)                                 :: Hpsi,B,B1
       Type(Basis_t), intent(in)                    :: Basis
-      REAL(KIND= Rk)                               :: dott
+      REAL(KIND= Rk)                               :: Norm
 
       CALL init_psi(Hpsi,Basis,  cplx=.TRUE.,grid =.true.)
       CALL init_psi(B ,Basis,    cplx=.TRUE.,grid   =.false.)
@@ -373,12 +373,12 @@ contains
       CALL Calc_Hpsi(psi_in%CVec,Hpsi%CVec,Basis)
       CALL GridTOBasis_cplx(B%CVec,Hpsi%CVec,Basis)
       CALL GridTOBasis_cplx(B1%CVec,psi_in%CVec,Basis)
-           dott =  real( dot_product(B1%CVec,B1%CVec),kind=Rk)
+      CALL  Calc_Norm(psi_in, Norm,Basis)
 
            E = real( dot_product(B%CVec,B1%CVec),kind=Rk)
-           E = E/dott
 
-      print*,' E = <Psi | H | Psi> =',E, '<Psi | Psi> =',dott
+      print*,' E = <Psi | H | Psi> =',E, 'sqrt(<Psi | Psi>) ='&
+              &,Norm,"<Psi | H | Psi>/<Psi|Psi> =",E/Norm**2
       End SUBROUTINE Calc_average_energy
 
       SUBROUTINE autocor_func(psi_in,psi_out,ki,argki)

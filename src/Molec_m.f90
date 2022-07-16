@@ -18,17 +18,16 @@ contains
 
   END FUNCTION Calc_pot
 
-
-  SUBROUTINE  sub_pot(Mat_V,Q)
+  SUBROUTINE  sub_pot(Mat_V,Q,potential_type)
        USE NumParameters_m
        REAL(kind=Rk), intent(inout)   :: Mat_V(:,:)
        REAL(kind=Rk), intent(in)      :: Q(:)
        INTEGER                        :: i,j
-       !REAL(kind=Rk), intent(in)      :: Q
+       integer , intent(in)           :: potential_type
 
 
         !IF (size(Q) /= 1) STOP 'wrong dimension'
-        !IF (size(Mat_V,dim=1) /= 2) STOP 'wrong number of electronic state'
+       ! IF (size(Mat_V,dim=1) /= 2) STOP 'wrong number of electronic state'
 
        SELECT CASE (potential_type)
    CASE (0)
@@ -36,7 +35,7 @@ contains
                 Mat_V(:,:) = 0
             do i = 1, size(Mat_V(1,:))
 
-               Mat_V(i,i) = HALF*(Q(1))**2
+               Mat_V(i,i) = HALF*dot_product(Q,Q)
                 do j = 1, size(Mat_V(:,1))
                     if (abs(i-j)== 1) then
 
