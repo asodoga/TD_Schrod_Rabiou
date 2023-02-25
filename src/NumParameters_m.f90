@@ -1,3 +1,25 @@
+
+!==================================================================================================================
+!
+!=====================================================================================================================
+!
+!> MODULE: Numparameters_m
+!
+!> This module difine globals parameters for the simulation, and
+!> provide them to other modules through globals.
+!> Copyright 2022 ISSA rabiou [1]
+!>  with contributions of:
+!> SODOGA A. Komi[2]
+!> David Lauvergnat[3]
+!> [1]: PhD student at university of Lomé-TOGO ,email: issagoudouya@gmail.com
+!> [2]:
+!> [3]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
+
+!=============================================================================================================
+
+
+
+
   MODULE NumParameters_m
       USE, intrinsic :: ISO_FORTRAN_ENV, ONLY : INPUT_UNIT,OUTPUT_UNIT,real64,real128,int32,int64
       IMPLICIT NONE

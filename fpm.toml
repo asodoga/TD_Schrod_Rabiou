@@ -1,12 +1,13 @@
 name = "TD_SCHROD"
 version = "0.1.0"
 license = "license"
-author = "Jane Doe"
-maintainer = "jane.doe@example.com"
-copyright = "Copyright 2022, Jane Doe"
+author = "ISSA rabiou"
+maintainer = "issagoudouya@gmail.com"
+copyright = "Copyright 2022, ISSA"
 [build]
 auto-executables = true
 auto-tests = true
 auto-examples = true
+link = ["blas", "lapack"]
 [install]
 library = false

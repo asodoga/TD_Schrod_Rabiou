@@ -3,8 +3,8 @@ module Molec_m
   implicit none
   private
 
-  real(kind=Rk) :: mass = ONE
-
+  real(kind=Rk) :: mass =  2000._Rk
+  integer :: potential_type = 1 !0 internal,1 QLM,2 options
   public :: Calc_pot,mass,sub_pot
 
 contains
@@ -16,20 +16,46 @@ contains
   Calc_pot = mass*HALF * Q*Q
 
   END FUNCTION Calc_pot
-  ! for dibatic one need multidimenssional pot
-  SUBROUTINE  sub_pot(Mat_V,Q)
-    REAL(kind=Rk), intent(inout)   :: Mat_V(:,:,:)
-    REAL(kind=Rk), intent(in)      :: Q(:)
-    INTEGER                        :: iq
 
-    Do iq = 1, SIZE(Q)
-    Mat_V(Q(iq),1,1) = (Q(iq)+1)**2
-    Mat_V(Q(iq),2,2) = (Q(iq)-1)**2
-    Mat_V(Q(iq),1,2) = 0.01*Q(iq)
-    Mat_V(Q(iq),2,1) = 0.01*Q(iq)
-   END DO
+  SUBROUTINE  sub_pot(Mat_V,Q,potential_type)
+       USE NumParameters_m
+       REAL(kind=Rk), intent(inout)   :: Mat_V(:,:)
+       REAL(kind=Rk), intent(in)      :: Q(:)
+       INTEGER                        :: i,j,iq
+       integer , intent(in)           :: potential_type
+
+
+        !IF (size(Q) /= 1) STOP 'wrong dimension'
+       ! IF (size(Mat_V,dim=1) /= 2) STOP 'wrong number of electronic state'
+
+       SELECT CASE (potential_type)
+   CASE (0)
+
+                Mat_V(:,:) = 0
+            do i = 1, size(Mat_V(1,:))
+               do iq = 1, size(Q)
+               Mat_V(i,i) = Mat_V(i,i)+ HALF*(Q(iq)-0)**2
+                   end do
+                do j = 1, size(Mat_V(:,1))
+                    if (abs(i-j)== 1) then
+
+                         Mat_V(i,j) = ZERO
+                         !0.001_Rk*Q(1)
+                    end if
+                 end do
+            end do
+
+   CASE (1) !QML
+     CALL sub_Qmodel_V(Mat_V,Q)
+   CASE (2)!QML
+      stop "ERROR potential_type=2 not define"
+      CASE DEFAULT
+      stop "no default in sub_pot"
+END SELECT
 
 
   END SUBROUTINE sub_pot
+
+
 
 end module Molec_m
