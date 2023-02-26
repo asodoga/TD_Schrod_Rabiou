@@ -33,7 +33,7 @@ contains
         TYPE(Basis_t) ,intent(inout)     :: Basis_f
         TYPE(Basis_t) ,target            :: Basis_1,Basis_2
         logical, parameter               :: debug = .true.
-        REAL(kind=Rk)                    :: Qt,SQt,Q0,SQ0
+        REAL(kind=Rk)                    :: Qt,SQt
 
         ! variables locales
         REAL(kind=Rk)                    :: t ,t_deltat, Norm,E
@@ -71,15 +71,14 @@ contains
             t_deltat = t + propa%delta_t
             write(out_unitp,*) propa%propa_name,i,t,t_deltat
            ! call Analyse(psi,t)
-            Write(10,*)   t, Qt
+            CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
+            Write(10,*)   t, Qt!,sQt
             if(mod(i,25)== 0)  call Write_p(psi,i)
             CALL  march(psi,psi_dt,t,propa)
             CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
-           ! Qt = Qt+Q0
             CALL  Calc_basis(Basis_1, psi0%Basis,Qt,ONE)
             CALL Hagedorn_transfo(psi_dt,psi)
             CALL  Calc_basis(Basis_2, psi0%Basis,Qt,ONE)
-            ! Q0 = Qt
 
         END DO
         psif%CVec(:) = psi_dt%CVec(:)
