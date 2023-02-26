@@ -1,0 +1,12 @@
+
+&potential
+  pot_name  = 'H2'
+    option=1
+   /
+&basis_nd name='dp' nb_basis=2/
+   &basis_nd name='HO' nb = 25 nq=25  SCALEQ= 1.0  /
+      &basis_nd name= 'el' nb=1/
+   &defGWP I_ElecChannel=2 Coef=(1.,0.) /
+       &defWP0 DQ= 1.4142135623730951  Q0= -4.0   k=0.0 phase=0.0 /
+      &prop t0  = 0  tf  =25 delta_t =0.1    eps= 0.00000000000000000001
+        max_iter =  5000 propa_name = 'taylor' /
