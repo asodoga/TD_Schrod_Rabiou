@@ -9,21 +9,21 @@ module Propa_m
      implicit none
 
      TYPE propa_t
-        real (kind=Rk)      :: t0
-        real (kind=Rk)      :: tf
-        real (kind=Rk)      :: delta_t
-        real (kind=Rk)      :: eps
-        integer             :: max_iter
-        integer             :: kmax
-        character(len=:), allocatable  :: propa_name
-    END TYPE propa_t
+         real (kind=Rk)      :: t0
+         real (kind=Rk)      :: tf
+         real (kind=Rk)      :: delta_t
+         real (kind=Rk)      :: eps
+         integer             :: max_iter
+         character(len=:), allocatable  :: propa_name
+         character(len=:), allocatable  :: propa_name2
+     END TYPE propa_t
 
-    public :: march_taylor,marh_RK4th,read_propa,autocor_func
-    public :: propagation_Hagedorn,propagation_DP
+    public :: march_taylor,marh_RK4th,read_propa,autocor_func,march_hagedorn
+    public :: propagation
     public :: mEyeHPsi,write_propa,fft_autocor_func,Analyse,Hagedorn_psi1_TO_psi2
 
 contains
-    SUBROUTINE propagation_Hagedorn(psif,psi0,Basis_f,propa)
+    SUBROUTINE propagation(psif,psi0,Basis_f,propa)
         USE psi_m
         USE Basis_m
 
@@ -31,79 +31,8 @@ contains
         TYPE (psi_t),  intent(in)        :: psi0
         TYPE(propa_t), intent(inout)     :: propa
         TYPE(Basis_t) ,intent(inout)     :: Basis_f
+        logical, parameter               :: debug = .true.
         TYPE(Basis_t) ,target            :: Basis_1,Basis_2
-        logical, parameter               :: debug = .true.
-        REAL(kind=Rk)                    :: Qt,SQt
-
-        ! variables locales
-        REAL(kind=Rk)                    :: t ,t_deltat, Norm,E
-
-        INTEGER                          :: i,nt,Iq,nf
-        TYPE (psi_t)                     :: psi,psi_dt
-        if (debug) then
-
-            write(out_unitp,*) 'BEGINNIG propagation', propa%t0,propa%tf,propa%delta_t
-           ! write(out_unitp,*) ''
-
-            write(out_unitp,*) '-------------propagation parameters---------------'
-            Call write_propa(propa)
-        else
-            STOP ' check your data!'
-            flush(out_unitp)
-
-        endif
-        nt = int((propa%tf-propa%t0)/propa%delta_t)
-        open(10, file = '<xHG>.dat')
-        !@@@@@@@@@@@@@@@ initialization of psi and psi_dt and construction of Basis_loc@@@@@@@@@@@@@@@
-        CALL init_Basis1_TO_Basis2 (psi0%Basis,Basis_1)
-        CALL init_Basis1_TO_Basis2 (psi0%Basis,Basis_2)
-        CALL construct_primitive_basis(Basis_1)
-        CALL construct_primitive_basis(Basis_2)
-        CALL init_psi(psi,Basis_1,cplx=.TRUE.,grid =.false.)
-        CALL init_psi(psi_dt,Basis_2,cplx=.TRUE.,grid =.false.  )
-
-        ! ************************************** initialisation of psi and <Q> ,DQ *************************************
-       ! Q0 = ZERO ; SQ0 = ZERO
-        psi%CVec(:) = psi0%CVec(:)
-        ! ******************************* Beging  propagation ********************************************************
-        DO i=0,nt
-            t = i*propa%delta_t
-            t_deltat = t + propa%delta_t
-            write(out_unitp,*) propa%propa_name,i,t,t_deltat
-           ! call Analyse(psi,t)
-            CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
-            Write(10,*)   t, Qt!,sQt
-            if(mod(i,25)== 0)  call Write_p(psi,i)
-            CALL  march(psi,psi_dt,t,propa)
-            CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
-            CALL  Calc_basis(Basis_1, psi0%Basis,Qt,ONE)
-            CALL Hagedorn_transfo(psi_dt,psi)
-            CALL  Calc_basis(Basis_2, psi0%Basis,Qt,ONE)
-
-        END DO
-        psif%CVec(:) = psi_dt%CVec(:)
-        CALL  Calc_basis(Basis_f, psi0%Basis,Qt,ONE)
-        call Calc_Norm_OF_Psi(psif, Norm)
-
-        IF (debug) THEN
-            write(out_unitp,*) 'END propagation'
-            write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psif)
-
-            flush(out_unitp)
-        END IF
-
-    END SUBROUTINE propagation_Hagedorn
-
-
-    SUBROUTINE propagation_DP(psif,psi0,propa)
-        USE psi_m
-        USE Basis_m
-
-        TYPE (psi_t),  intent(inout)     :: psif
-        TYPE (psi_t),  intent(in)        :: psi0
-        TYPE(propa_t), intent(inout)     :: propa
-        logical, parameter               :: debug = .true.
 
         ! variables locales
         REAL(kind=Rk)                    :: t ,t_deltat, Norm,E,Qt,SQt
@@ -123,27 +52,53 @@ contains
 
         endif
         nt = int((propa%tf-propa%t0)/propa%delta_t)
-        open(12, file = '<x>.dat')
+        if( propa%propa_name  == 'hagedorn' ) then
+            open(13, file = 'xmeanHG.dat')
 
-        !@@@@@@@@@@@@@@@ initialization of psi and psi_dt and construction of Basis_loc@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        CALL init_psi(psi,psi0%Basis,cplx=.TRUE.,grid =.false.)
-        CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.,grid =.false.  )
-        ! ************************************** initialisation of psi and <Q> ,DQ *************************************
+            !@@@@@@@@@@@@@@@ initialization of psi and psi_dt and construction of Basis_loc@@@@@@@@@@@@@@@
+            CALL init_Basis1_TO_Basis2 (psi0%Basis,Basis_1)
+            CALL init_Basis1_TO_Basis2 (psi0%Basis,Basis_2)
+            CALL construct_primitive_basis(Basis_1)
+            CALL construct_primitive_basis(Basis_2)
+            CALL init_psi(psi,Basis_1,cplx=.TRUE.,grid =.false.)
+            CALL init_psi(psi_dt,Basis_2,cplx=.TRUE.,grid =.false.  )
+
+            ! ************************************** initialisation of psi and <Q> ,DQ *************************************
+        else
+            open(12, file = 'xmean.dat')
+            !@@@@@@@@@@@@@@@ initialization of psi and psi_dt and construction of Basis_loc@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+            CALL init_psi(psi,psi0%Basis,cplx=.TRUE.,grid =.false.)
+            CALL init_psi(psi_dt,psi0%Basis,cplx=.TRUE.,grid =.false.  )
+            ! ************************************** initialisation of psi and <Q> ,DQ *************************************
+        end if
+
+
         psi%CVec(:) = psi0%CVec(:)
         ! ******************************* Beging  propagation ********************************************************
         DO i=0,nt
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
-            write(out_unitp,*) propa%propa_name,i,t,t_deltat
+            write(out_unitp,*) propa%propa_name2,i,t,t_deltat
             ! call Analyse(psi,t)
+            call Calc_average_energy(psi,E)
+            write(*,*) i,abs(psi%CVec)
+             !if(mod(i,5)== 0) CALL Write_psi(psi,i)
             CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
-            Write(12,*)   t, Qt
-            if(mod(i,25)== 0)  call Write_p(psi,i)
-            CALL  march(psi,psi_dt,t,propa)
+            if( propa%propa_name  == 'hagedorn'  .and. mod(i,10)== 0)    Write(13,*)   t, Qt,E
+            if(  propa%propa_name  /='hagedorn' .and. mod(i,2)== 0)      Write(12,*)   t, Qt,E
+
+            if( propa%propa_name  == 'hagedorn' ) then
+                CALL  march(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
+            else
+                CALL  march(psi,psi_dt,t,propa)
+            end if
             psi%CVec(:) = psi_dt%CVec(:)
 
         END DO
         psif%CVec(:) = psi_dt%CVec(:)
+        if( propa%propa_name  == 'hagedorn' ) then
+            CALL  Calc_basis(Basis_f, psi0%Basis,Qt,ONE )
+        end if
         call Calc_Norm_OF_Psi(psif, Norm)
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
@@ -153,9 +108,9 @@ contains
             flush(out_unitp)
         END IF
 
-    END SUBROUTINE propagation_DP
+    END SUBROUTINE propagation
 
-    SUBROUTINE Analyse(psi,t)
+        SUBROUTINE Analyse(psi,t)
         implicit none
         TYPE (psi_t)  ,INTENT(IN)       :: psi
         real(Kind = Rk),allocatable     :: pop(:),Qm(:),Qp(:)
@@ -269,6 +224,39 @@ contains
     END SUBROUTINE march_taylor
 
 
+    SUBROUTINE march_hagedorn(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
+        implicit none
+        TYPE (psi_t),  intent(inout)                   :: psi_dt,psi
+        TYPE(Basis_t), intent(inout), optional         :: Basis_1
+        TYPE(Basis_t), intent(inout), optional         :: Basis_2
+        TYPE(Basis_t), intent(in)                     :: Basis_f
+        TYPE(propa_t), intent(in)                      :: propa
+        REAL(kind=Rk),intent(in)                       :: t
+        real(Kind = Rk)                                :: Norm,Norm0,Qt,SQt
+
+        select case (propa%propa_name2)
+        case ('rk4')
+            CALL marh_RK4th(psi,psi_dt,t,propa)
+        case ('taylor')
+            CALL  march_taylor(psi,psi_dt,t,propa)
+        case default
+            write(out_unitp,*) 'name is not in the list'
+        end select
+        CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
+        CALL  Calc_basis(Basis_1, Basis_f,Qt,ONE)
+        CALL Hagedorn_transfo(psi_dt,psi)
+        CALL  Calc_basis(Basis_2, Basis_f,Qt,ONE)
+
+        write(out_unitp,*) 'BEGING march_HAGEDORDON'
+        CALL Calc_Norm_OF_Psi(psi,Norm0)
+        CALL Calc_Norm_OF_Psi(psi_dt,Norm)
+        write(out_unitp,*) '<psi_dt|psi_dt> = ',Norm , 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =',abs(Norm0-Norm)
+        write(out_unitp,*) 'END march_HAGEDORDON'
+
+    END SUBROUTINE
+
+
+
     SUBROUTINE marh_RK4th(psi,psi_dt,t,propa)
        USE op_m
        USE psi_m
@@ -315,22 +303,6 @@ contains
       deallocate(k4%CVec)
       deallocate(psi_inter%CVec)
     END SUBROUTINE marh_RK4th
-    subroutine march_SIL(psi,psi_dt,propa)
-        implicit none
-        TYPE (psi_t),  intent(inout)     :: psi_dt
-        TYPE (psi_t),  intent(in)        :: psi
-        TYPE(propa_t), intent(in)        :: propa
-        real(Kind = Rk)                  :: Norm,Norm0
-         write(out_unitp,*) 'BEGING march_SIL'
-        call Lan_eign_syst_solve(psi,psi_dt,propa%kmax ,propa%delta_t)
-        CALL Calc_Norm_OF_Psi(Psi,Norm0)
-        CALL Calc_Norm_OF_Psi(Psi_dt,Norm)
-        write(out_unitp,*) '<psi_dt|psi_dt> = ',Norm , 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =',abs(Norm0-Norm)
-        write(out_unitp,*) 'END march_SIL'
-
-    end subroutine march_SIL
-
-
 
 
     SUBROUTINE read_propa( propa)
@@ -338,17 +310,17 @@ contains
       implicit none
       TYPE (propa_t),  intent(inout) :: propa
       real(kind= Rk)                 :: t0,tf,delta_t ,eps
-      character(len= 40)             :: propa_name
-      integer                        ::  max_iter,kmax
+      character(len= 40)             :: propa_name,propa_name2
+      integer                        ::  max_iter
 
-      namelist /prop/ t0,tf,delta_t ,eps,max_iter, propa_name,kmax
+      namelist /prop/ t0,tf,delta_t ,eps,max_iter, propa_name,propa_name2
       t0  = ZERO
       tf  = 10._Rk
       delta_t = 0.001
       eps= ONETENTH**10
       max_iter = 5000
-      propa_name = 'rk4'
-      kmax       = 50
+      propa_name = 'non_hagedorn'
+      propa_name2 = 'rk4'
 
       read(*,nml=prop)
 
@@ -358,7 +330,7 @@ contains
       propa%eps = eps
       propa%max_iter = max_iter
       propa%propa_name = propa_name
-      propa%kmax = kmax
+      propa%propa_name2 = propa_name2
 
     END SUBROUTINE read_propa
     SUBROUTINE mEyeHPsi (Psi,HPsi) !calcul de -iHpsi
@@ -373,24 +345,29 @@ contains
        HPsi%CVec(:)    = - EYE*HPsi%CVec(:)
     END SUBROUTINE mEyeHPsi
 
-    SUBROUTINE march(psi,psi_dt,t,propa)
-       USE psi_m
-       TYPE (propa_t) , INTENT(IN)      :: propa
-       TYPE (psi_t)   , INTENT(IN)      :: psi
-       TYPE (psi_t)   , INTENT(INOUT)   :: psi_dt
-       real(kind=Rk)  ,INTENT(IN)       :: t
+    SUBROUTINE march(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
+        USE psi_m
+        TYPE (propa_t) , INTENT(IN)               :: propa
+        TYPE (psi_t)   , INTENT(INOUT)            :: psi
+        TYPE(Basis_t), intent(inout), optional    :: Basis_1
+        TYPE(Basis_t), intent(inout), optional    :: Basis_2
+        TYPE(Basis_t), intent(inout), optional    :: Basis_f
+        TYPE (psi_t)   , INTENT(INOUT)            :: psi_dt
+        real(kind=Rk)  ,INTENT(IN)                :: t
 
-       select case (propa%propa_name)
+        print *," Basis_1 and Basis_2 present check: ",present(Basis_1),present(Basis_2)
+        if (present(Basis_1) .and. present(Basis_2)) then
+            CALL march_hagedorn(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
+        else
+            select case (propa%propa_name2)
             case ('rk4')
-            CALL marh_RK4th(psi,psi_dt,t,propa)
+                CALL marh_RK4th(psi,psi_dt,t,propa)
             case ('taylor')
-            CALL  march_taylor(psi,psi_dt,t,propa)
-            case ('SIL')
-           CALL  march_SIL(psi,psi_dt,propa)
+                CALL  march_taylor(psi,psi_dt,t,propa)
             case default
-            write(out_unitp,*) 'name is not in the list'
-       end select
-
+                write(out_unitp,*) 'name is not in the list'
+            end select
+        end if
     END SUBROUTINE march
 
 
@@ -407,7 +384,8 @@ contains
       write(out_unitp,*) 'eps = ',propa%eps
       write(out_unitp,*) 'max_iter = ',propa%max_iter
       write(out_unitp,*) 'propa_name = ',propa%propa_name
-      write(out_unitp,*) 'kmax = ',      propa%kmax
+      write(out_unitp,*) 'propa_name2 = ',propa%propa_name2
+
 
     END SUBROUTINE write_propa
 

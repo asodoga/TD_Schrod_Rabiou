@@ -4,9 +4,9 @@
     option=1
    /
 &basis_nd name='dp' nb_basis=2/
-   &basis_nd name='HO' nb = 25 nq=25  SCALEQ= 1.0  /
+   &basis_nd name='HO' nb = 10 nq=10  Q0 = 0.0 SCALEQ= 1.0  /
       &basis_nd name= 'el' nb=1/
    &defGWP I_ElecChannel=2 Coef=(1.,0.) /
-       &defWP0 DQ= 1.4142135623730951  Q0= -4.0   k=0.0 phase=0.0 /
-      &prop t0  = 0  tf  =25 delta_t =0.1    eps= 0.00000000000000000001
-        max_iter =  5000 propa_name = 'taylor' /
+       &defWP0 DQ= 1.4142135623730951  Q0= 0.0   k=0.0 phase=0.0 /
+      &prop t0  = 0  tf  =250 delta_t =1.0    eps= 0.0000000001
+        max_iter =  5000 propa_name ='hagedorn'  propa_name2 = 'taylor' /

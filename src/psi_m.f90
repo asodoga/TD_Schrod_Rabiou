@@ -199,12 +199,20 @@ contains
          TYPE(psi_t), intent(in) :: psi
          TYPE(psi_t)             :: psi1
          integer,intent(in)      :: i
-         integer                 :: iq
-         CALL init_psi(psi1,psi%Basis,cplx=.TRUE.,grid =.true.)
-         call BasisTOGrid_nD_cplx(psi1%CVec,psi%CVec,psi%Basis)
-          do iq = 1,psi%Basis%nb
-             write(100+i,*)   psi1%Basis%tab_basis(1)%X(iq), abs(psi1%CVec(iq))**2
-         end do
+         integer                 :: iq ,ib
+         if(psi%grid)then
+             print*,'pis is on grid'
+             CALL init_psi(psi1,psi%Basis,cplx=.TRUE.,grid =.true.)
+             call BasisTOGrid_nD_cplx(psi1%CVec,psi%CVec,psi%Basis)
+             do iq = 1,psi%Basis%nq
+                write(100+i,*)   psi1%Basis%tab_basis(1)%X(iq), abs(psi1%CVec(iq))**2
+             end do
+         else
+             print*,'pis is on basis'
+             do ib = 1,psi%Basis%nb
+                 write(i,*)   , abs(psi%CVec(ib))**2
+             end do
+         end if
          END SUBROUTINE
 
 
@@ -256,6 +264,8 @@ contains
 
         allocate(S(psi1%Basis%nb,psi1%Basis%nb))
         print*,' Beging Hagedorn projection'
+        S(:,:) = ZERO
+        psi2%CVec(:) = CZERO
         Do iq = 1,psi1%Basis%nb
             Do jq =1,psi1%Basis%nb
                 CALL  Hermite_product_integral ( S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
@@ -411,10 +421,6 @@ contains
            call dealloc_psi(psi_g)
     END SUBROUTINE write_psi_Grid
 
-
-
-
-
     subroutine test(Basis)
         implicit none
         TYPE (Basis_t), target  ,intent(in)     :: Basis
@@ -422,7 +428,6 @@ contains
         real(kind=Rk)                           :: NormG,NormB
         CALL init_psi(psiB,   Basis,    cplx=.TRUE.   ,grid =.false.)
         CALL init_psi(psiG,   Basis,    cplx=.TRUE.   ,grid =.true.)
-
 
         psiB%CVec(:) = CZERO
         psiB%CVec(1) = CONE
@@ -432,30 +437,18 @@ contains
         call  BasisTOGrid_nD_cplx(PsiG%CVec,psiB%CVec,Basis)
         !call BasisTOGrid_nE_cplx(PsiG%CVec,psiB%CVec,Basis)
         call Calc_Norm_OF_Psi(psiG,NormG)
-
           print*,'NormB = ',NormB
           print*,'NormG = ',NormG
-
         print*,'=================================================='
-
-
         psiG%CVec(:) = CONE
        ! psiG%CVec(1) = CONE
         call Calc_Norm_OF_Psi(PsiG,NormG)
         psiG%CVec(:) = psiG%CVec(:)/NormG
         call GridTOBasis_nD_cplx(PsiB%CVec,psiG%CVec,Basis)
-        !call GridTOBasis_nE_cplx(PsiB%CVec,psiG%CVec,Basis)
         call Calc_Norm_OF_Psi(psiB,NormB)
         call Calc_Norm_OF_Psi(psiG,NormG)
         print*,'NormG = ',NormG
         print*,'NormB = ',NormB
-
-
     end subroutine test
-
-
-
-
-
 
 end module psi_m

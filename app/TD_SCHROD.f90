@@ -45,35 +45,19 @@ write(out_unitp,*) 'pot_name'
  ! Call Write_Basis(Basis_f)
    CALL  GWP_init(psi0,1,nio=in_unitp)
 
-   !psi0%CVec(:) = CZERO
-   !psi0%CVec(1) =ONE
- ! call  Projection(psi0,psi,q10=ZERO,q20=ZERO,sci=ONE,scj=ONE )
-  !call   init_basis(Basis1, psi%Basis,ONE,ONE)
-  !CALL  init_psiHG(psi,Basis1)
-  !CALL Write_psi(psi0)
-  !CALL Hagedorn_psi1_TO_psi2(psif,psi0,0.0000000001_Rk,ONE)
- !CALL Test_Hagedorn(psi0,psif,q10=ZERO,q20=HALF,sci=ONE,scj=ONE)
-  !call Calc_average_energy(psi0,E)
+  CALL Write_p(psi0,0)
+  call Calc_average_energy(psi0,E)
   !call Calc_std_dev_AVQ_1D(psi0,1,AVQ,DQ)
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
- !STOP 'calcul de H|psi> est fait'
+ ! STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
-  !CALL propagation_DP(Psif,Psi0,propa)
-  CALL propagation_Hagedorn(Psif,Psi0,Basis_f,propa)
+  CALL propagation(Psif,Psi0,Basis_f,propa)
  ! CALL Write_psi(psif)
-
-
   write(out_unitp,*) 'deallocation'
   CALL dealloc_psi(psi0)
-
-
-
-
-
-
   CALL dealloc_psi(psif)
 
 
