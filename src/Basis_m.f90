@@ -12,7 +12,8 @@ MODULE Basis_m
   PUBLIC ::  BasisTOGrid_1D_cplx, GridTOBasis_1D_cplx
   PUBLIC ::   Calc_Q_grid,construct_primitive_basis,init_Basis1_TO_Basis2
   PUBLIC ::Calc_iqib,Scale_Basis,Construct_poly_Hermite , Hermite_product_integral
-  PUBLIC ::Deallocate_Basis  ,Hermite_double_product_func,Calc_basis
+  PUBLIC ::Deallocate_Basis  ,Hermite_double_product_func
+ PUBLIC  :: Calc_S , Calc_basis
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -31,6 +32,7 @@ MODULE Basis_m
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
     real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
     real(kind=Rk),   allocatable :: d0bgw(:,:)     ! transpose of basis functions d0gb(nb,nq)
+    real(kind=Rk),   allocatable :: S(:,:)         ! for Hagedorn transformation
     TYPE(NDindex_t)              :: NDindexq
     TYPE(NDindex_t)              :: NDindexb
     TYPE (Basis_t),  allocatable :: tab_basis(:)   !  for more than one Basis.
@@ -48,7 +50,7 @@ CONTAINS
         CLASS(Basis_t), intent(in)     :: basis_in
         CLASS(Basis_t), intent(inout)  :: basis_out
 
-            CALL init_Basis1_TO_Basis2 (Basis_in,Basis_out)
+            CALL init_Basis1_TO_Basis2 (Basis_out,Basis_in)
             CALL  construct_primitive_basis(Basis_out)
     END SUBROUTINE copy_basis
 
@@ -131,11 +133,12 @@ CONTAINS
             CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
            END IF
          !! write(out_unitp,*)
-         ! IF (.NOT.allocated(Basis%d0gb)) THEN
-         !   !write(out_unitp,*)' Basis table d0gb is not allocated.'
-         ! ELSE
-         ! !  CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
-         ! END IF
+          IF (.NOT.allocated(Basis%d0gb)) THEN
+            write(out_unitp,*)' Basis table d0gb is not allocated.'
+          ELSE
+           CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
+          END IF
+
          !
          ! !write(out_unitp,*)
          !IF (.NOT.allocated(Basis%d0bgw)) THEN
@@ -167,8 +170,15 @@ CONTAINS
          ! ELSE
          !   !CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
          ! END IF
+
+       IF (.NOT.allocated(Basis%d2gg)) THEN
+             write(out_unitp,*)' Basis table S is not allocated.'
+           ELSE
+             CALL Write_RMat(Basis%S,out_unitp,5,name_info='S')
+           END IF
          !
          !  write(out_unitp,*) 'nb_basis',Basis%nb_basis
+
          IF (allocated(Basis%tab_basis)) THEN
            DO i=1,size(Basis%tab_basis)
                if (Basis%tab_basis(i)%Basis_name /= 'el') CALL Write_Basis(Basis%tab_basis(i))
@@ -253,7 +263,7 @@ CONTAINS
         !logical,             parameter     ::debug = .false.
         TYPE(Basis_t),       intent(inout)  :: Basis
         integer,             intent(in)     :: nio
-        integer                             :: err_io,nb,nq,i,j,nb_basis
+        integer                             :: err_io,nb,nq,i,j,nb_basis,ib
         character (len=Name_len)            :: name
         real(kind=Rk)                       :: A,B,scaleQ,Q0,d0,d2,X1,W1
 
@@ -311,6 +321,12 @@ CONTAINS
             Basis%A                    =    A
             Basis%B                    =    B
             Basis%Basis_name           =    trim(adjustl(name))
+            allocate(Basis%S(nb,nb))
+            Basis%S(:,:)               = ZERO
+            do ib = 1,Basis%nb
+                Basis%S(ib,ib)               = ONE
+            end do
+
             CALL string_uppercase_TO_lowercase(Basis%Basis_name)
         END IF
     END SUBROUTINE Read_Basis
@@ -463,22 +479,24 @@ CONTAINS
 
 
 
- SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
+ SUBROUTINE Construct_Basis_Ho(Basis,Basis_H) ! HO :
  USE UtilLib_m
 
-    TYPE(Basis_t),       intent(inout)  :: Basis
-    integer                :: iq,ib
+    TYPE(Basis_t),       intent(inout)         :: Basis
+ TYPE(Basis_t),       intent(inout),optional   :: Basis_H
+    integer                                    :: iq,ib
 
 
     allocate(Basis%x(Basis%nq))
     allocate(Basis%w(Basis%nq))
-
     call hercom(Basis%nq, Basis%x(:), Basis%w(:))
 
     allocate(Basis%d0gb(Basis%nq,Basis%nb))
     allocate(Basis%d1gb(Basis%nq,Basis%nb,1))
     allocate(Basis%d2gb(Basis%nq,Basis%nb,1,1))
-
+ if ( present(Basis_H) ) then
+     allocate(Basis%d0gb(Basis%nq,Basis%nb))
+ end if
 
     DO iq = 1, Basis%nq
         DO ib = 1, Basis%nb
@@ -551,11 +569,11 @@ CONTAINS
 
        ! Hfi = He(I,qi) = HermiteH[I,qi/Sqrt[2]] / Sqrt [ 2^I ]
                qi = (x-q0i)/sci
-        CALL Construct_poly_Hermite(Hfi,qi,I)
+        CALL Construct_poly_Hermite(Hfi,qi,I-1)
 
        ! Hfj = He(J,qj) = HermiteH[J,qj/Sqrt[2]] / Sqrt [ 2^J ]
           qj = (x-q0j)/scj
-       CALL  Construct_poly_Hermite(Hfj,qj,J)
+       CALL  Construct_poly_Hermite(Hfj,qj,J-1)
 
        !  Hf = Hfi *Hfj = He(J,x)*He(J,x)
 
@@ -590,7 +608,7 @@ CONTAINS
 
     END SUBROUTINE Hermite_product_integral
 
-     RECURSIVE SUBROUTINE  init_Basis1_TO_Basis2 (Basis1,Basis2)
+     RECURSIVE SUBROUTINE  init_Basis1_TO_Basis2 (Basis2,Basis1)
         USE UtilLib_m
         TYPE(Basis_t), intent(in)           :: Basis1
         TYPE(Basis_t), intent(inout)        :: Basis2
@@ -601,10 +619,10 @@ CONTAINS
         IF(allocated(Basis1%tab_basis))THEN
             call Deallocate_Basis(Basis2)
             Basis2%Basis_name     = Basis1%Basis_name
-            Basis2%nb_basis  = Basis1%nb_basis
+            Basis2%nb_basis       = Basis1%nb_basis
             allocate(Basis2%tab_basis(Basis2%nb_basis))
             DO ib=1,Basis1%nb_basis
-              CALL  init_Basis1_TO_Basis2(Basis1%tab_basis(ib),Basis2%tab_basis(ib))
+              CALL  init_Basis1_TO_Basis2(Basis2%tab_basis(ib),Basis1%tab_basis(ib))
             END DO
             Basis2%nb =1
             Basis2%nq =1
@@ -622,6 +640,7 @@ CONTAINS
             Basis2%SCALEQ               =  Basis1%SCALEQ
             Basis2%A                    =  Basis1%A
             Basis2%B                    =  Basis1%B
+            Basis2%S                    =  Basis1%S
         END IF
 
     END SUBROUTINE init_Basis1_TO_Basis2 
@@ -892,15 +911,45 @@ CONTAINS
          TYPE(Basis_t)   ,        INTENT(IN)        :: Basis1
          TYPE(Basis_t)   ,        INTENT(INOUT)     :: Basis2
          REAL(kind=Rk),              INTENT(IN)     :: X0,SX
+         integer                                    :: ib1,ib2
          write(out_unitp,*) 'Beging init_Basis'
+
         ! CALL Write_Basis(Basis1)
-         Call init_Basis1_TO_Basis2 (Basis1,Basis2)
+
+         Call init_Basis1_TO_Basis2 (Basis2,Basis1)
          Basis2%tab_basis(1)%Q0      = X0
          Basis2%tab_basis(1)%SCALEQ  = SX
          Call construct_primitive_basis(Basis2)
+
          !CALL Write_Basis(Basis2)
+
          write(out_unitp,*) 'END init_Basis'
          END SUBROUTINE
+
+
+    SUBROUTINE Calc_S(Basis,X0,SX)
+        USE UtilLib_m
+        TYPE(Basis_t)   ,        INTENT(INout)         :: Basis
+        real(kind = Rk)  ,        INTENT(IN)           :: X0,SX
+        integer                                        :: ib1,ib2
+
+        write(out_unitp,*) 'Beging Calc_S'
+
+        ! CALL Write_Basis(Basis1)
+
+        Do  ib2 =1,Basis%tab_basis(1)%nb
+            Do  ib1 =1,Basis%tab_basis(1)%nb
+                Call Hermite_product_integral (Basis%tab_basis(1)%S(ib1,ib2) , Basis%tab_basis(1)%X &
+                        , Basis%tab_basis(1)%W ,ib1,ib2,Basis%tab_basis(1)%Q0,X0 &
+                        ,Basis%tab_basis(1)%SCALEQ,SX )
+            End Do
+        End Do
+
+        !CALL Write_Basis(Basis2)
+        CALL Write_RMat(Basis%tab_basis(1)%S,out_unitp,5)
+
+        write(out_unitp,*) 'END  Calc_S'
+    END SUBROUTINE
 
 SUBROUTINE Calc_tranpose_d0gb(Basis)
   USE UtilLib_m

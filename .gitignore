@@ -1,3 +1,9 @@
+*.x
+res*
+fort.*
+*log
+*.pdf
+*.dat
 # Prerequisites
 *.d
 

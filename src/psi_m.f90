@@ -1,4 +1,5 @@
 module psi_m
+  USE UtilLib_m
   USE NumParameters_m
   USE Basis_m
   USE NDindex_m
@@ -118,7 +119,7 @@ contains
     IF (associated(psi%Basis)) THEN
      ! write(out_unitp,*) ' The basis is linked to psi.'
     END IF
-      CALL  Write_Basis(psi%Basis)
+      !CALL  Write_Basis(psi%Basis)
     IF (allocated(psi%RVec)) THEN
      ! write(out_unitp,*) 'Writing psi (real):'
       write(out_unitp,*) psi%RVec
@@ -137,51 +138,33 @@ contains
 
 
 
-    SUBROUTINE Projection(psi_dt_B1,psi_dt_B2,q10,q20,sci,scj )
-        TYPE(psi_t), intent(in)        :: psi_dt_B1
-        TYPE(psi_t), intent(inout)     :: psi_dt_B2
-        real(Kind = Rk), allocatable   :: S(:,:)
-        real(Kind = Rk),intent(in)     :: q10,q20,sci,scj
-        real(Kind = Rk)                :: Norm
+    SUBROUTINE Projection(psi_dt_2,psi_dt_1)
+        TYPE(psi_t), intent(in)        :: psi_dt_1
+        TYPE(psi_t), intent(inout)     :: psi_dt_2
+
         logical,  parameter            :: debug = .true.
         integer                        :: ib1,ib2
 
-
-        psi_dt_B2%CVec(:) =CZERO
-            write(out_unitp,*) 'Begin Hagedorn projection'
-        !write(out_unitp,*) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-       ! write(out_unitp,*) 'psi on first Basis'
-       ! CALL Write_psi(psi_dt_B1)
-        !write(out_unitp,*) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-
-        allocate(S(psi_dt_B2%Basis%tab_basis(1)%nb,psi_dt_B2%Basis%tab_basis(1)%nb))
-        S(:,:) = ZERO
-
-        DO ib2=1,psi_dt_B2%Basis%tab_basis(1)%nb
-            psi_dt_B2%CVec(ib2) =CZERO
-            DO ib1=1,psi_dt_B2%Basis%tab_basis(1)%nb
-                CALL  Hermite_product_integral ( S(ib1,ib2), psi_dt_B1%Basis%tab_basis(1)%X ,&
-                        & psi_dt_B1%Basis%tab_basis(1)%W , ib1-1,ib2-1,q10,q20 ,sci,scj)
-            End Do
-        End Do
-
-        DO ib2=1,psi_dt_B2%Basis%tab_basis(1)%nb
-            DO ib1=1,psi_dt_B1%Basis%tab_basis(1)%nb
-                psi_dt_B2%CVec(ib2) = psi_dt_B2%CVec(ib2) +S(ib1,ib2)*psi_dt_B1%CVec(ib1)
+        psi_dt_2%CVec(:) =CZERO
+        !write(out_unitp,*) 'writing psi_in'
+        !CALL Write_psi(psi_dt_1)
+        write(out_unitp,*) 'Begin Hagedorn projection'
+        write(out_unitp,*) 'b1'
+            CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
+            write(out_unitp,*) 'b2'
+            CALL Write_RMat(psi_dt_2%Basis%tab_basis(1)%S,out_unitp,5)
+           
+            DO ib2=1,psi_dt_1%Basis%tab_basis(1)%nb
+                DO ib1=1,psi_dt_1%Basis%tab_basis(1)%nb
+                    psi_dt_2%CVec(ib2) = psi_dt_2%CVec(ib2) + psi_dt_1%Basis%tab_basis(1)%S(ib1,ib2)*psi_dt_1%CVec(ib1)
+                END DO
+                
             END DO
-        End do
-        !write(out_unitp,*) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-        !write(out_unitp,*) 'psi on second Basis'
-        !CALL Write_psi(psi_dt_B2)
-       ! write(out_unitp,*) '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+            !write(out_unitp,*) 'writing psi_out'
+            !CALL Write_psi(psi_dt_2)
 
-         !call Calc_Norm_OF_Psi(psi_dt_B2,Norm)
-        !psi_dt_B2%CVec = psi_dt_B2%CVec/Norm
-        !call Calc_Norm_OF_Psi(psi_dt_B2,Norm)
-        !print*,'Norm=',Norm
-            deallocate(S)
             write(out_unitp,*) 'END Hagedorn projection'
-
+            
     END SUBROUTINE Projection
 
 
@@ -210,7 +193,7 @@ contains
          else
              print*,'pis is on basis'
              do ib = 1,psi%Basis%nb
-                 write(i,*)   , abs(psi%CVec(ib))**2
+                 write(i,*)  abs(psi%CVec(ib))**2
              end do
          end if
          END SUBROUTINE
@@ -243,7 +226,7 @@ contains
 
         print*, '<psis1|psi1> = ',Norm1
         print*,''
-       CALL Projection(psi1,psi2,q10,q20,sci,scj)
+       CALL Projection(psi2,psi1)
         print*,''
 
         CALL Calc_Norm_OF_Psi(psi2,Norm2)
@@ -268,13 +251,12 @@ contains
         psi2%CVec(:) = CZERO
         Do iq = 1,psi1%Basis%nb
             Do jq =1,psi1%Basis%nb
-                CALL  Hermite_product_integral ( S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
+                CALL  Hermite_product_integral ( psi1%Basis%tab_basis(1)%S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
                         &psi1%Basis%tab_basis(1)%W , iq-1, jq-1,psi1%Basis%tab_basis(1)%Q0,psi2%Basis%tab_basis(1)%Q0,&
                         psi1%Basis%tab_basis(1)%SCALEQ,psi2%Basis%tab_basis(1)%SCALEQ )
             End Do
         End Do
-        CALL Projection(psi1,psi2,psi1%Basis%tab_basis(1)%Q0,psi2%Basis%tab_basis(1)%Q0,&
-                psi1%Basis%tab_basis(1)%SCALEQ,psi2%Basis%tab_basis(1)%SCALEQ)
+        CALL Projection(psi2,psi2)
         deallocate(S)
           print*,'END Hagedorn projection'
     END SUBROUTINE Hagedorn_transfo

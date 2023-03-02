@@ -1,4 +1,5 @@
 PROGRAM TD_SCHROD
+  USE UtilLib_m
   USE GWPnD_m
   USE Basis_m
   USE psi_m
@@ -15,7 +16,7 @@ PROGRAM TD_SCHROD
 
 !====================================================================
 ! for QML
-integer :: ndim,nsurf,option,iq
+integer :: ndim,nsurf,option,iq,ib
 logical :: adiabatic
 character (len=16)                  :: pot_name
 
@@ -32,26 +33,29 @@ write(out_unitp,*) 'pot_name'
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis_i,nio=in_unitp)
   CALL construct_primitive_basis(Basis_i)
-  CALL init_Basis1_TO_Basis2 (Basis_i,Basis_f)
+  CALL init_Basis1_TO_Basis2 (Basis_f,Basis_i)
   CALL construct_primitive_basis(Basis_f)
-  !Call Write_Basis(Basis_f)
+
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
   write(out_unitp,*) 'Initialization of a complex psi'
   CALL init_psi(psi0,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psif,   Basis_f,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
-  !CALL construct_primitive_basis(Basis_f)
- ! Call Write_Basis(Basis_f)
-   CALL  GWP_init(psi0,1,nio=in_unitp)
 
-  CALL Write_p(psi0,0)
-  call Calc_average_energy(psi0,E)
+  CALL GWP_init(psi0,1,in_unitp)
+
+   
+    !CALL  Calc_S(Basis_i,HALF,ONE)
+    !CALL Projection(psif,psi0)
+  
+
+  ! call Calc_average_energy(psi0,E)
   !call Calc_std_dev_AVQ_1D(psi0,1,AVQ,DQ)
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
- ! STOP 'calcul de H|psi> est fait'
+  ! STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
   CALL propagation(Psif,Psi0,Basis_f,propa)

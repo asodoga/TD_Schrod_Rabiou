@@ -56,7 +56,9 @@
                   X   =  X+conjg(psi%CVec(Iq))*(psi%Basis%tab_basis(i_1D)%x(Iq)**2)*psi%CVec(Iq)*psi%Basis%tab_basis(i_1D)%w(Iq)
 
                   end do
+                
                     STD_DQ =sqrt(X-AVQ*AVQ)
+
               ! Print*,"<psi|Q|psi> = ",AVQ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ
              CALL dealloc_psi(psi)
              IF (debug) THEN

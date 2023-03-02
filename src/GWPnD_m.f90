@@ -88,13 +88,15 @@ END SUBROUTINE Read_GWPnD
         call calc_Q_grid(Q,Psi0%Basis)
         DO iq = 1,psi0%Basis%nq
             call Tab_GWPnD(paragwp,Q(Iq,:),g(Iq))
-            write(22,*) Q(Iq,:),abs(g(Iq))**2
         END DO
         gb(:,:) = CZERO
         gb(:,Istate) =  g(:)
         psi%CVec(:) = reshape(gb,shape=[psi0%Basis%nq*Psi0%Basis%tab_basis(Ndim+1)%nb])
         call Calc_Norm_OF_Psi(psi,NormG)
         psi%CVec(:) = psi%CVec(:)/NormG
+        DO iq = 1,psi0%Basis%nq
+            write(22,*) Q(Iq,:),abs(psi%CVec(Iq))**2
+        END DO
         call Calc_Norm_OF_Psi(psi,NormG)
         print*,'NormG = ',NormG
         call GridTOBasis_nD_cplx(psi0%CVec,psi%CVec,psi0%Basis)
