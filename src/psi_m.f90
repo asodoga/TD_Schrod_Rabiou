@@ -119,6 +119,7 @@ contains
     IF (associated(psi%Basis)) THEN
      ! write(out_unitp,*) ' The basis is linked to psi.'
     END IF
+    CALL Write_Basis(psi%Basis)
       !CALL  Write_Basis(psi%Basis)
     IF (allocated(psi%RVec)) THEN
      ! write(out_unitp,*) 'Writing psi (real):'
@@ -146,13 +147,13 @@ contains
         integer                        :: ib1,ib2
 
         psi_dt_2%CVec(:) =CZERO
-        !write(out_unitp,*) 'writing psi_in'
-        !CALL Write_psi(psi_dt_1)
         write(out_unitp,*) 'Begin Hagedorn projection'
-        write(out_unitp,*) 'b1'
-            CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
-            write(out_unitp,*) 'b2'
-            CALL Write_RMat(psi_dt_2%Basis%tab_basis(1)%S,out_unitp,5)
+        write(out_unitp,*) 'writing psi_in'
+        CALL Write_psi(psi_dt_1)
+            !write(out_unitp,*) 'b1'
+            !CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
+            !write(out_unitp,*) 'b2'
+            !CALL Write_RMat(psi_dt_2%Basis%tab_basis(1)%S,out_unitp,5)
            
             DO ib2=1,psi_dt_1%Basis%tab_basis(1)%nb
                 DO ib1=1,psi_dt_1%Basis%tab_basis(1)%nb
@@ -160,9 +161,8 @@ contains
                 END DO
                 
             END DO
-            !write(out_unitp,*) 'writing psi_out'
-            !CALL Write_psi(psi_dt_2)
-
+            write(out_unitp,*) 'writing psi_out'
+            CALL Write_psi(psi_dt_2)
             write(out_unitp,*) 'END Hagedorn projection'
             
     END SUBROUTINE Projection
@@ -236,32 +236,6 @@ contains
         deallocate(S)
 
     END SUBROUTINE Test_Hagedorn
-
-    SUBROUTINE Hagedorn_transfo(psi1,psi2)
-        USE UtilLib_m
-        TYPE(psi_t), intent(in)        :: psi1
-        TYPE(psi_t), intent(inout)     :: psi2
-        real(Kind = Rk),allocatable    :: S(:,:)
-        integer                        :: iq,jq
-        real(kind=Rk)                  :: Norm1,Norm2
-
-        allocate(S(psi1%Basis%nb,psi1%Basis%nb))
-        print*,' Beging Hagedorn projection'
-        S(:,:) = ZERO
-        psi2%CVec(:) = CZERO
-        Do iq = 1,psi1%Basis%nb
-            Do jq =1,psi1%Basis%nb
-                CALL  Hermite_product_integral ( psi1%Basis%tab_basis(1)%S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
-                        &psi1%Basis%tab_basis(1)%W , iq-1, jq-1,psi1%Basis%tab_basis(1)%Q0,psi2%Basis%tab_basis(1)%Q0,&
-                        psi1%Basis%tab_basis(1)%SCALEQ,psi2%Basis%tab_basis(1)%SCALEQ )
-            End Do
-        End Do
-        CALL Projection(psi2,psi2)
-        deallocate(S)
-          print*,'END Hagedorn projection'
-    END SUBROUTINE Hagedorn_transfo
-
-
 
 
     SUBROUTINE Calc_Norm_OF_Psi(Psi,Norm)

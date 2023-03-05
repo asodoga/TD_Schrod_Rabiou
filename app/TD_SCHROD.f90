@@ -8,7 +8,7 @@ PROGRAM TD_SCHROD
   USE Ana_psi_m
   USE lanczos_m
   IMPLICIT NONE
-  TYPE (Basis_t), target       :: Basis_i,Basis_f
+  TYPE (Basis_t), target       :: Basis_i,Basis_f,Basis_ii
     TYPE (Op_t)                  :: H
   TYPE (psi_t)                 :: psi0,psif,psi
   TYPE(propa_t)                :: propa
@@ -36,18 +36,21 @@ write(out_unitp,*) 'pot_name'
   CALL init_Basis1_TO_Basis2 (Basis_f,Basis_i)
   CALL construct_primitive_basis(Basis_f)
 
+  CALL init_Basis1_TO_Basis2 (Basis_ii,Basis_i)
+  CALL construct_primitive_basis(Basis_ii)
+
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
   write(out_unitp,*) 'Initialization of a complex psi'
   CALL init_psi(psi0,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psif,   Basis_f,    cplx=.TRUE.   ,grid =.false.)
-  CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
+  CALL init_psi(psi,   Basis_ii,    cplx=.TRUE.   ,grid =.false.)
+
+
+
 
   CALL GWP_init(psi0,1,in_unitp)
 
-   
-    !CALL  Calc_S(Basis_i,HALF,ONE)
-    !CALL Projection(psif,psi0)
   
 
   ! call Calc_average_energy(psi0,E)
@@ -55,10 +58,11 @@ write(out_unitp,*) 'pot_name'
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  ! STOP 'calcul de H|psi> est fait'
+  !STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
-  CALL propagation(Psif,Psi0,Basis_f,propa)
+  CALL propagation_Test(Psif,Psi0,Basis_f,propa)
+  !CALL propagation(Psif,Psi0,Basis_f,propa)
  ! CALL Write_psi(psif)
   write(out_unitp,*) 'deallocation'
   CALL dealloc_psi(psi0)

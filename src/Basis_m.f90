@@ -128,56 +128,51 @@ CONTAINS
            END IF
            write(out_unitp,*)
            IF (.NOT.allocated(Basis%W)) THEN
-             !write(out_unitp,*)' Basis table w is not allocated.'
+           !  write(out_unitp,*)' Basis table w is not allocated.'
            ELSE
             CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
            END IF
          !! write(out_unitp,*)
-          IF (.NOT.allocated(Basis%d0gb)) THEN
-            write(out_unitp,*)' Basis table d0gb is not allocated.'
-          ELSE
-           CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
-          END IF
-
-         !
-         ! !write(out_unitp,*)
-         !IF (.NOT.allocated(Basis%d0bgw)) THEN
-         !   !write(out_unitp,*)' Basis table d0bgw is not allocated.'
-         ! ELSE
-         !  !CALL Write_RMat(Basis%d0bgw,out_unitp,5,name_info='d0gbw')
-         !END IF
-         !! write(out_unitp,*)
-         ! IF (.NOT.allocated(Basis%d1gb)) THEN
-         !   !write(out_unitp,*)' Basis table d1gb is not allocated.'
-         ! ELSE
-         !  ! CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
-         ! END IF
-         ! !write(out_unitp,*)
-         ! IF (.NOT.allocated(Basis%d1gg)) THEN
-         !  ! write(out_unitp,*)' Basis table d1gb is not allocated.'
-         ! ELSE
-         !  ! CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
-         ! END IF
-         !! write(out_unitp,*)
-         ! IF (.NOT.allocated(Basis%d2gb)) THEN
-         !  ! write(out_unitp,*)' Basis table d1gb is not allocated.'
-         ! ELSE
-         !   !CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
-         ! END IF
-         !! write(out_unitp,*)
-         ! IF (.NOT.allocated(Basis%d2gg)) THEN
-         !   !write(out_unitp,*)' Basis table d2gg is not allocated.'
-         ! ELSE
-         !   !CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+         ! IF (.NOT.allocated(Basis%d0gb)) THEN
+          !  write(out_unitp,*)' Basis table d0gb is not allocated.'
+          !ELSE
+           !CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
          ! END IF
 
-       IF (.NOT.allocated(Basis%d2gg)) THEN
-             write(out_unitp,*)' Basis table S is not allocated.'
-           ELSE
-             CALL Write_RMat(Basis%S,out_unitp,5,name_info='S')
-           END IF
          !
-         !  write(out_unitp,*) 'nb_basis',Basis%nb_basis
+          !write(out_unitp,*)
+       !  IF (.NOT.allocated(Basis%d0bgw)) THEN
+       !     write(out_unitp,*)' Basis table d0bgw is not allocated.'
+       !   ELSE
+       !    !CALL Write_RMat(Basis%d0bgw,out_unitp,5,name_info='d0gbw')
+       !  END IF
+       !  ! write(out_unitp,*)
+       !   IF (.NOT.allocated(Basis%d1gb)) THEN
+       !     write(out_unitp,*)' Basis table d1gb is not allocated.'
+       !   ELSE
+       !    ! CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
+       !   END IF
+       !   !write(out_unitp,*)
+       !   IF (.NOT.allocated(Basis%d1gg)) THEN
+       !     write(out_unitp,*)' Basis table d1gb is not allocated.'
+       !   ELSE
+       !    ! CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+       !   END IF
+       !  ! write(out_unitp,*)
+       !   IF (.NOT.allocated(Basis%d2gb)) THEN
+       !     write(out_unitp,*)' Basis table d1gb is not allocated.'
+       !   ELSE
+       !     !CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+       !   END IF
+       !  ! write(out_unitp,*)
+       !   IF (.NOT.allocated(Basis%d2gg)) THEN
+       !     write(out_unitp,*)' Basis table d2gg is not allocated.'
+       !   ELSE
+       !     !CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+       !   END IF
+           ! CALL Write_RMat(Basis%S,out_unitp,5,name_info='S')
+
+        !   write(out_unitp,*) 'nb_basis',Basis%nb_basis
 
          IF (allocated(Basis%tab_basis)) THEN
            DO i=1,size(Basis%tab_basis)
@@ -526,11 +521,11 @@ CONTAINS
         norme  =  sqrt(PI)
 
         IF (l == 0) THEN
-            poly_Hermite  = exp ( - 0.5*x*x  )
+            poly_Hermite  = exp ( - HALF*x*x  )
             poly_Hermite  = poly_Hermite/sqrt(norme)
         ELSE IF (l == 1) THEN
             norme          = norme * TWO
-            poly_Hermite   = TWO*x*exp ( - 0.5*x*x  )
+            poly_Hermite   = TWO*x*exp ( - HALF*x*x  )
             poly_Hermite   =  poly_Hermite /sqrt(norme)
         ELSE
 
@@ -544,7 +539,7 @@ CONTAINS
                 pl2 = pl1
                 pl1 = pl0
             END DO
-             pl0          = pl0*exp ( - 0.5*x*x  )
+             pl0          = pl0*exp ( - HALF*x*x  )
              poly_Hermite = pl0/sqrt(norme)
 
 
@@ -946,7 +941,7 @@ CONTAINS
         End Do
 
         !CALL Write_Basis(Basis2)
-        CALL Write_RMat(Basis%tab_basis(1)%S,out_unitp,5)
+        !CALL Write_RMat(Basis%tab_basis(1)%S,out_unitp,5)
 
         write(out_unitp,*) 'END  Calc_S'
     END SUBROUTINE

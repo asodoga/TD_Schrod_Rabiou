@@ -59,7 +59,7 @@
                 
                     STD_DQ =sqrt(X-AVQ*AVQ)
 
-              ! Print*,"<psi|Q|psi> = ",AVQ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ
+               Print*,"<psi|Q|psi> = ",AVQ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ
              CALL dealloc_psi(psi)
              IF (debug) THEN
                 ! write(out_unitp,*) 'END AVQ,STD_DQ'

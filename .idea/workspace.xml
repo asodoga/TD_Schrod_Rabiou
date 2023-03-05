@@ -5,21 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7ce707dc-fe59-41ba-9963-c83cdad3fde8" name="Changes" comment="Developing Hagedorn technique &amp; solving problem">
-      <change afterPath="$PROJECT_DIR$/Ener.dat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_7_29_22,_12_50_PM_[Changes]/TD_SCHROD.x" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_7_29_22,_12_50_PM_[Changes]/TD_SCHROD.x" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DAT_files/dat_fourier" beforeDir="false" afterPath="$PROJECT_DIR$/DAT_files/dat_fourier" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TD_SCHROD.x" beforeDir="false" afterPath="$PROJECT_DIR$/TD_SCHROD.x" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/TD_SCHROD.f90" beforeDir="false" afterPath="$PROJECT_DIR$/app/TD_SCHROD.f90" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fort.22" beforeDir="false" afterPath="$PROJECT_DIR$/fort.22" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resultat" beforeDir="false" afterPath="$PROJECT_DIR$/resultat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/script.sh" beforeDir="false" afterPath="$PROJECT_DIR$/script.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Ana_psi_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/Ana_psi_m.f90" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Basis_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/Basis_m.f90" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/GWPnD_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/GWPnD_m.f90" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Propa_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/Propa_m.f90" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/psi_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/psi_m.f90" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/xmean.dat" beforeDir="false" afterPath="$PROJECT_DIR$/xmean.dat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,8 +25,8 @@
   <component name="Git.Settings">
     <option name="PUSH_TAGS">
       <GitPushTagMode>
-        <option name="argument" value="--tags" />
-        <option name="title" value="All" />
+        <option name="argument" value="--follow-tags" />
+        <option name="title" value="Current Branch" />
       </GitPushTagMode>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -65,19 +58,20 @@
     <option name="showLibraryContents" value="true" />
     <option name="showVisibilityIcons" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;Project.color&quot;: &quot;ffaa81&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/elprof/TD_Schrod_Rabiou&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "Project.color": "ffaa81",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "last_opened_file_path": "/home/elprof/TD_Schrod_Rabiou",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.sourceCode"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration default="true" type="JetRunConfigurationType">
       <module name="TD_Schrod" />
