@@ -58,10 +58,10 @@ write(out_unitp,*) 'pot_name'
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  !STOP 'calcul de H|psi> est fait'
+  STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
-  CALL propagation_Test(Psif,Psi0,Basis_f,propa)
+  CALL propagation_Test(psif,psi0,propa)
   !CALL propagation(Psif,Psi0,Basis_f,propa)
  ! CALL Write_psi(psif)
   write(out_unitp,*) 'deallocation'

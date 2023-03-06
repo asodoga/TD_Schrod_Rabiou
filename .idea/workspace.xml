@@ -5,14 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7ce707dc-fe59-41ba-9963-c83cdad3fde8" name="Changes" comment="Developing Hagedorn technique &amp; solving problem">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/.polyortho_m.f90.swn" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/.polyortho_m.f90.swo" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/.polyortho_m.f90.swp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/poly0rtho_m.f90" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DAT_files/dat_fourier" beforeDir="false" afterPath="$PROJECT_DIR$/DAT_files/dat_fourier" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/TD_SCHROD.f90" beforeDir="false" afterPath="$PROJECT_DIR$/app/TD_SCHROD.f90" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Ana_psi_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/Ana_psi_m.f90" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Basis_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/Basis_m.f90" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Propa_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/Propa_m.f90" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/psi_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/psi_m.f90" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

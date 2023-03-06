@@ -131,16 +131,15 @@ contains
 
 
     END SUBROUTINE
-    SUBROUTINE propagation_Test(psif,psi0,Basis_f,propa)
+    SUBROUTINE propagation_Test(psif,psi0,propa)
         USE psi_m
         USE Basis_m
 
         TYPE (psi_t),  intent(inout)     :: psif
         TYPE (psi_t),  intent(in)        :: psi0
         TYPE(propa_t), intent(inout)     :: propa
-        TYPE(Basis_t) ,intent(inout)     :: Basis_f
         logical, parameter               :: debug = .true.
-        TYPE(Basis_t) ,target            :: Basis_1,Basis_2
+        TYPE(Basis_t) ,target            :: Basis_1,Basis_2,Basis_0
 
         ! variables locales
         REAL(kind=Rk)                    :: t ,t_deltat, Norm,E,Qt,SQt
@@ -165,23 +164,30 @@ contains
 
             CALL init_Basis1_TO_Basis2 (Basis_1,psi0%Basis)
             CALL init_Basis1_TO_Basis2 (Basis_2,psi0%Basis)
+            CALL init_Basis1_TO_Basis2 (Basis_0,psi0%Basis)
+            CALL construct_primitive_basis(Basis_0)
             CALL construct_primitive_basis(Basis_1)
             CALL construct_primitive_basis(Basis_2)
             CALL init_psi(psi,Basis_1,cplx=.TRUE.,grid =.false.)
             CALL init_psi(psi_dt,Basis_2,cplx=.TRUE.,grid =.false.  )
 
-             psi%CVec(:) = psi0%CVec(:)
+             psi = psi0
         ! ******************************* Beging  propagation ********************************************************
         DO i=0,nt
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
+            CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
+            call Calc_average_energy(psi,E)
             write(13,*)    t, Qt,E
             CALL  march_test(psi,psi_dt,t,propa)
-            if( propa%propa_name  == 'hagedorn' ) CALL  Hagedorn(psi,psi_dt,Basis_1,Basis_2,Basis_f)
+            if( propa%propa_name  == 'hagedorn' )  then
+                CALL  Hagedorn(psi,psi_dt,Basis_0)
+                else
+                psi = psi_dt
+                end if
         END DO
-           psif%CVec(:) = psi_dt%CVec(:)
-          CALL  Calc_basis(Basis_f, psi0%Basis,Qt,ONE )
+           psif = psi_dt
           CALL  Calc_Norm_OF_Psi(psif, Norm)
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
@@ -195,25 +201,22 @@ contains
 
 
 
-    SUBROUTINE Hagedorn(psi,psi_dt,Basis_1,Basis_2,Basis_f)
+    SUBROUTINE Hagedorn(psi,psi_dt,Basis)
         USE psi_m
         USE Basis_m
 
-        TYPE (psi_t),  intent(inout)            :: psi
-        TYPE (psi_t),  intent(in)               :: psi_dt
-        logical, parameter                      :: debug = .true.
-        TYPE(Basis_t) ,intent(inout)            :: Basis_1,Basis_2
-        TYPE(Basis_t) ,intent(in)               :: Basis_f
+        TYPE (psi_t),     intent(inout)             :: psi,psi_dt
+        TYPE (Basis_t)  ,  intent(in)               :: Basis
+        logical, parameter                          :: debug = .true.
 
         ! variables locales
-        REAL(kind=Rk)                    :: Qt,SQt
+        REAL(kind=Rk)                               :: Qt,SQt
         write(out_unitp,*) 'Beging Hagedorn'
-            CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
-            CALL  Calc_basis(Basis_1, Basis_f,Qt,ONE)
-            CALL Calc_S(Basis_2,Qt,ONE)
-            CALL Projection(psi,psi_dt)
-            CALL  Calc_basis(Basis_2, Basis_f,Qt,ONE)
-            CALL Calc_S(Basis_1,Qt,ONE)
+        CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
+        CALL  Calc_basis(psi%Basis, Basis,Qt,SQt)
+        CALL Calc_S(psi_dt%Basis,Qt,SQt)
+        CALL Projection(psi,psi_dt)
+        CALL  Calc_basis(psi_dt%Basis, Basis,Qt,SQt)
         write(out_unitp,*) 'End Hagedorn'
         IF (debug) THEN
             flush(out_unitp)
