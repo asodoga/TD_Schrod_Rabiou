@@ -29,14 +29,14 @@
          end subroutine Population
 
 
-         SUBROUTINE Calc_std_dev_AVQ_1D(Psi_in,i_1D,AVQ,STD_DQ)
+         SUBROUTINE Calc_std_dev_AVQ_1D(Psi_in,i_1D,AVQ,SQ)
              USE UtilLib_m
              logical,         parameter      :: debug = .false.
              TYPE(Psi_t), intent(in)         :: Psi_in
              integer,intent(in)              :: i_1D ! indicating  the dimension
              TYPE(Psi_t)                     :: Psi
-             real(kind=Rk),intent(inout)     :: AVQ,STD_DQ
-             real(kind=Rk)                   :: WnD,X
+             real(kind=Rk),intent(inout)     :: AVQ,SQ
+             real(kind=Rk)                   :: WnD,X,STD_DQ
              integer                         :: Iq
              IF (debug) THEN
                 ! write(out_unitp,*) 'Beging AVQ,STD_DQ'
@@ -58,8 +58,9 @@
                   end do
                 
                     STD_DQ =sqrt(X-AVQ*AVQ)
+                    SQ = ONE/(STD_DQ*sqrt(ONE+ONE))
 
-               Print*,"<psi|Q|psi> = ",AVQ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ
+               Print*,"<psi|Q|psi> = ",AVQ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ,'SQ=',SQ
              CALL dealloc_psi(psi)
              IF (debug) THEN
                 ! write(out_unitp,*) 'END AVQ,STD_DQ'

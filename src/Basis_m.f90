@@ -367,7 +367,7 @@ CONTAINS
                 STOP 'ERROR  Noting to construct'
             END SELECT
             !  this part wil not have sens for 'el' basis
-            CALL Scale_Basis(Basis,Basis%Q0,Basis%scaleQ)
+             ! CALL Scale_Basis(Basis,Basis%Q0,Basis%scaleQ)
             CALL   Calc_tranpose_d0gb(Basis)
             CALL Calc_dngg_grid(Basis)
             CALL CheckOrtho_Basis(Basis,nderiv=2)
@@ -500,6 +500,16 @@ CONTAINS
         END DO
     END DO
 
+    !*********************scaling***************************************************************
+
+    Basis%x(:) =  Basis%Q0 + Basis%x(:) /  Basis%SCALEQ
+    Basis%w(:) =      Basis%w(:) / Basis%SCALEQ
+    Basis%d0gb(:,:)     = Basis%d0gb(:,:)     * sqrt(Basis%SCALEQ)
+    Basis%d1gb(:,:,:)   = Basis%d1gb(:,:,:)   * sqrt(Basis%SCALEQ)*Basis%SCALEQ
+    Basis%d2gb(:,:,:,:) = Basis%d2gb(:,:,:,:) * sqrt(Basis%SCALEQ)*Basis%SCALEQ*Basis%SCALEQ
+
+
+
  END SUBROUTINE Construct_Basis_Ho
 
     !*******************************************************************************************************************
@@ -563,11 +573,11 @@ CONTAINS
 
 
        ! Hfi = He(I,qi) = HermiteH[I,qi/Sqrt[2]] / Sqrt [ 2^I ]
-               qi = (x-q0i)/sci
+               qi = (x-q0i)*sci
         CALL Construct_poly_Hermite(Hfi,qi,I-1)
 
        ! Hfj = He(J,qj) = HermiteH[J,qj/Sqrt[2]] / Sqrt [ 2^J ]
-          qj = (x-q0j)/scj
+          qj = (x-q0j)*scj
        CALL  Construct_poly_Hermite(Hfj,qj,J-1)
 
        !  Hf = Hfi *Hfj = He(J,x)*He(J,x)

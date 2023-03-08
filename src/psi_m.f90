@@ -199,41 +199,47 @@ contains
          END SUBROUTINE
 
 
-    SUBROUTINE Test_Hagedorn(psi1,psi2,q10,q20,sci,scj)
+    SUBROUTINE Test_Hagedorn(psi1,psi2)
+        !SUBROUTINE Test_Hagedorn(psi1,psi2,q10,q20,sci,scj)
         USE UtilLib_m
-        TYPE(psi_t), intent(in)        :: psi1
-        TYPE(psi_t), intent(inout)     :: psi2
-        real(Kind = Rk),allocatable    :: S(:,:)
-        real(kind=Rk)      ,intent(in) :: q10,q20,sci,scj
-        integer                        :: iq,jq
-        real(kind=Rk)                  :: Norm1,Norm2
+        TYPE(psi_t), intent(inout)         :: psi1
+        TYPE(psi_t), intent(inout)         :: psi2
+        real(Kind = Rk),allocatable        :: S(:,:)
+         !real(kind=Rk)      ,intent(in)   :: q10,q20,sci,scj
+         integer                           :: iq,jq,ib
+         !real(kind=Rk)                    :: Norm1,Norm2
 
-        allocate(S(size(psi1%CVec),size(psi1%CVec)))
-        print*,''
-        Do iq = 1,size(psi1%CVec)
-            Do jq =1,size(psi1%CVec)
-                CALL  Hermite_product_integral ( S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
-                & psi1%Basis%tab_basis(1)%W , iq-1, jq-1,q10,q20,sci,scj )
-            End Do
-        End Do
-        Do iq = 1,size(psi1%CVec)
-            print*, S(iq,:)
-        End Do
-        print*,''
+       ! allocate(S(size(psi1%CVec),size(psi1%CVec)))
 
-        print*,'psiB1',psi1%CVec
-        CALL Calc_Norm_OF_Psi(psi1,Norm1)
 
-        print*, '<psis1|psi1> = ',Norm1
-        print*,''
-       CALL Projection(psi2,psi1)
-        print*,''
+        psi1%Basis%tab_basis(1)%S = matmul(psi1%Basis%tab_basis(1)%d0bgw,psi2%Basis%tab_basis(1)%d0gb)
+        CALL Write_RMat(psi1%Basis%tab_basis(1)%S,out_unitp,5,name_info='S')
 
-        CALL Calc_Norm_OF_Psi(psi2,Norm2)
-        print*, '<psis2|psi2> = ',Norm2
-        print*,'psiB2',psi2%CVec
+          ! print*,''
+          ! Do iq = 1,size(psi1%CVec)
+          !     Do jq =1,size(psi1%CVec)
+          !         CALL  Hermite_product_integral ( S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
+          !         & psi1%Basis%tab_basis(1)%W , iq-1, jq-1,q10,q20,sci,scj )
+          !     End Do
+          ! End Do
+          ! Do iq = 1,size(psi1%CVec)
+          !     print*, S(iq,:)
+          ! End Do
+          ! print*,''
 
-        deallocate(S)
+       ! print*,'psiB1',psi1%CVec
+       ! CALL Calc_Norm_OF_Psi(psi1,Norm1)
+       !
+       ! print*, '<psis1|psi1> = ',Norm1
+       ! print*,''
+       !CALL Projection(psi2,psi1)
+       ! print*,''
+       !
+       ! CALL Calc_Norm_OF_Psi(psi2,Norm2)
+       ! print*, '<psis2|psi2> = ',Norm2
+       ! print*,'psiB2',psi2%CVec
+
+       ! deallocate(S)
 
     END SUBROUTINE Test_Hagedorn
 

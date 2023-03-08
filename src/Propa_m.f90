@@ -179,7 +179,7 @@ contains
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
             CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
-            write(13,*)    t, Qt,E
+            write(13,*)    t, Qt,E,abs(dot_product(psi%CVec,psi%CVec))
             CALL  march_test(psi,psi_dt,t,propa)
             if( propa%propa_name  == 'hagedorn' )  then
                 CALL  Hagedorn(psi,psi_dt,Basis_0)
@@ -210,14 +210,18 @@ contains
         logical, parameter                          :: debug = .true.
 
         ! variables locales
-        REAL(kind=Rk)                               :: Qt,SQt
+        REAL(kind=Rk)                               :: Qt,SQt,Norm
         write(out_unitp,*) 'Beging Hagedorn'
+        call Calc_Norm_OF_Psi(psi_dt,Norm)
+        write(out_unitp,*) '<psi|psi> =',Norm
         CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
         CALL  Calc_basis(psi%Basis, Basis,Qt,SQt)
         CALL Calc_S(psi_dt%Basis,Qt,SQt)
         CALL Projection(psi,psi_dt)
         CALL  Calc_basis(psi_dt%Basis, Basis,Qt,SQt)
         write(out_unitp,*) 'End Hagedorn'
+        call Calc_Norm_OF_Psi(psi,Norm)
+        write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
         IF (debug) THEN
             flush(out_unitp)
         END IF
@@ -320,7 +324,7 @@ contains
         Enddo
         CALL Calc_Norm_OF_Psi(Psi,Norm0)
         CALL Calc_Norm_OF_Psi(Psi_dt,Norm)
-      !  write(out_unitp,*) '<psi_dt|psi_dt> = ',Norm , 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =',abs(Norm0-Norm)
+       write(out_unitp,*) '<psi_dt|psi_dt> = ',Norm , 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =',abs(Norm0-Norm)
         write(out_unitp,*) 'END march_taylor'
         !CALL dealloc_psi(psi0)
         !CALL dealloc_psi(Hpsi)
