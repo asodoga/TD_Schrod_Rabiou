@@ -139,7 +139,7 @@ END SUBROUTINE Read_GWPnD
         gb( 1:psi0%Basis%nq, 1:psi0%Basis%tab_basis(size(psi0%Basis%tab_basis))%nb)   =>    psi%CVec
         gb(:,1) = CZERO
         gb(:,2) = g(:)
-        CALL Write_psi_basis(psi,0._Rk,2)
+        !CALL Write_psi_basis(psi,0._Rk,2)
         call Calc_Norm_OF_Psi(psi,NormG)
         print*,'NormG = ',NormG
         call GridTOBasis_nD_cplx(psi0%CVec,psi%CVec,psi0%Basis)
@@ -183,7 +183,7 @@ END SUBROUTINE Read_GWPnD
         gb( 1:psi0%Basis%nq, 1:psi0%Basis%tab_basis(size(psi0%Basis%tab_basis))%nb)   =>    psi%CVec
         gb(:,1) = CZERO
         gb(:,2) = g(:)
-        CALL Write_psi_basis(psi,0._Rk,2)
+        !CALL Write_psi_basis(psi,0._Rk,2)
         call Calc_Norm_OF_Psi(psi,NormG)
         psi%CVec(:) = psi%CVec(:)/NormG
         call Calc_Norm_OF_Psi(psi,NormG)

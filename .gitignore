@@ -4,6 +4,7 @@ fort.*
 *log
 *.pdf
 *.dat
+*.swap
 # Prerequisites
 *.d
 

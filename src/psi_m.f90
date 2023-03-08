@@ -312,58 +312,45 @@ contains
         ! write(out_unitp,*) 'norm,psi',Norm
     END SUBROUTINE Calc_Norm_OF_PsiBasis
 
-     SUBROUTINE write_psi_basis(psi,t,nio)
-    TYPE(psi_t), intent(in) ,target:: psi
-    real(kind=Rk),   intent(in)    :: t
-    real(kind=Rk)                  :: c1mod1, c1mod2
-    real(Kind= Rk), allocatable    ::Q(:,:)
-    integer,   intent(in)          :: nio
-    complex(Kind= Rk), pointer     ::gb0(:,:),gb1(:,:)
-    integer                        :: i,Ndim
-    Ndim = size(Psi%Basis%tab_basis)
-      if(psi%Grid) then
-          !> *************************wrinting psi on grid***********************************
-          gb0( 1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
-          call calc_Q_grid(Q,psi%Basis)
-          if(nio== 0) then
-              do i=1, psi%Basis%nq
-                 ! c1mod1 = abs(gb(i,1))**2
-                  !if(c1mod1 <= 1.d-10) gb(i,1) =CZERO
-                  !c1mod2 = abs(gb(i,2))**2
-                  !if(c1mod2 <= 1.d-10) gb(i,2) =CZERO
-                  write(*,*) t,Q(i,:), real(gb0(i,1)),aimag(gb0(i,1)),real(gb0(i,2)),aimag(gb0(i,2))
-              end do
-          else
-              do i=1, psi%Basis%nq
-                  !c1mod1 = abs(gb(i,1))**2
-                  !if(c1mod1 <= 1.d-10) gb(i,1) =CZERO
-                  !c1mod2 = abs(gb(i,2))**2
-                  !if(c1mod2 <= 1.d-10) gb(i,2) =CZERO
-                  write(nio,*) t,Q(i,:), real(gb0(i,1)),aimag(gb0(i,1)) ,real(gb0(i,2)),aimag(gb0(i,2))
-              end do
-          endif
-          else
-          !> *************************wrinting psi on Basis***********************************
-          gb1( 1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
-          if(nio== 0) then
-          do i=1, psi%Basis%nb
-              !c1mod1 = abs(gb(i,1))**2
-              !if(c1mod1 <= 1.d-10) gb(i,1) =CZERO
-             ! c1mod2 = abs(gb(i,2))**2
-             ! if(c1mod2 <= 1.d-10) gb(i,2) =CZERO
-          write(*,*) t, real(gb1(i,1)),aimag(gb1(i,1)),real(gb1(i,2)),aimag(gb1(i,2))
-          end do
-          else
-          do i=1, psi%Basis%nb
-              !c1mod1 = abs(gb(i,1))**2
-              !if(c1mod1 <= 1.d-10) gb(i,1) =CZERO
-             ! c1mod2 = abs(gb(i,2))**2
-             ! if(c1mod2 <= 1.d-10) gb(i,2) =CZERO
-              write(nio,*) t, real(gb1(i,1)),aimag(gb1(i,1)),real(gb1(i,2)),aimag(gb1(i,2))
-          end do
-          endif
+  SUBROUTINE write_psi_basis(psi,density,t,nio)
+    TYPE(psi_t)       ,  intent(in)    ,target          :: psi
+    real(kind=Rk)     , intent(in)     ,optional        :: t
+    integer           , intent(in)     ,optional        :: nio
+    logical           ,  intent(in)                     :: density
+    complex(Kind= Rk) , pointer                         ::psibe(:,:)
+    integer                                             :: ib ,Ndim
+   
+    
 
-      end if
+     psibe ( 1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
+
+     if( density .eqv.  .false.) then
+      write(*,*) '****************** Beging wrinting psi on basis****************************'
+
+          if (present(nio) .and. present(t)) then
+             do ib =1, psi%Basis%nb
+                 write(nio,*) t,  psibe(ib,1) , psibe(ib,2)
+             end do
+         else
+             do ib=1, psi%Basis%nb
+               write(*,*) t ,  psibe(ib,1) , psibe(ib,2)
+             end do
+         endif
+         write(*,*) '****************** End wrinting psi on basis********************************'
+    else
+        write(*,*) '****************** Beging wrinting <psi/psi> on basis****************************'      
+        if (present(nio) .and. present(t)) then
+           do ib =1, psi%Basis%nb
+               write(nio,*) t,  psibe(ib,1) , psibe(ib,2)
+           end do
+        else
+           do ib=1, psi%Basis%nb
+             write(*,*) t ,ib, abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
+           end do
+        endif
+       write(*,*) '****************** End wrinting <psi/psi> on basis********************************'
+  end if
+
   END SUBROUTINE write_psi_basis
 
     SUBROUTINE write_psi_Grid(psi,nio)
