@@ -41,13 +41,15 @@ write(out_unitp,*) 'pot_name'
   write(out_unitp,*) 'Initialization of a complex psi'
   CALL init_psi(psi0,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psif,   Basis_f,    cplx=.TRUE.   ,grid =.false.)
+  CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
 
   CALL GWP_init(psi0,1,in_unitp)
-  !psi0%CVec= CZERO
-  !psi0%CVec(1) = CONE
+! call write_psi_basis(psi0,print_cplx='no')
+  call BasisTOGrid_nD_cplx(psi%CVec,psi0%CVec,Basis_i)
+  call write_psi_Grid(psi,print_cplx='no')
 
-  CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
-  call Write_psi(psi0)
+  !CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
+ ! call Write_psi(psi0)
 
   ! call Calc_average_energy(psi0,E)
   !call Calc_std_dev_AVQ_1D(psi0,1,AVQ,DQ)

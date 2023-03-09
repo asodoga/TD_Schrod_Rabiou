@@ -312,63 +312,138 @@ contains
         ! write(out_unitp,*) 'norm,psi',Norm
     END SUBROUTINE Calc_Norm_OF_PsiBasis
 
-  SUBROUTINE write_psi_basis(psi,density,t,nio)
-    TYPE(psi_t)       ,  intent(in)    ,target          :: psi
-    real(kind=Rk)     , intent(in)     ,optional        :: t
-    integer           , intent(in)     ,optional        :: nio
-    logical           ,  intent(in)                     :: density
-    complex(Kind= Rk) , pointer                         ::psibe(:,:)
-    integer                                             :: ib ,Ndim
+  SUBROUTINE write_psi_basis(psi,print_cplx,t,nio)
+    TYPE(psi_t)                   ,  intent(in)    ,target          :: psi
+    real(kind=Rk)                 , intent(in)     ,optional        :: t
+    integer                       , intent(in)     ,optional        :: nio
+    character(len = *)           ,  intent(in)                      :: print_cplx
+    complex(Kind= Rk) , pointer                                     ::psibe(:,:)
+    integer                                                         :: ib ,Ndim
    
     
+    Ndim = size(psi%Basis%tab_basis)
+    psibe ( 1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
 
-     psibe ( 1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
-
-     if( density .eqv.  .false.) then
+     if( print_cplx  == 'yes') then
       write(*,*) '****************** Beging wrinting psi on basis****************************'
-
           if (present(nio) .and. present(t)) then
-             do ib =1, psi%Basis%nb
-                 write(nio,*) t,  psibe(ib,1) , psibe(ib,2)
+              write(nio,*) '       t,               ib'
+              do ib =1, psi%Basis%nb
+                 write(nio,*) t, ib, psibe(ib,1) , psibe(ib,2)
              end do
-         else
+         elseif(present(t))then
+              write(*,*) '          t,             ib'
              do ib=1, psi%Basis%nb
-               write(*,*) t ,  psibe(ib,1) , psibe(ib,2)
+               write(*,*) t ,ib,  psibe(ib,1) , psibe(ib,2)
              end do
+         elseif(present(nio))  then
+              write(nio,*) '        ib'
+              do ib =1, psi%Basis%nb
+                  write(nio,*) ib, psibe(ib,1) , psibe(ib,2)
+              end do
+         elseif(.not. present(nio) .and.  .not. present(t))then
+              write(*,*) '         ib,        '
+              do ib =1, psi%Basis%nb
+                  write(out_unitp,*) ib, psibe(ib,1) !, psibe(ib,2)
+              end do
+         else
+              print*,'no default case'
          endif
          write(*,*) '****************** End wrinting psi on basis********************************'
-    else
+    elseif(print_cplx== 'no') then
         write(*,*) '****************** Beging wrinting <psi/psi> on basis****************************'      
         if (present(nio) .and. present(t)) then
            do ib =1, psi%Basis%nb
-               write(nio,*) t,  psibe(ib,1) , psibe(ib,2)
+               write(nio,*) t, ib, abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
            end do
+        elseif(present(t))then
+            do ib=1, psi%Basis%nb
+                write(*,*) t ,ib,  abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
+            end do
+        elseif(present(nio))  then
+            do ib =1, psi%Basis%nb
+                write(nio,*) ib, abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
+            end do
+        elseif(.not. present(nio) .and.  .not. present(t))then
+            do ib =1, psi%Basis%nb
+                write(out_unitp,*) ib, abs( psibe(ib,1))**2 !, abs(psibe(ib,2))**2
+            end do
         else
-           do ib=1, psi%Basis%nb
-             write(*,*) t ,ib, abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
-           end do
+            print*,'no default case'
         endif
+    else
+         print*,'no default case'
        write(*,*) '****************** End wrinting <psi/psi> on basis********************************'
-  end if
+    end if
 
   END SUBROUTINE write_psi_basis
 
-    SUBROUTINE write_psi_Grid(psi,nio)
-        TYPE(psi_t), intent(in)        :: psi
-        TYPE(psi_t)                    :: psi_g
-        integer,   intent(in)          :: nio
-        integer                         :: i
-            !> *************************wrinting psi on grid***********************************
 
-        CALL init_psi(psi_g,   psi%Basis,    cplx=.TRUE.   ,grid =.true.)
-        call BasisTOGrid_nD_cplx(psi_g%CVec,psi%CVec,psi%Basis)
+    SUBROUTINE write_psi_Grid(psi,print_cplx,t,nio)
+        TYPE(psi_t)                   ,  intent(in)    ,target          :: psi
+        real(kind=Rk)                 , intent(in)     ,optional        :: t
+        integer                       , intent(in)     ,optional        :: nio
+        character(len = *)            ,  intent(in)                     :: print_cplx
+        complex(Kind= Rk)             , pointer                         ::psige(:,:)
+        integer                                                         :: iq ,Ndim
+        real(Kind= Rk)               , allocatable                      ::Q(:,:)
 
-           do i=1, psi%Basis%tab_basis(1)%nq
-                Write(nio,*) psi_g%Basis%tab_basis(1)%x(i) , ABS(psi_g%CVec(i))**2,&
-                 & ABS(psi_g%CVec(psi%Basis%tab_basis(1)%nq+i))**2
-           end do
-           call dealloc_psi(psi_g)
-    END SUBROUTINE write_psi_Grid
+
+        Ndim = size(psi%Basis%tab_basis)
+        psige ( 1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
+        call calc_Q_grid(Q,psi%Basis)
+
+        if( print_cplx  == 'yes') then
+            write(*,*) '****************** Beging wrinting psi on Grid****************************'
+            if (present(nio) .and. present(t)) then
+                write(nio,*) '       t,               ib'
+                do iq =1, psi%Basis%nq
+                    write(nio,*) t, Q(iq,:), psige(iq,1) , psige(iq,2)
+                end do
+            elseif(present(t))then
+                do iq=1, psi%Basis%nq
+                    write(*,*) t ,Q(iq,:),  psige(iq,1) , psige(iq,2)
+                end do
+            elseif(present(nio))  then
+                do iq =1, psi%Basis%nq
+                    write(nio,*) Q(iq,:), psige(iq,1) , psige(iq,2)
+                end do
+            elseif(.not. present(nio) .and.  .not. present(t))then
+                do iq =1, psi%Basis%nq
+                    write(out_unitp,*) Q(iq,:), psige(iq,1) !, psibe(ib,2)
+                end do
+            else
+                print*,'no default case'
+            endif
+            write(*,*) '****************** End wrinting psi on Grid ********************************'
+        elseif(print_cplx== 'no') then
+            write(*,*) '****************** Beging wrinting <psi/psi> on Grid ****************************'
+            if (present(nio) .and. present(t)) then
+                do iq =1, psi%Basis%nq
+                    write(nio,*) t, Q(iq,:), abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                end do
+            elseif(present(t))then
+                do iq=1, psi%Basis%nq
+                    write(*,*) t ,Q(iq,:),  abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                end do
+            elseif(present(nio))  then
+                do iq =1, psi%Basis%nq
+                    write(nio,*) Q(iq,:), abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                end do
+            elseif(.not. present(nio) .and.  .not. present(t))then
+                do iq =1, psi%Basis%nq
+                    write(out_unitp,*) Q(iq,:), abs( psige(iq,1))**2 !, abs(psibe(ib,2))**2
+                end do
+            else
+                print*,'no default case'
+            endif
+        else
+            print*,'no default case'
+            write(*,*) '****************** End wrinting <psi/psi> on Grid ********************************'
+        end if
+
+    END SUBROUTINE
+
 
     subroutine test(Basis)
         implicit none
