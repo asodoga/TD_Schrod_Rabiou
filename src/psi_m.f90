@@ -17,9 +17,9 @@ module psi_m
 
   END TYPE psi_t
 
-   public :: psi_t,write_psi,init_psi,dealloc_psi,write_psi_Grid, Write_p
+   public :: psi_t,write_psi,init_psi,dealloc_psi,write_psi_grid
    public :: write_psi_basis,Calc_Norm_OF_PsiBasis,Calc_Norm_OF_PsiGrid,Calc_Norm_OF_Psi
-   public:: Projection,Test_Hagedorn,init_psiHG
+   public:: Projection,Test_Hagedorn
 contains
 
      SUBROUTINE copy_psi(psi_out,psi_in)
@@ -112,28 +112,76 @@ contains
 
   END SUBROUTINE dealloc_psi
 
-  SUBROUTINE write_psi(psi)
-    TYPE(psi_t), intent(in) :: psi
-    integer                 :: i
+  SUBROUTINE write_psi(psi,psi_cplx,print_psi_grid,print_basis,t,int_print)
+    TYPE(psi_t)     ,intent(in)                                 :: psi
+    logical         ,intent(in)                                 :: print_psi_grid,print_basis,psi_cplx
+    integer         ,intent(in) ,optional                       :: int_print
+    real(kind=Rk)   ,intent(in) ,optional                       :: t
 
-    IF (associated(psi%Basis)) THEN
-     ! write(out_unitp,*) ' The basis is linked to psi.'
-    END IF
-    CALL Write_Basis(psi%Basis)
-      !CALL  Write_Basis(psi%Basis)
-    IF (allocated(psi%RVec)) THEN
-     ! write(out_unitp,*) 'Writing psi (real):'
-      write(out_unitp,*) psi%RVec
-     ! write(out_unitp,*) 'END Writing psi'
-    END IF
-    IF (allocated(psi%CVec)) THEN
-       Write(out_unitp,*) 'Writing psi (complex):'
-       do i=1, size(psi%CVec)
-       write(out_unitp,*) i, psi%CVec(i)
-       end do
-      ! write(out_unitp,*) psi%CVec
-       write(out_unitp,*) 'END Writting psi'
-    END IF
+
+    !local variable
+    TYPE(psi_t)                                                 :: psi_g,psi_b
+    integer                                                     :: i
+
+    
+
+   if ( print_psi_grid ) then
+     if ( psi%Grid ) then
+        if ( present(t) .and. present(int_print) ) then
+          call write_psi_grid(psi,print_cplx=psi_cplx,t=t,nio=int_print)
+        elseif(present(t))then
+          call write_psi_grid(psi,print_cplx=psi_cplx,t=t)
+        elseif(present(int_print))then
+          call write_psi_grid(psi,print_cplx=psi_cplx,nio=int_print) 
+        elseif(.not. present(t) .and. .not. present(int_print))then
+         call write_psi_grid(psi,print_cplx=psi_cplx)  
+       end if
+     else
+        call init_psi(psi_g, psi%Basis, cplx=.TRUE. ,grid=.true.)
+        call BasisTOGrid_nD_cplx(psi_g%CVec,psi%CVec,psi%Basis) 
+
+        if ( present(t) .and. present(int_print) ) then
+          call write_psi_grid(psi_g,print_cplx=psi_cplx,t=t,nio=int_print)
+        elseif(present(t))then
+          call write_psi_grid(psi_g,print_cplx=psi_cplx,t=t)
+        elseif(present(int_print))then
+          call write_psi_grid(psi_g,print_cplx=psi_cplx,nio=int_print) 
+        elseif(.not. present(t) .and. .not. present(int_print)) then
+         call write_psi_grid(psi_g,print_cplx=psi_cplx)  
+        end if
+          
+      end if
+   else
+
+      if ( psi%Grid ) then
+        call init_psi(psi_b, psi%Basis, cplx=.TRUE. ,grid=.false.)
+        call GridTOBasis_nD_cplx(psi_b%CVec,psi%CVec,psi%Basis) 
+        if ( present(t) .and. present(int_print) ) then
+          call write_psi_basis(psi_b,print_cplx=psi_cplx,t=t,nio=int_print)
+        elseif(present(t)) then
+          call write_psi_basis(psi_b,print_cplx=psi_cplx,t=t)
+        elseif(present(int_print))then
+          call write_psi_basis(psi_b,print_cplx=psi_cplx,nio=int_print) 
+        elseif(.not. present(t) .and. .not. present(int_print)) then
+         call write_psi_basis(psi_b,print_cplx=psi_cplx)  
+        end if
+
+      else
+        if ( present(t) .and. present(int_print) ) then
+          call write_psi_basis(psi,print_cplx=psi_cplx,t=t,nio=int_print)
+        elseif(present(t)) then
+          call write_psi_basis(psi,print_cplx=psi_cplx,t=t)
+        elseif(present(int_print))then
+          call write_psi_basis(psi,print_cplx=psi_cplx,nio=int_print) 
+        elseif(.not. present(t) .and. .not. present(int_print))then
+         call write_psi_basis(psi,print_cplx=psi_cplx)  
+       end if           
+      end if 
+    end if
+
+    if ( print_basis ) then
+    call Write_Basis(psi%Basis) 
+    end if
 
   END SUBROUTINE write_psi
 
@@ -149,7 +197,7 @@ contains
         psi_dt_2%CVec(:) =CZERO
         write(out_unitp,*) 'Begin Hagedorn projection'
         write(out_unitp,*) 'writing psi_in'
-        CALL Write_psi(psi_dt_1)
+        !CALL Write_psi(psi_dt_1)
             !write(out_unitp,*) 'b1'
             !CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
             !write(out_unitp,*) 'b2'
@@ -162,41 +210,10 @@ contains
                 
             END DO
             write(out_unitp,*) 'writing psi_out'
-            CALL Write_psi(psi_dt_2)
+            !CALL Write_psi(psi_dt_2)
             write(out_unitp,*) 'END Hagedorn projection'
             
     END SUBROUTINE Projection
-
-
-    SUBROUTINE init_psiHG(psi,Basis)
-        USE UtilLib_m
-        TYPE(psi_t)   ,        INTENT(INOUT)               :: psi
-        TYPE(Basis_t)   ,        INTENT(IN),target          :: Basis
-        write(out_unitp,*) 'Beging init_psiHG'
-        call write_psi(psi)
-        psi%Basis  => Basis
-        call write_psi(psi)
-        write(out_unitp,*) 'END init_psiHG'
-    END SUBROUTINE
-     SUBROUTINE Write_p(psi,i)
-         TYPE(psi_t), intent(in) :: psi
-         TYPE(psi_t)             :: psi1
-         integer,intent(in)      :: i
-         integer                 :: iq ,ib
-         if(psi%grid)then
-             print*,'pis is on grid'
-             CALL init_psi(psi1,psi%Basis,cplx=.TRUE.,grid =.true.)
-             call BasisTOGrid_nD_cplx(psi1%CVec,psi%CVec,psi%Basis)
-             do iq = 1,psi%Basis%nq
-                write(100+i,*)   psi1%Basis%tab_basis(1)%X(iq), abs(psi1%CVec(iq))**2
-             end do
-         else
-             print*,'pis is on basis'
-             do ib = 1,psi%Basis%nb
-                 write(i,*)  abs(psi%CVec(ib))**2
-             end do
-         end if
-         END SUBROUTINE
 
 
     SUBROUTINE Test_Hagedorn(psi1,psi2)
@@ -316,15 +333,15 @@ contains
     TYPE(psi_t)                   ,  intent(in)    ,target          :: psi
     real(kind=Rk)                 , intent(in)     ,optional        :: t
     integer                       , intent(in)     ,optional        :: nio
-    character(len = *)           ,  intent(in)                      :: print_cplx
-    complex(Kind= Rk) , pointer                                     ::psibe(:,:)
+    logical                      ,  intent(in)                      :: print_cplx
+    complex(Kind= Rk)            , pointer                          ::psibe(:,:)
     integer                                                         :: ib ,Ndim
    
     
     Ndim = size(psi%Basis%tab_basis)
     psibe ( 1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
 
-     if( print_cplx  == 'yes') then
+     if( print_cplx) then
       write(*,*) '****************** Beging wrinting psi on basis****************************'
           if (present(nio) .and. present(t)) then
               write(nio,*) '       t,               ib'
@@ -350,7 +367,7 @@ contains
               print*,'no default case'
          endif
          write(*,*) '****************** End wrinting psi on basis********************************'
-    elseif(print_cplx== 'no') then
+    else
         write(*,*) '****************** Beging wrinting <psi/psi> on basis****************************'      
         if (present(nio) .and. present(t)) then
            do ib =1, psi%Basis%nb
@@ -371,19 +388,16 @@ contains
         else
             print*,'no default case'
         endif
-    else
-         print*,'no default case'
-       write(*,*) '****************** End wrinting <psi/psi> on basis********************************'
     end if
 
   END SUBROUTINE write_psi_basis
 
 
-    SUBROUTINE write_psi_Grid(psi,print_cplx,t,nio)
+    SUBROUTINE write_psi_grid(psi,print_cplx,t,nio)
         TYPE(psi_t)                   ,  intent(in)    ,target          :: psi
         real(kind=Rk)                 , intent(in)     ,optional        :: t
         integer                       , intent(in)     ,optional        :: nio
-        character(len = *)            ,  intent(in)                     :: print_cplx
+        logical                       ,  intent(in)                     :: print_cplx
         complex(Kind= Rk)             , pointer                         ::psige(:,:)
         integer                                                         :: iq ,Ndim
         real(Kind= Rk)               , allocatable                      ::Q(:,:)
@@ -393,7 +407,7 @@ contains
         psige ( 1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
         call calc_Q_grid(Q,psi%Basis)
 
-        if( print_cplx  == 'yes') then
+        if( print_cplx ) then
             write(*,*) '****************** Beging wrinting psi on Grid****************************'
             if (present(nio) .and. present(t)) then
                 write(nio,*) '       t,               ib'
@@ -416,7 +430,7 @@ contains
                 print*,'no default case'
             endif
             write(*,*) '****************** End wrinting psi on Grid ********************************'
-        elseif(print_cplx== 'no') then
+          else 
             write(*,*) '****************** Beging wrinting <psi/psi> on Grid ****************************'
             if (present(nio) .and. present(t)) then
                 do iq =1, psi%Basis%nq
@@ -424,7 +438,7 @@ contains
                 end do
             elseif(present(t))then
                 do iq=1, psi%Basis%nq
-                    write(*,*) t ,Q(iq,:),  abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                    write(*,*) t ,Q(iq,:) ,  abs( psige(iq,1))**2 , abs(psige(iq,2))**2
                 end do
             elseif(present(nio))  then
                 do iq =1, psi%Basis%nq
@@ -432,14 +446,11 @@ contains
                 end do
             elseif(.not. present(nio) .and.  .not. present(t))then
                 do iq =1, psi%Basis%nq
-                    write(out_unitp,*) Q(iq,:), abs( psige(iq,1))**2 !, abs(psibe(ib,2))**2
+                    write(out_unitp,*) Q(iq,:), abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
                 end do
             else
                 print*,'no default case'
             endif
-        else
-            print*,'no default case'
-            write(*,*) '****************** End wrinting <psi/psi> on Grid ********************************'
         end if
 
     END SUBROUTINE

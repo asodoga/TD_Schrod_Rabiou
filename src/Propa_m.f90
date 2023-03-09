@@ -23,7 +23,7 @@ module Propa_m
     public :: mEyeHPsi,write_propa,fft_autocor_func,Analyse
 
 contains
-    SUBROUTINE propagation(psif,psi0,Basis_f,propa)
+    SUBROUTINE propagation_Test(psif,psi0,Basis_f,propa)
         USE psi_m
         USE Basis_m
 
@@ -83,12 +83,12 @@ contains
             ! call Analyse(psi,t)
             call Calc_average_energy(psi,E)
             write(*,*) i,abs(psi%CVec)
-            CALL Write_psi(psi)
+            call write_psi(psi=psi,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.)
             !if(mod(i,5)== 0) CALL Write_psi(psi,i)
             CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
                      Write(5000,*)   t, Qt,E
 
-            CALL  march(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
+            CALL  march_test(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
 
             psi%CVec(:) = psi_dt%CVec(:)
         END DO
@@ -100,14 +100,14 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psif)
+            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.)
 
             flush(out_unitp)
         END IF
 
     END SUBROUTINE
 
-    SUBROUTINE march_test(psi,psi_dt,t,propa)
+    SUBROUTINE march(psi,psi_dt,t,propa)
         USE psi_m
         TYPE (propa_t) , INTENT(IN)               :: propa
         TYPE (psi_t)   , INTENT(IN)               :: psi
@@ -131,7 +131,7 @@ contains
 
 
     END SUBROUTINE
-    SUBROUTINE propagation_Test(psif,psi0,propa)
+    SUBROUTINE propagation(psif,psi0,propa)
         USE psi_m
         USE Basis_m
 
@@ -180,7 +180,7 @@ contains
             CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
             write(13,*)    t, Qt,E,abs(dot_product(psi%CVec,psi%CVec))
-            CALL  march_test(psi,psi_dt,t,propa)
+            CALL  march(psi,psi_dt,t,propa)
             if( propa%propa_name  == 'hagedorn' )  then
                 CALL  Hagedorn(psi,psi_dt,Basis_0)
                 else
@@ -192,7 +192,7 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psif)
+            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.)
 
             flush(out_unitp)
         END IF
@@ -421,7 +421,7 @@ contains
         HPsi%CVec(:)    = - EYE*HPsi%CVec(:)
     END SUBROUTINE mEyeHPsi
 
-    SUBROUTINE march(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
+    SUBROUTINE march_test(psi,psi_dt,t,propa,Basis_1,Basis_2,Basis_f)
         USE psi_m
         TYPE (propa_t) , INTENT(IN)               :: propa
         TYPE (psi_t)   , INTENT(INOUT)            :: psi
@@ -458,7 +458,7 @@ contains
         end if
 
 
-    END SUBROUTINE march
+    END SUBROUTINE
 
 
 

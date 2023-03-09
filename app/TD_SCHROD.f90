@@ -44,9 +44,7 @@ write(out_unitp,*) 'pot_name'
   CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
 
   CALL GWP_init(psi0,1,in_unitp)
-! call write_psi_basis(psi0,print_cplx='no')
-  call BasisTOGrid_nD_cplx(psi%CVec,psi0%CVec,Basis_i)
-  call write_psi_Grid(psi,print_cplx='no')
+  !call write_psi(psi=psi0,psi_cplx=.true.,print_psi_grid=.true.,print_basis=.false.)
 
   !CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
  ! call Write_psi(psi0)
@@ -56,11 +54,10 @@ write(out_unitp,*) 'pot_name'
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  STOP 'calcul de H|psi> est fait'
+ ! STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
-  CALL propagation_Test(psif,psi0,propa)
-  !CALL propagation(Psif,Psi0,Basis_f,propa)
+  CALL propagation(psif,psi0,propa)
  ! CALL Write_psi(psif)
   write(out_unitp,*) 'deallocation'
   CALL dealloc_psi(psi0)
