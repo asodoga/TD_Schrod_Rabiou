@@ -112,9 +112,9 @@ contains
 
   END SUBROUTINE dealloc_psi
 
-  SUBROUTINE write_psi(psi,psi_cplx,print_psi_grid,print_basis,t,int_print)
+  SUBROUTINE write_psi(psi,psi_cplx,print_psi_grid,print_basis,t,int_print,real_part)
     TYPE(psi_t)     ,intent(in)                                 :: psi
-    logical         ,intent(in)                                 :: print_psi_grid,print_basis,psi_cplx
+    logical         ,intent(in)                                 :: print_psi_grid,print_basis,psi_cplx,real_part
     integer         ,intent(in) ,optional                       :: int_print
     real(kind=Rk)   ,intent(in) ,optional                       :: t
     logical, parameter                                          :: debug = .true.
@@ -129,26 +129,26 @@ contains
    if ( print_psi_grid ) then
      if ( psi%Grid ) then
         if ( present(t) .and. present(int_print) ) then
-          call write_psi_grid(psi,print_cplx=psi_cplx,t=t,nio=int_print)
+          call write_psi_grid(psi,print_cplx=psi_cplx,t=t,nio=int_print,real_part=real_part)
         elseif(present(t))then
-          call write_psi_grid(psi,print_cplx=psi_cplx,t=t)
+          call write_psi_grid(psi,print_cplx=psi_cplx,t=t,real_part=real_part)
         elseif(present(int_print))then
-          call write_psi_grid(psi,print_cplx=psi_cplx,nio=int_print) 
+          call write_psi_grid(psi,print_cplx=psi_cplx,nio=int_print,real_part=real_part) 
         elseif(.not. present(t) .and. .not. present(int_print))then
-         call write_psi_grid(psi,print_cplx=psi_cplx)  
+         call write_psi_grid(psi,print_cplx=psi_cplx,real_part=real_part)  
        end if
      else
         call init_psi(psi_g, psi%Basis, cplx=.TRUE. ,grid=.true.)
         call BasisTOGrid_nD_cplx(psi_g%CVec,psi%CVec,psi%Basis) 
 
         if ( present(t) .and. present(int_print) ) then
-          call write_psi_grid(psi_g,print_cplx=psi_cplx,t=t,nio=int_print)
+          call write_psi_grid(psi_g,print_cplx=psi_cplx,t=t,nio=int_print,real_part=real_part)
         elseif(present(t))then
-          call write_psi_grid(psi_g,print_cplx=psi_cplx,t=t)
+          call write_psi_grid(psi_g,print_cplx=psi_cplx,t=t,real_part=real_part)
         elseif(present(int_print))then
-          call write_psi_grid(psi_g,print_cplx=psi_cplx,nio=int_print) 
+          call write_psi_grid(psi_g,print_cplx=psi_cplx,nio=int_print,real_part=real_part) 
         elseif(.not. present(t) .and. .not. present(int_print)) then
-         call write_psi_grid(psi_g,print_cplx=psi_cplx)  
+         call write_psi_grid(psi_g,print_cplx=psi_cplx,real_part=real_part)  
         end if
           
       end if
@@ -159,24 +159,24 @@ contains
         call init_psi(psi_b, psi%Basis, cplx=.TRUE. ,grid=.false.)
         call GridTOBasis_nD_cplx(psi_b%CVec,psi%CVec,psi%Basis) 
         if ( present(t) .and. present(int_print) ) then
-          call write_psi_basis(psi_b,print_cplx=psi_cplx,t=t,nio=int_print)
+          call write_psi_basis(psi_b,print_cplx=psi_cplx,t=t,nio=int_print,real_part=real_part)
         elseif(present(t)) then
-          call write_psi_basis(psi_b,print_cplx=psi_cplx,t=t)
+          call write_psi_basis(psi_b,print_cplx=psi_cplx,t=t,real_part=real_part)
         elseif(present(int_print))then
-          call write_psi_basis(psi_b,print_cplx=psi_cplx,nio=int_print) 
+          call write_psi_basis(psi_b,print_cplx=psi_cplx,nio=int_print,real_part=real_part) 
         elseif(.not. present(t) .and. .not. present(int_print)) then
-         call write_psi_basis(psi_b,print_cplx=psi_cplx)  
+         call write_psi_basis(psi_b,print_cplx=psi_cplx,real_part=real_part)  
         end if
         call dealloc_psi(psi_b)
       else
         if ( present(t) .and. present(int_print) ) then
-          call write_psi_basis(psi,print_cplx=psi_cplx,t=t,nio=int_print)
+          call write_psi_basis(psi,print_cplx=psi_cplx,t=t,nio=int_print,real_part=real_part)
         elseif(present(t)) then
-          call write_psi_basis(psi,print_cplx=psi_cplx,t=t)
+          call write_psi_basis(psi,print_cplx=psi_cplx,t=t,real_part=real_part)
         elseif(present(int_print))then
-          call write_psi_basis(psi,print_cplx=psi_cplx,nio=int_print) 
+          call write_psi_basis(psi,print_cplx=psi_cplx,nio=int_print,real_part=real_part) 
         elseif(.not. present(t) .and. .not. present(int_print))then
-         call write_psi_basis(psi,print_cplx=psi_cplx)  
+         call write_psi_basis(psi,print_cplx=psi_cplx,real_part=real_part)  
        end if           
       end if 
     end if
@@ -334,11 +334,11 @@ contains
         ! write(out_unitp,*) 'norm,psi',Norm
     END SUBROUTINE Calc_Norm_OF_PsiBasis
 
-  SUBROUTINE write_psi_basis(psi,print_cplx,t,nio)
+  SUBROUTINE write_psi_basis(psi,print_cplx,t,nio,real_part)
     TYPE(psi_t)                   ,  intent(in)    ,target          :: psi
     real(kind=Rk)                 , intent(in)     ,optional        :: t
     integer                       , intent(in)     ,optional        :: nio
-    logical                      ,  intent(in)                      :: print_cplx
+    logical                      ,  intent(in)                      :: print_cplx,real_part
     complex(Kind= Rk)            , pointer                          ::psibe(:,:)
     integer                                                         :: ib ,Ndim
    
@@ -347,48 +347,77 @@ contains
     psibe ( 1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb)   =>    psi%CVec
 
      if( print_cplx) then
-      write(*,*) '****************** Beging wrinting psi on basis****************************'
-          if (present(nio) .and. present(t)) then
-              write(nio,*) '       t,               ib'
-              do ib =1, psi%Basis%nb
-                 write(nio,*) t, ib, psibe(ib,1)!, psibe(ib,2)
-             end do
-         elseif(present(t))then
-              write(*,*) '          t,             ib'
-             do ib=1, psi%Basis%nb
-               write(*,*) t ,ib,  psibe(ib,1) !, psibe(ib,2)
-             end do
-         elseif(present(nio))  then
-              write(nio,*) '        ib'
-              do ib =1, psi%Basis%nb
-                  write(nio,*) ib, psibe(ib,1)! , psibe(ib,2)
+       if ( real_part ) then
+                write(*,*) '****************** Beging wrinting psi on basis****************************'
+           if (present(nio) .and. present(t)) then
+              
+               do ib =1, psi%Basis%nb
+                  write(nio,*) ib, real(psibe(ib,:),kind=Rk),aimag(psibe(ib,:)),t
               end do
-         elseif(.not. present(nio) .and.  .not. present(t))then
-              write(*,*) '         ib,        '
-              do ib =1, psi%Basis%nb
-                  write(out_unitp,*) ib, psibe(ib,1) !, psibe(ib,2)
+          elseif(present(t))then
+              
+              do ib=1, psi%Basis%nb
+                write(*,*) ib,  real(psibe(ib,:),kind=Rk),aimag(psibe(ib,:)),t 
               end do
-         else
-              print*,'no default case'
-         endif
-         write(*,*) '****************** End wrinting psi on basis********************************'
+          elseif(present(nio))  then
+               
+               do ib =1, psi%Basis%nb
+                   write(nio,*) ib,real(psibe(ib,:),kind=Rk),aimag(psibe(ib,:))
+               end do
+          elseif(.not. present(nio) .and.  .not. present(t))then
+               
+               do ib =1, psi%Basis%nb
+                   write(out_unitp,*) ib, real(psibe(ib,:),kind=Rk),aimag(psibe(ib,:)) 
+               end do
+          else
+               print*,'no default case'
+          endif
+          write(*,*) '****************** End wrinting psi on basis********************************'
+        else
+       
+         write(*,*) '****************** Beging wrinting psi on basis****************************'
+            if (present(nio) .and. present(t)) then
+               
+                do ib =1, psi%Basis%nb
+                   write(nio,*) t, ib, psibe(ib,:)
+               end do
+           elseif(present(t))then
+               
+               do ib=1, psi%Basis%nb
+                 write(*,*) t ,ib,  psibe(ib,1) 
+               end do
+           elseif(present(nio))  then
+                
+                do ib =1, psi%Basis%nb
+                    write(nio,*) ib, psibe(ib,:)
+                end do
+           elseif(.not. present(nio) .and.  .not. present(t))then
+                
+                do ib =1, psi%Basis%nb
+                    write(out_unitp,*) ib, psibe(ib,:) 
+                end do
+           else
+                print*,'no default case'
+           endif
+          write(*,*) '****************** End wrinting psi on basis********************************'
+        end if    
     else
         write(*,*) '****************** Beging wrinting <psi/psi> on basis****************************'      
         if (present(nio) .and. present(t)) then
            do ib =1, psi%Basis%nb
-               write(nio,*) t, ib, abs( psibe(ib,1))**2! , abs(psibe(ib,2))**2
+               write(nio,*) t, ib, abs( psibe(ib,:))**2
            end do
         elseif(present(t))then
             do ib=1, psi%Basis%nb
-                write(*,*) t ,ib,  abs( psibe(ib,1))**2 !, abs(psibe(ib,2))**2
+                write(*,*) t ,ib,  abs( psibe(ib,:))**2 
             end do
         elseif(present(nio))  then
             do ib =1, psi%Basis%nb
-                write(nio,*) ib, abs( psibe(ib,1))**2!, abs(psibe(ib,2))**2
+                write(nio,*) ib, abs( psibe(ib,:))**2
             end do
         elseif(.not. present(nio) .and.  .not. present(t))then
             do ib =1, psi%Basis%nb
-                write(out_unitp,*) ib, abs( psibe(ib,1))**2 !, abs(psibe(ib,2))**2
+                write(out_unitp,*) ib, abs( psibe(ib,:))**2 
             end do
         else
             print*,'no default case'
@@ -398,11 +427,11 @@ contains
   END SUBROUTINE write_psi_basis
 
 
-    SUBROUTINE write_psi_grid(psi,print_cplx,t,nio)
+    SUBROUTINE write_psi_grid(psi,print_cplx,t,nio,real_part)
         TYPE(psi_t)                   ,  intent(in)    ,target          :: psi
         real(kind=Rk)                 , intent(in)     ,optional        :: t
         integer                       , intent(in)     ,optional        :: nio
-        logical                       ,  intent(in)                     :: print_cplx
+        logical                       ,  intent(in)                     :: print_cplx,real_part
         complex(Kind= Rk)             , pointer                         ::psige(:,:)
         integer                                                         :: iq ,Ndim
         real(Kind= Rk)               , allocatable                      ::Q(:,:)
@@ -413,49 +442,75 @@ contains
         call calc_Q_grid(Q,psi%Basis)
 
         if( print_cplx ) then
-            write(*,*) '****************** Beging wrinting psi on Grid****************************'
-            if (present(nio) .and. present(t)) then
-                write(nio,*) '       t,               ib'
-                do iq =1, psi%Basis%nq
-                    write(nio,*) t, Q(iq,:), psige(iq,1)! , psige(iq,2)
-                end do
-            elseif(present(t))then
-                do iq=1, psi%Basis%nq
-                    write(*,*) t ,Q(iq,:),  psige(iq,1) !, psige(iq,2)
-                end do
-            elseif(present(nio))  then
-                do iq =1, psi%Basis%nq
-                    write(nio,*) Q(iq,:), psige(iq,1) !, psige(iq,2)
-                end do
-            elseif(.not. present(nio) .and.  .not. present(t))then
-                do iq =1, psi%Basis%nq
-                    write(out_unitp,*) Q(iq,:), psige(iq,1) !, psibe(ib,2)
-                end do
+            if ( real_part ) then
+               write(*,*) '****************** Beging wrinting psi on Grid****************************'
+               if (present(nio) .and. present(t)) then
+                  
+                   do iq =1, psi%Basis%nq
+                       write(nio,*)  Q(iq,:), real(psige(iq,:),kind=Rk),aimag(psige(iq,:)),t
+                   end do
+               elseif(present(t))then
+                   do iq=1, psi%Basis%nq
+                       write(*,*) Q(iq,:),  real(psige(iq,:),kind=Rk),aimag(psige(iq,:)),t
+                   end do
+               elseif(present(nio))  then
+                   do iq =1, psi%Basis%nq
+                       write(nio,*) Q(iq,:), real(psige(iq,:),kind=Rk),aimag(psige(iq,:))
+                   end do
+               elseif(.not. present(nio) .and.  .not. present(t))then
+                   do iq =1, psi%Basis%nq
+                       write(out_unitp,*) Q(iq,:),  real(psige(iq,:),kind=Rk),aimag(psige(iq,:))
+                   end do
+               else
+                   print*,'no default case'
+               endif
+               write(*,*) '****************** End wrinting psi on Grid ********************************'
             else
-                print*,'no default case'
-            endif
-            write(*,*) '****************** End wrinting psi on Grid ********************************'
-          else 
+               write(*,*) '****************** Beging wrinting psi on Grid****************************'
+               if (present(nio) .and. present(t)) then
+                  
+                   do iq =1, psi%Basis%nq
+                       write(nio,*)  Q(iq,:), psige(iq,:),t
+                   end do
+               elseif(present(t))then
+                   do iq=1, psi%Basis%nq
+                       write(*,*) Q(iq,:),  psige(iq,:),t 
+                   end do
+               elseif(present(nio))  then
+                   do iq =1, psi%Basis%nq
+                       write(nio,*) Q(iq,:), psige(iq,:) 
+                   end do
+               elseif(.not. present(nio) .and.  .not. present(t))then
+                   do iq =1, psi%Basis%nq
+                       write(out_unitp,*) Q(iq,:), psige(iq,:) 
+                   end do
+               else
+                   print*,'no default case'
+               endif
+               write(*,*) '****************** End wrinting psi on Grid ********************************'  
+              
+            end if
+          else            
             write(*,*) '****************** Beging wrinting <psi/psi> on Grid ****************************'
             if (present(nio) .and. present(t)) then
                 do iq =1, psi%Basis%nq
-                    write(nio,*) t, Q(iq,:), abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
+                    write(nio,*) t, Q(iq,:), abs( psige(iq,:))**2 
                 end do
             elseif(present(t))then
                 do iq=1, psi%Basis%nq
-                    write(*,*) t ,Q(iq,:) ,  abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
+                    write(*,*) t ,Q(iq,:) ,  abs( psige(iq,:))**2 
                 end do
             elseif(present(nio))  then
                 do iq =1, psi%Basis%nq
-                    write(nio,*) Q(iq,:), abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
+                    write(nio,*) Q(iq,:), abs( psige(iq,:))**2 
                 end do
             elseif(.not. present(nio) .and.  .not. present(t))then
                 do iq =1, psi%Basis%nq
-                    write(out_unitp,*) Q(iq,:), abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
+                    write(out_unitp,*) Q(iq,:), abs( psige(iq,:))**2 
                 end do
             else
                 print*,'no default case'
-            endif
+            endif          
         end if
 
     END SUBROUTINE

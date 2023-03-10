@@ -44,7 +44,7 @@ write(out_unitp,*) 'pot_name'
   CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
 
   CALL GWP_init(psi0,1,in_unitp)
-  !call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100)
+  call write_psi(psi=psi0,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
 
   CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
   ! call Calc_average_energy(psi0,E)

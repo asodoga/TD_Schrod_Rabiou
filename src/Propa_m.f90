@@ -83,7 +83,7 @@ contains
             ! call Analyse(psi,t)
             call Calc_average_energy(psi,E)
             write(*,*) i,abs(psi%CVec)
-            call write_psi(psi=psi,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.)
+            call write_psi(psi=psi,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,real_part=.false.)
             !if(mod(i,5)== 0) CALL Write_psi(psi,i)
             CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
                      Write(5000,*)   t, Qt,E
@@ -100,7 +100,7 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.)
+            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,real_part=.false.)
 
             flush(out_unitp)
         END IF
@@ -181,8 +181,10 @@ contains
             call  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
             write(11,*)    t, Qt,E
-             if ( mod(i,25)== 0 )  call write_psi(psi=psi,psi_cplx=.true.&
-             &,print_psi_grid=.true.,print_basis=.false.,t=t,int_print=10) ; write(10,*) ''
+             if ( mod(i,25)== 0 ) then
+              call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=t,int_print=10,real_part=.false.) 
+              write(10,*) 
+             end if
             CALL  march(psi,psi_dt,t,propa)
             if( propa%propa_name  == 'hagedorn' )  then
                 call  Hagedorn(psi,psi_dt,Basis_0)
@@ -195,7 +197,7 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.)
+            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,real_part=.false.)
 
             flush(out_unitp)
         END IF
