@@ -158,8 +158,9 @@ contains
             flush(out_unitp)
 
         endif
+        open (unit = 10, file = "psi.dat")
+        open (unit = 11, file = "x.dat")
         nt = int((propa%tf-propa%t0)/propa%delta_t)
-            open(13, file = 'xtest.dat')
         Qt= zero; E = ZERO
 
             CALL init_Basis1_TO_Basis2 (Basis_1,psi0%Basis)
@@ -177,12 +178,14 @@ contains
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
-            CALL  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
+            call  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
-            write(13,*)    t, Qt,E,abs(dot_product(psi%CVec,psi%CVec))
+            write(11,*)    t, Qt,E
+             if ( mod(i,25)== 0 )  call write_psi(psi=psi,psi_cplx=.true.&
+             &,print_psi_grid=.true.,print_basis=.false.,t=t,int_print=10) ; write(10,*) ''
             CALL  march(psi,psi_dt,t,propa)
             if( propa%propa_name  == 'hagedorn' )  then
-                CALL  Hagedorn(psi,psi_dt,Basis_0)
+                call  Hagedorn(psi,psi_dt,Basis_0)
                 else
                 psi = psi_dt
                 end if

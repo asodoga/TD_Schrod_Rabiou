@@ -44,17 +44,15 @@ write(out_unitp,*) 'pot_name'
   CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
 
   CALL GWP_init(psi0,1,in_unitp)
-  !call write_psi(psi=psi0,psi_cplx=.true.,print_psi_grid=.true.,print_basis=.false.)
+  !call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100)
 
-  !CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
- ! call Write_psi(psi0)
-
+  CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
   ! call Calc_average_energy(psi0,E)
-  !call Calc_std_dev_AVQ_1D(psi0,1,AVQ,DQ)
+
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
- ! STOP 'calcul de H|psi> est fait'
+  STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
   CALL propagation(psif,psi0,propa)

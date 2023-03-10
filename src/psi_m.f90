@@ -28,20 +28,20 @@ contains
         CLASS(psi_t), intent(inout)  :: psi_out
 
         IF (allocated(psi_in%RVec)) THEN
-            write(out_unitp,*) 'Coping psi_in in psi_out (real):'
+            !write(out_unitp,*) 'Coping psi_in in psi_out (real):'
             psi_out%RVec(:) = psi_in%RVec(:)
             !CALL init_Basis1_TO_Basis2 (psi_in%Basis,psi_out%Basis)
             !CALL  construct_primitive_basis(psi_out%Basis)
              psi_out%Basis => psi_in%Basis
-            write(out_unitp,*) 'END Coping psi_in in psi_out'
+            !write(out_unitp,*) 'END Coping psi_in in psi_out'
         END IF
         IF (allocated(psi_in%CVec)) THEN
-            write(out_unitp,*) 'Coping psi_in in psi_out (complex):'
+            !write(out_unitp,*) 'Coping psi_in in psi_out (complex):'
             psi_out%CVec(:) = psi_in%CVec(:)
             !CALL init_Basis1_TO_Basis2 (psi_in%Basis,psi_out%Basis)
             !CALL  construct_primitive_basis(psi_out%Basis)
             psi_out%Basis => psi_in%Basis
-            write(out_unitp,*) 'END Coping psi_in in psi_out'
+            !write(out_unitp,*) 'END Coping psi_in in psi_out'
         END IF
 
      END SUBROUTINE copy_psi
@@ -117,6 +117,7 @@ contains
     logical         ,intent(in)                                 :: print_psi_grid,print_basis,psi_cplx
     integer         ,intent(in) ,optional                       :: int_print
     real(kind=Rk)   ,intent(in) ,optional                       :: t
+    logical, parameter                                          :: debug = .true.
 
 
     !local variable
@@ -151,6 +152,7 @@ contains
         end if
           
       end if
+      call dealloc_psi(psi_g)
    else
 
       if ( psi%Grid ) then
@@ -165,7 +167,7 @@ contains
         elseif(.not. present(t) .and. .not. present(int_print)) then
          call write_psi_basis(psi_b,print_cplx=psi_cplx)  
         end if
-
+        call dealloc_psi(psi_b)
       else
         if ( present(t) .and. present(int_print) ) then
           call write_psi_basis(psi,print_cplx=psi_cplx,t=t,nio=int_print)
@@ -181,6 +183,9 @@ contains
 
     if ( print_basis ) then
     call Write_Basis(psi%Basis) 
+    end if
+    if (debug) then
+      flush(out_unitp)
     end if
 
   END SUBROUTINE write_psi
@@ -346,17 +351,17 @@ contains
           if (present(nio) .and. present(t)) then
               write(nio,*) '       t,               ib'
               do ib =1, psi%Basis%nb
-                 write(nio,*) t, ib, psibe(ib,1) , psibe(ib,2)
+                 write(nio,*) t, ib, psibe(ib,1)!, psibe(ib,2)
              end do
          elseif(present(t))then
               write(*,*) '          t,             ib'
              do ib=1, psi%Basis%nb
-               write(*,*) t ,ib,  psibe(ib,1) , psibe(ib,2)
+               write(*,*) t ,ib,  psibe(ib,1) !, psibe(ib,2)
              end do
          elseif(present(nio))  then
               write(nio,*) '        ib'
               do ib =1, psi%Basis%nb
-                  write(nio,*) ib, psibe(ib,1) , psibe(ib,2)
+                  write(nio,*) ib, psibe(ib,1)! , psibe(ib,2)
               end do
          elseif(.not. present(nio) .and.  .not. present(t))then
               write(*,*) '         ib,        '
@@ -371,15 +376,15 @@ contains
         write(*,*) '****************** Beging wrinting <psi/psi> on basis****************************'      
         if (present(nio) .and. present(t)) then
            do ib =1, psi%Basis%nb
-               write(nio,*) t, ib, abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
+               write(nio,*) t, ib, abs( psibe(ib,1))**2! , abs(psibe(ib,2))**2
            end do
         elseif(present(t))then
             do ib=1, psi%Basis%nb
-                write(*,*) t ,ib,  abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
+                write(*,*) t ,ib,  abs( psibe(ib,1))**2 !, abs(psibe(ib,2))**2
             end do
         elseif(present(nio))  then
             do ib =1, psi%Basis%nb
-                write(nio,*) ib, abs( psibe(ib,1))**2 , abs(psibe(ib,2))**2
+                write(nio,*) ib, abs( psibe(ib,1))**2!, abs(psibe(ib,2))**2
             end do
         elseif(.not. present(nio) .and.  .not. present(t))then
             do ib =1, psi%Basis%nb
@@ -412,15 +417,15 @@ contains
             if (present(nio) .and. present(t)) then
                 write(nio,*) '       t,               ib'
                 do iq =1, psi%Basis%nq
-                    write(nio,*) t, Q(iq,:), psige(iq,1) , psige(iq,2)
+                    write(nio,*) t, Q(iq,:), psige(iq,1)! , psige(iq,2)
                 end do
             elseif(present(t))then
                 do iq=1, psi%Basis%nq
-                    write(*,*) t ,Q(iq,:),  psige(iq,1) , psige(iq,2)
+                    write(*,*) t ,Q(iq,:),  psige(iq,1) !, psige(iq,2)
                 end do
             elseif(present(nio))  then
                 do iq =1, psi%Basis%nq
-                    write(nio,*) Q(iq,:), psige(iq,1) , psige(iq,2)
+                    write(nio,*) Q(iq,:), psige(iq,1) !, psige(iq,2)
                 end do
             elseif(.not. present(nio) .and.  .not. present(t))then
                 do iq =1, psi%Basis%nq
@@ -434,15 +439,15 @@ contains
             write(*,*) '****************** Beging wrinting <psi/psi> on Grid ****************************'
             if (present(nio) .and. present(t)) then
                 do iq =1, psi%Basis%nq
-                    write(nio,*) t, Q(iq,:), abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                    write(nio,*) t, Q(iq,:), abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
                 end do
             elseif(present(t))then
                 do iq=1, psi%Basis%nq
-                    write(*,*) t ,Q(iq,:) ,  abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                    write(*,*) t ,Q(iq,:) ,  abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
                 end do
             elseif(present(nio))  then
                 do iq =1, psi%Basis%nq
-                    write(nio,*) Q(iq,:), abs( psige(iq,1))**2 , abs(psige(iq,2))**2
+                    write(nio,*) Q(iq,:), abs( psige(iq,1))**2 !, abs(psige(iq,2))**2
                 end do
             elseif(.not. present(nio) .and.  .not. present(t))then
                 do iq =1, psi%Basis%nq
