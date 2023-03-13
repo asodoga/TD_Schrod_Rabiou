@@ -6,7 +6,8 @@
 &basis_nd name='dp' nb_basis=2/
    &basis_nd name='HO' nb = 25 nq=50  Q0 = -1.0 SCALEQ= 1.0  /
       &basis_nd name= 'el' nb=1/
-   &defGWP I_ElecChannel=2 Coef=(1.,0.) /
-       &defWP0 DQ= 1.4142135623730951  Q0= -1.0   k=0.0 phase=0.0 /
+   &defGWP I_ElecChannel=2 nGWP =1  /
+   &defWP0 DQ= 1.4142135623730951  Q0= -1.0   k=0.0 phase=0.0  Coef=(1.,0.) /
+
    &prop t0  = 0  tf  =250 delta_t =1.0    eps= 0.00000001
         max_iter =  5000 propa_name ='hagedorn'  propa_name2 = 'taylor' /

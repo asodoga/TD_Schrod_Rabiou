@@ -20,9 +20,11 @@ contains
            !logical           ,parameter                    :: debug = .true.
            type( GWP1D_t)    ,intent(inout)                 :: paragwp1D
            real(kind= Rk)                                   :: DQ, Q0, k, phase
+          complex(kind=Rk)                                  :: coef
            integer                                          :: err_io
 
           namelist/defWP0/ DQ, Q0, k, phase
+          namelist/defGWP/ I_ElecChannel ,nGWP,  Coef
             DQ=0.2;
             Q0=0.0;
             k=0.0;
