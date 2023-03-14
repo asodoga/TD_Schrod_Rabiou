@@ -15,7 +15,7 @@ AD_dnSVMDIR=/home/elprof/QuantumModelLib
 MAIN=TD_SCHROD
 
 LIBSRC= NumParameters_m.f90 UtilLib_m.f90 diago_m.f90 \
- Molec_m.f90 NDindex_m.f90 Basis_m.f90 psi_m.f90 Ana_psi_m.f90 lanczos_m.f90 Op_m.f90 GWP1D_m.f90 GWPnD_m.f90 Propa_m.f90
+ Molec_m.f90 NDindex_m.f90 Basis_m.f90 psi_m.f90 Ana_psi_m.f90 lanczos_m.f90 Op_m.f90 param_WP0_m.f90 Propa_m.f90
 OBJ0=${LIBSRC:.f90=.o}
 
 OBJ=$(addprefix $(OBJ_DIR)/, $(OBJ0))
@@ -50,8 +50,8 @@ $(OBJ_DIR)/Basis_m.o: $(OBJ_DIR)/NDindex_m.o $(OBJ_DIR)/UtilLib_m.o $(OBJ_DIR)/d
 $(OBJ_DIR)/Molec_m.o: $(OBJ_DIR)/UtilLib_m.o $(OBJ_DIR)/diago_m.o $(OBJ_DIR)/NumParameters_m.o
 
 $(OBJ_DIR)/psi_m.o: $(OBJ_DIR)/Basis_m.o
-$(OBJ_DIR)/GWP1D_m.o: $(OBJ_DIR)/psi_m.o
-$(OBJ_DIR)/GWPnD_m.o: $(OBJ_DIR)/GWP1D_m.o $(OBJ_DIR)/psi_m.o
+$(OBJ_DIR)param_WP0_m.o: $(OBJ_DIR)/psi_m.o
+
 $(OBJ_DIR)/Ana_psi_m.o: $(OBJ_DIR)/psi_m.o
 
 $(OBJ_DIR)/Op_m.o: $(OBJ_DIR)/Molec_m.o $(OBJ_DIR)/Basis_m.o $(OBJ_DIR)/psi_m.o

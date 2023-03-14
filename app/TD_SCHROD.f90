@@ -1,6 +1,6 @@
 PROGRAM TD_SCHROD
   USE UtilLib_m
-  USE GWPnD_m
+  USE param_WP0_m
   USE Basis_m
   USE psi_m
   USE op_m
@@ -9,9 +9,10 @@ PROGRAM TD_SCHROD
   USE lanczos_m
   IMPLICIT NONE
   TYPE (Basis_t), target       :: Basis_i,Basis_f
-    TYPE (Op_t)                  :: H
+    TYPE (Op_t)                :: H
   TYPE (psi_t)                 :: psi0,psif,psi
   TYPE(propa_t)                :: propa
+  TYPE (GWP_t)                 :: GWP
   real(Kind = Rk)              :: E,Norm,AVQ,SQ
 
 !====================================================================
@@ -42,11 +43,13 @@ write(out_unitp,*) 'pot_name'
   CALL init_psi(psi0,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psif,   Basis_f,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
+  call Read_GWP(GWP)
+  call Write_GWP(GWP)
 
-  CALL GWP_init(psi0,1,in_unitp)
-  call write_psi(psi=psi0,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
+  !CALL GWP_init(psi0,1,in_unitp)
+  !call write_psi(psi=psi0,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
 
-  CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
+ ! CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
   ! call Calc_average_energy(psi0,E)
 
   !call Set_Op(H,Basis)

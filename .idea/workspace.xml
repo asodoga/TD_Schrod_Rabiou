@@ -5,10 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7ce707dc-fe59-41ba-9963-c83cdad3fde8" name="Changes" comment="Hagedorn 1.2">
-      <change afterPath="$PROJECT_DIR$/src/param_WP0_m.f90" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DAT_files/dat_fourier" beforeDir="false" afterPath="$PROJECT_DIR$/DAT_files/dat_fourier" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/GWP1D_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/GWP1D_m.f90" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/TD_SCHROD.f90" beforeDir="false" afterPath="$PROJECT_DIR$/app/TD_SCHROD.f90" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/GWP1D_m.f90" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/GWPnD_m.f90" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/param_WP0_m.f90" beforeDir="false" afterPath="$PROJECT_DIR$/src/param_WP0_m.f90" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
