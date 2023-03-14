@@ -1,5 +1,4 @@
  module Ana_psi_m
-    USE NumParameters_m
     USE Basis_m
     USE NDindex_m
     USE psi_m

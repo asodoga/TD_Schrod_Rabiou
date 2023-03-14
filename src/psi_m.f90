@@ -1,6 +1,5 @@
 module psi_m
-  USE UtilLib_m
-  USE NumParameters_m
+  USE param_WP0_m 
   USE Basis_m
   USE NDindex_m
   implicit none
@@ -19,7 +18,7 @@ module psi_m
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,write_psi_grid
    public :: write_psi_basis,Calc_Norm_OF_PsiBasis,Calc_Norm_OF_PsiGrid,Calc_Norm_OF_Psi
-   public:: Projection,Test_Hagedorn
+   public:: Projection
 contains
 
      SUBROUTINE copy_psi(psi_out,psi_in)
@@ -221,54 +220,9 @@ contains
     END SUBROUTINE Projection
 
 
-    SUBROUTINE Test_Hagedorn(psi1,psi2)
-        !SUBROUTINE Test_Hagedorn(psi1,psi2,q10,q20,sci,scj)
-        USE UtilLib_m
-        TYPE(psi_t), intent(inout)         :: psi1
-        TYPE(psi_t), intent(inout)         :: psi2
-        real(Kind = Rk),allocatable        :: S(:,:)
-         !real(kind=Rk)      ,intent(in)   :: q10,q20,sci,scj
-         integer                           :: iq,jq,ib
-         !real(kind=Rk)                    :: Norm1,Norm2
-
-       ! allocate(S(size(psi1%CVec),size(psi1%CVec)))
-
-
-        psi1%Basis%tab_basis(1)%S = matmul(psi1%Basis%tab_basis(1)%d0bgw,psi2%Basis%tab_basis(1)%d0gb)
-        CALL Write_RMat(psi1%Basis%tab_basis(1)%S,out_unitp,5,name_info='S')
-
-          ! print*,''
-          ! Do iq = 1,size(psi1%CVec)
-          !     Do jq =1,size(psi1%CVec)
-          !         CALL  Hermite_product_integral ( S(iq,jq), psi1%Basis%tab_basis(1)%X ,&
-          !         & psi1%Basis%tab_basis(1)%W , iq-1, jq-1,q10,q20,sci,scj )
-          !     End Do
-          ! End Do
-          ! Do iq = 1,size(psi1%CVec)
-          !     print*, S(iq,:)
-          ! End Do
-          ! print*,''
-
-       ! print*,'psiB1',psi1%CVec
-       ! CALL Calc_Norm_OF_Psi(psi1,Norm1)
-       !
-       ! print*, '<psis1|psi1> = ',Norm1
-       ! print*,''
-       !CALL Projection(psi2,psi1)
-       ! print*,''
-       !
-       ! CALL Calc_Norm_OF_Psi(psi2,Norm2)
-       ! print*, '<psis2|psi2> = ',Norm2
-       ! print*,'psiB2',psi2%CVec
-
-       ! deallocate(S)
-
-    END SUBROUTINE Test_Hagedorn
-
-
-    SUBROUTINE Calc_Norm_OF_Psi(Psi,Norm)
+    SUBROUTINE Calc_Norm_OF_Psi(psi,Norm)
         implicit none
-        type  (Psi_t),   intent(in)      :: Psi
+        type  (Psi_t),   intent(in)      :: psi
         real (kind=Rk), intent(inout)    :: Norm
         IF (psi%Grid) THEN
             CALL Calc_Norm_OF_PsiGrid(Psi,Norm)
@@ -277,12 +231,12 @@ contains
         END IF
     END SUBROUTINE Calc_Norm_OF_Psi
 
-    SUBROUTINE Calc_Norm_OF_PsiGrid(Psi_g,Norm)
+    SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g,Norm)
 
         USE UtilLib_m
         logical,         parameter      :: debug = .false.
-        TYPE(Psi_t), intent(in)         :: Psi_g
-        complex (kind=Rk),allocatable   :: Psi_gb(:,:)
+        TYPE(Psi_t), intent(in)         :: psi_g
+        complex (kind=Rk),allocatable   :: psi_gb(:,:)
         logical                         :: Endloop_q
         real(kind=Rk),intent(inout)     :: Norm
         real(kind=Rk),allocatable       :: Norme(:)
@@ -514,6 +468,43 @@ contains
         end if
 
     END SUBROUTINE
+
+    SUBROUTINE psi_init_GWP0(psi,Tab_GWP)
+      USE UtilLib_m
+      TYPE(psi_t),intent(inout) ,target        :: psi
+      TYPE (GWP_t)                             :: Tab_GWP(:)
+
+
+      !------------------locale variables--------------------------------------------
+      TYPE(psi_t)  ,target                    :: psi_g
+      real (kind=Rk), allocatable             :: Q(:,:)
+      integer                                 :: iq,iGWO
+      complex(Kind= Rk), pointer              ::gb(:,:)
+      real(Kind= Rk)                          ::NormG,NormB
+
+     !initialisation-----------------------------------------------------------------
+      CALL init_psi(psi_g,   psi%Basis,    cplx=.TRUE.   ,grid =.true.)
+      call calc_Q_grid(Q,psi%Basis)
+        
+      psi%CVec(:) = CZERO
+        gb( 1:psi%Basis%nq, 1:psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb)   =>    psi_g%CVec
+        gb(:,:) = CZERO
+        DO iq = 1,psi%Basis%nq
+         call  calc_Tab_GWP(Tab_GWP,Q(iq,:),gb(iq,:))
+                
+        END DO
+      !------------------transformation Grid to Basis-------------------------
+        call Calc_Norm_OF_Psi(psi_g,NormG)
+        print*,'NormG = ',NormG  
+        call GridTOBasis_nD_cplx(psi%CVec,psi_g%CVec,psi%Basis)
+        call Calc_Norm_OF_Psi(psi,NormB)
+        print*,'NormB = ',NormB
+        deallocate(Q)
+        CALL dealloc_psi(psi_g)
+
+
+
+  END SUBROUTINE    
 
 
     subroutine test(Basis)

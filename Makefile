@@ -48,9 +48,9 @@ $(OBJ_DIR)/$(MAIN).o: $(OBJ)
 
 $(OBJ_DIR)/Basis_m.o: $(OBJ_DIR)/NDindex_m.o $(OBJ_DIR)/UtilLib_m.o $(OBJ_DIR)/diago_m.o $(OBJ_DIR)/NumParameters_m.o
 $(OBJ_DIR)/Molec_m.o: $(OBJ_DIR)/UtilLib_m.o $(OBJ_DIR)/diago_m.o $(OBJ_DIR)/NumParameters_m.o
+$(OBJ_DIR)/param_WP0_m.o: $(OBJ_DIR)/UtilLib_m.o
 
-$(OBJ_DIR)/psi_m.o: $(OBJ_DIR)/Basis_m.o
-$(OBJ_DIR)param_WP0_m.o: $(OBJ_DIR)/psi_m.o
+$(OBJ_DIR)/psi_m.o: $(OBJ_DIR)/Basis_m.o $(OBJ_DIR)/param_WP0_m.o
 
 $(OBJ_DIR)/Ana_psi_m.o: $(OBJ_DIR)/psi_m.o
 

@@ -12,7 +12,7 @@ PROGRAM TD_SCHROD
     TYPE (Op_t)                :: H
   TYPE (psi_t)                 :: psi0,psif,psi
   TYPE(propa_t)                :: propa
-  TYPE (GWP_t)                 :: GWP
+  TYPE (GWP_t),allocatable     :: tab_GWP(:)
   real(Kind = Rk)              :: E,Norm,AVQ,SQ
 
 !====================================================================
@@ -26,31 +26,29 @@ nsurf     = 1
 pot_name  = 'read_model'
 adiabatic = .false.
 option    = 1
-CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
- write(out_unitp,*)'ndim,nsurf',ndim,nsurf
+call sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
+write(out_unitp,*)'ndim,nsurf',ndim,nsurf
 write(out_unitp,*) 'pot_name'
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
-  CALL Read_Basis(Basis_i,nio=in_unitp)
-  CALL construct_primitive_basis(Basis_i)
-  CALL init_Basis1_TO_Basis2 (Basis_f,Basis_i)
-  CALL construct_primitive_basis(Basis_f)
+  call Read_Basis(Basis_i,nio=in_unitp)
+  call construct_primitive_basis(Basis_i)
+  call init_Basis1_TO_Basis2 (Basis_f,Basis_i)
+  call construct_primitive_basis(Basis_f)
 
   !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
   write(out_unitp,*) 'Initialization of a complex psi'
-  CALL init_psi(psi0,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
-  CALL init_psi(psif,   Basis_f,    cplx=.TRUE.   ,grid =.false.)
-  CALL init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
-  call Read_GWP(GWP)
-  call Write_GWP(GWP)
-
-  !CALL GWP_init(psi0,1,in_unitp)
-  !call write_psi(psi=psi0,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
+  call init_psi(psi0,   Basis_i,    cplx=.TRUE.   ,grid =.false.)
+  call init_psi(psif,   Basis_f,    cplx=.TRUE.   ,grid =.false.)
+  call init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
+  call Read_tab_GWP(tab_GWP=tab_GWP,nb_GWP=1,nio=in_unitp)
+  call psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
+  call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
 
  ! CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
-  ! call Calc_average_energy(psi0,E)
+   call Calc_average_energy(psi0,E)
 
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)

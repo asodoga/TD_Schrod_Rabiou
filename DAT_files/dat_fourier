@@ -6,9 +6,9 @@
 &basis_nd name='dp' nb_basis=2/
    &basis_nd name='HO' nb = 25 nq=50  Q0 = -1.0 SCALEQ= 1.0  /
       &basis_nd name= 'el' nb=1/
-      &defGWP ndim=2 Coef=(1.,0.)
+ &defGWP ndim=1  Elecindex = 1 Coef=(1.,0.)/
  &defWP0  sigma= 1.4142135623730951  Qeq= -1.0   imp_k=0.0 phase=0.0 /
-  &defWP0  sigma= 1.4142135623730951  Qeq= -1.0   imp_k=0.0 phase=0.0 /
+
 
    &prop t0  = 0  tf  =250 delta_t =1.0    eps= 0.00000001
         max_iter =  5000 propa_name ='hagedorn'  propa_name2 = 'taylor' /
