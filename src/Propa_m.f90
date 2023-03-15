@@ -140,6 +140,7 @@ contains
         TYPE(propa_t), intent(inout)     :: propa
         logical, parameter               :: debug = .true.
         TYPE(Basis_t) ,target            :: Basis_1,Basis_2,Basis_0
+        real(kind=Rk)                    ::f1(700,3),f2(700,3),df(700,3)
 
         ! variables locales
         REAL(kind=Rk)                    :: t ,t_deltat, Norm,E,Qt,SQt
@@ -182,7 +183,8 @@ contains
             call Calc_average_energy(psi,E)
             write(11,*)    t, Qt,E
              if ( mod(i,25)== 0 ) then
-              call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=t,int_print=10,real_part=.false.) 
+              call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
+                      ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
               write(10,*) 
              end if
             CALL  march(psi,psi_dt,t,propa)
@@ -560,5 +562,44 @@ contains
             WRITE(100,*)  w(Iw), ABS(fft_autocor_function(Iw))
         ENDDO !omega
     END SUBROUTINE fft_autocor_func
+
+
+
+
+    subroutine diff()
+        real(kind=Rk) ,allocatable         :: df(:,:)
+        real(kind=Rk) ,allocatable         :: f1(:,:)
+        real(kind=Rk) ,allocatable         :: f2(:,:)
+        integer                             :: iostat,iq=1,n =1000,m=3
+
+        open(22, file='psi.dat', status="old")
+        open(23, file='psih.dat', status="old")
+        open(24, file='diff.dat')
+       allocate(f1(n,m),f2(n,m),df(n,m))
+
+        do while(iq < n)
+            read(22,*, IOSTAT=iostat) f1(iq,:)
+            read(23,*, IOSTAT=iostat) f2(iq,:)
+            iq = iq + 1
+        end do
+
+        do iq = 1,n
+            if(iq>= 550)then
+                f1(iq,:) =ZERO
+                f2(iq,:) =ZERO
+            end if
+            df(iq,1) = f1(iq,1)
+
+          ! print*,iq,f(iq,:)
+        end do
+        df(:,:) = ZERO
+        df(:,:) = f1(:,:)
+        df(:,3) = abs(f1(:,3)-f2(:,3))
+        do iq = 1,549
+            !df(iq,3) = f1(iq,3)-f2(iq,3)
+            !print*,iq,df(iq,:)   ,   abs(f1(iq,3)-f2(iq,3))
+            write(24,*)  df(iq,:)
+        end do
+    end subroutine diff
 
 end module Propa_m
