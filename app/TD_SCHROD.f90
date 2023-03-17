@@ -34,6 +34,7 @@ write(out_unitp,*) 'pot_name'
   ! the basis/grid informations have to be put in a module
   call Read_Basis(Basis_i,nio=in_unitp)
   call construct_primitive_basis(Basis_i)
+  !STOP 'calcul de H|psi> est fait'
   call init_Basis1_TO_Basis2 (Basis_f,Basis_i)
   call construct_primitive_basis(Basis_f)
 
@@ -45,15 +46,23 @@ write(out_unitp,*) 'pot_name'
   call init_psi(psi,   Basis_i,    cplx=.TRUE.   ,grid =.true.)
   call Read_tab_GWP(tab_GWP=tab_GWP,nb_GWP=1,nio=in_unitp)
   call psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
-  call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
+ ! call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
+  !call Write_Basis(Basis_0)
 
- ! CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
-   call Calc_average_energy(psi0,E)
 
+  !call  Buld_S(S=Basis_i%tab_basis(1)%S,d0gb1=Basis_i%tab_basis(1)%d0gb &
+     ! ,d0gb2=Basis_i%tab_basis(1)%d0gb,nb=Basis_i%tab_basis(1)%nb,w1=Basis_i%tab_basis(1)%w)
+
+  !CALL  Calc_basis(psi0%Basis, Basis_f,ONE,ONE)
+  !call Hagedorn(psi,psi0,Basis_f)  
+  
+   !CALL  Calc_std_dev_AVQ_1D(psi0,1,AVQ,SQ)
+   !call Calc_average_energy(psi0,E)
+ !call diff()
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  STOP 'calcul de H|psi> est fait'
+  !STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
   CALL propagation(psif,psi0,propa)

@@ -140,7 +140,6 @@ contains
         TYPE(propa_t), intent(inout)     :: propa
         logical, parameter               :: debug = .true.
         TYPE(Basis_t) ,target            :: Basis_1,Basis_2,Basis_0
-        real(kind=Rk)                    ::f1(700,3),f2(700,3),df(700,3)
 
         ! variables locales
         REAL(kind=Rk)                    :: t ,t_deltat, Norm,E,Qt,SQt
@@ -170,10 +169,11 @@ contains
             CALL construct_primitive_basis(Basis_0)
             CALL construct_primitive_basis(Basis_1)
             CALL construct_primitive_basis(Basis_2)
+
             CALL init_psi(psi,Basis_1,cplx=.TRUE.,grid =.false.)
             CALL init_psi(psi_dt,Basis_2,cplx=.TRUE.,grid =.false.  )
 
-             psi = psi0
+             psi%CVec(:) = psi0%CVec(:)
         ! ******************************* Beging  propagation ********************************************************
         DO i=0,nt
             t = i*propa%delta_t
@@ -181,7 +181,7 @@ contains
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
             call  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
-            write(11,*)    t, Qt,E
+            write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
              if ( mod(i,25)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
@@ -189,9 +189,18 @@ contains
              end if
             CALL  march(psi,psi_dt,t,propa)
             if( propa%propa_name  == 'hagedorn' )  then
-                call  Hagedorn(psi,psi_dt,Basis_0)
+
+                call  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
+                call init_Basis1_TO_Basis2(Basis_1,Basis_0)
+                call construct_primitive_basis(Basis_1,Qt,SQt)
+                call Projection(psi,psi_dt)
+                call init_Basis1_TO_Basis2(Basis_2,Basis_0)
+                call construct_primitive_basis(Basis_2,Qt,SQt)
+
                 else
-                psi = psi_dt
+
+                psi%CVec(:) = psi_dt%CVec(:)
+
                 end if
         END DO
            psif = psi_dt
@@ -222,8 +231,13 @@ contains
         call Calc_Norm_OF_Psi(psi_dt,Norm)
         write(out_unitp,*) '<psi|psi> =',Norm
         CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
+
+
         CALL  Calc_basis(psi%Basis, Basis,Qt,SQt)
+
+
         CALL Calc_S(psi_dt%Basis,Qt,SQt)
+
         CALL Projection(psi,psi_dt)
         CALL  Calc_basis(psi_dt%Basis, Basis,Qt,SQt)
         write(out_unitp,*) 'End Hagedorn'

@@ -10,10 +10,11 @@ MODULE Basis_m
   PUBLIC :: Calc_dngg_grid,Basis_IS_allocatedtot,Calc_tranpose_d0gb,test_basitogridgridtobasis
   PUBLIC :: GridTOBasis_nD_cplx,BasisTOGrid_nD_cplx
   PUBLIC ::  BasisTOGrid_1D_cplx, GridTOBasis_1D_cplx
-  PUBLIC ::   Calc_Q_grid,construct_primitive_basis,init_Basis1_TO_Basis2
+  PUBLIC ::   Calc_Q_grid,init_Basis1_TO_Basis2
   PUBLIC ::Calc_iqib,Scale_Basis,Construct_poly_Hermite , Hermite_product_integral
   PUBLIC ::Deallocate_Basis  ,Hermite_double_product_func
- PUBLIC  :: Calc_S , Calc_basis
+ PUBLIC  :: Calc_S , Calc_basis,Buld_S
+ PUBLIC ::   construct_primitive_basis,construct_primitive_basis0,construct_primitive_basis1
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -326,7 +327,7 @@ CONTAINS
         END IF
     END SUBROUTINE Read_Basis
 
-    RECURSIVE SUBROUTINE construct_primitive_basis(Basis)
+    RECURSIVE SUBROUTINE construct_primitive_basis0(Basis)
         USE UtilLib_m
         logical,             parameter      :: debug = .true.
         !logical,             parameter      ::debug = .false.
@@ -367,13 +368,91 @@ CONTAINS
                 STOP 'ERROR  Noting to construct'
             END SELECT
             !  this part wil not have sens for 'el' basis
-             ! CALL Scale_Basis(Basis,Basis%Q0,Basis%scaleQ)
+            CALL Scale_Basis(Basis,Basis%Q0,Basis%scaleQ)
             CALL   Calc_tranpose_d0gb(Basis)
             CALL Calc_dngg_grid(Basis)
             CALL CheckOrtho_Basis(Basis,nderiv=2)
         END IF
        ! write(out_unitp,*) ' End  construct  primitive Basis '
-    END SUBROUTINE construct_primitive_basis
+    END SUBROUTINE construct_primitive_basis0
+
+
+
+
+
+    RECURSIVE SUBROUTINE construct_primitive_basis1(Basis,x,sx)
+    USE UtilLib_m
+    logical,             parameter      :: debug = .true.
+    real(kind=Rk) ,intent(in)           :: x,sx
+    !logical,             parameter      ::debug = .false.
+    TYPE(Basis_t),       intent(inout)  :: Basis
+    integer, allocatable                :: NDend_q(:)
+    integer, allocatable                :: NDend_b(:)
+    integer                             :: nb,nq,i,j
+    character (len=Name_len)            :: name
+       ! write(out_unitp,*) ' Begin  construct primitive  Basis '
+    IF(allocated(Basis%tab_basis))THEN
+        allocate(NDend_q(Basis%nb_basis-1))
+        allocate(NDend_b(Basis%nb_basis-1))
+        DO i=1,Basis%nb_basis-1
+            NDend_q(i)=Basis%tab_basis(i)%nq
+            NDend_b(i)=Basis%tab_basis(i)%nb
+        END DO
+        CALL Init_NDindex(Basis%NDindexq,NDend_q,Basis%nb_basis-1)
+        CALL Init_NDindex(Basis%NDindexb,NDend_b,Basis%nb_basis-1)
+        DO i=1,Basis%nb_basis
+            CALL construct_primitive_basis(Basis%tab_basis(i),x,sx)
+        END DO
+    ELSE
+        SELECT CASE (Basis%Basis_name)
+        CASE('el')
+            write(6,*) 'Electronic basis. Electronic state number:',basis%nb
+            basis%nq = 0
+        CASE ('boxab')
+            CALL Construct_Basis_Sin(Basis)
+            Basis%Q0      = Basis%A
+            Basis%scaleQ  = pi/(Basis%B-Basis%A)
+        CASE ('fourier')
+            CALL Construct_Basis_Fourier(Basis)
+        CASE ('herm','ho')
+            CALL Construct_Basis_Ho_HG(Basis,x,sx)
+        CASE default
+            STOP 'ERROR  Noting to construct'
+        END SELECT
+        !  this part wil not have sens for 'el' basis
+        !CALL Scale_Basis(Basis,Basis%Q0,Basis%scaleQ)
+        CALL   Calc_tranpose_d0gb(Basis)
+        CALL Calc_dngg_grid(Basis)
+        CALL CheckOrtho_Basis(Basis,nderiv=2)
+    END IF
+   ! write(out_unitp,*) ' End  construct  primitive Basis '
+END SUBROUTINE construct_primitive_basis1
+
+
+RECURSIVE SUBROUTINE construct_primitive_basis(Basis,x,sx)
+USE UtilLib_m
+logical,             parameter      :: debug = .true.
+!logical,             parameter     ::debug = .false.
+TYPE(Basis_t),       intent(inout)  :: Basis
+real(kind=Rk) ,intent(in),optional  :: x,sx
+
+
+if(present(x).and. present(sx)) then
+     !write(out_unitp,*) ' S will be constructed for Ho Basis'
+     !stop 'cc'
+   call construct_primitive_basis1(Basis,x,sx)
+else
+   call construct_primitive_basis0(Basis)    
+   !stop 'cc'
+end if
+
+END SUBROUTINE construct_primitive_basis
+
+    
+
+
+
+    
 
   SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
  USE UtilLib_m
@@ -500,17 +579,94 @@ CONTAINS
         END DO
     END DO
 
-    !*********************scaling***************************************************************
 
-    Basis%x(:) =  Basis%Q0 + Basis%x(:) /  Basis%SCALEQ
-    Basis%w(:) =      Basis%w(:) / Basis%SCALEQ
-    Basis%d0gb(:,:)     = Basis%d0gb(:,:)     * sqrt(Basis%SCALEQ)
-    Basis%d1gb(:,:,:)   = Basis%d1gb(:,:,:)   * sqrt(Basis%SCALEQ)*Basis%SCALEQ
-    Basis%d2gb(:,:,:,:) = Basis%d2gb(:,:,:,:) * sqrt(Basis%SCALEQ)*Basis%SCALEQ*Basis%SCALEQ
+  END SUBROUTINE Construct_Basis_Ho
 
 
 
- END SUBROUTINE Construct_Basis_Ho
+  SUBROUTINE Construct_Basis_Ho_HG(Basis,x0,sx) ! HO HAGEDORN:
+    USE UtilLib_m
+   
+       TYPE(Basis_t),       intent(inout)                  :: Basis
+       integer                                             :: iq,ib
+       real(kind=Rk) ,intent(in)                           :: x0,sx
+       real(kind=Rk),allocatable                           :: d0gb(:,:),d1gb(:,:,:),d2gb(:,:,:,:)
+   
+   
+       allocate(Basis%x(Basis%nq))
+       allocate(Basis%w(Basis%nq))
+       call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+   
+       allocate(Basis%d0gb(Basis%nq,Basis%nb))
+       allocate(Basis%d1gb(Basis%nq,Basis%nb,1))
+       allocate(Basis%d2gb(Basis%nq,Basis%nb,1,1))
+       
+       allocate(d0gb(Basis%nq,Basis%nb))
+       allocate(d1gb(Basis%nq,Basis%nb,1))
+       allocate(d2gb(Basis%nq,Basis%nb,1,1))
+       
+     
+    
+   
+       DO iq = 1, Basis%nq
+           DO ib = 1, Basis%nb
+             CALL Construct_Basis_poly_Hermite_exp( Basis%scaleQ*( Basis%x(iq)-Basis%Q0),Basis%d0gb(iq,ib),&
+              Basis%d1gb(iq,ib,1),Basis%d2gb(iq,ib,1,1), ib-1,.TRUE.)
+              
+              CALL Construct_Basis_poly_Hermite_exp( SX*( Basis%x(iq)-X0),d0gb(iq,ib),&
+              d1gb(iq,ib,1),d2gb(iq,ib,1,1), ib-1,.FALSE.)
+              
+           END DO
+       END DO
+    
+       Basis%x(:) =  Basis%Q0 + Basis%x(:) /  Basis%SCALEQ
+       Basis%w(:) =      Basis%w(:) / Basis%SCALEQ
+       print*,'construction of s'
+       call  Buld_S(S=Basis%S,d0gb1=Basis%d0gb,d0gb2=d0gb,nb=Basis%nb,w1=Basis%w)
+       
+
+    END SUBROUTINE Construct_Basis_Ho_HG
+
+    SUBROUTINE Buld_S(S,d0gb1,d0gb2,nb,w1)
+      USE UtilLib_m
+    
+        integer                           :: ib,jb,iq,nq
+        integer ,INTENT(IN)               :: nb
+        real(kind=Rk),  INTENT(INOUT)     :: S(:,:)
+        real(kind=Rk), INTENT(IN)         :: d0gb1(:,:),d0gb2(:,:),w1(:)
+        real(kind=Rk),  ALLOCATABLE       :: d0bgw(:,:)
+        
+        nq =size(w1)
+        write(out_unitp,*) 'Beging Buld_s'
+        
+
+          d0bgw = transpose(d0gb1)
+          !CALL Write_RMat(d0bgw,out_unitp,5,name_info='<d0b1|d0b2>')
+          !write(*,*) ''
+
+          DO ib=1,nb
+            
+               d0bgw(ib,:) = d0bgw(ib,:) * w1(:)
+         
+          END DO
+          !CALL Write_RMat(d0bgw,out_unitp,5,name_info='<d0b1|d0b2>')
+          !write(*,*) ''
+      
+          S = matmul(d0bgw,d0gb2)
+        
+           CALL Write_RMat(S,out_unitp,5,name_info='<d0b1|d0b2>')
+         
+         
+         
+
+          write(out_unitp,*) 'Beging Buld_s'
+      
+      END SUBROUTINE Buld_S
+    
+
+
+
+
 
     !*******************************************************************************************************************
 
