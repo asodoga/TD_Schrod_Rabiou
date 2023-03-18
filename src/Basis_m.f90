@@ -133,11 +133,11 @@ CONTAINS
            ELSE
             CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
            END IF
-         !! write(out_unitp,*)
+          write(out_unitp,*)
          ! IF (.NOT.allocated(Basis%d0gb)) THEN
           !  write(out_unitp,*)' Basis table d0gb is not allocated.'
           !ELSE
-           !CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
+           CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
          ! END IF
 
          !
@@ -145,25 +145,25 @@ CONTAINS
        !  IF (.NOT.allocated(Basis%d0bgw)) THEN
        !     write(out_unitp,*)' Basis table d0bgw is not allocated.'
        !   ELSE
-       !    !CALL Write_RMat(Basis%d0bgw,out_unitp,5,name_info='d0gbw')
+          !CALL Write_RMat(Basis%d0bgw,out_unitp,5,name_info='d0gbw')
        !  END IF
        !  ! write(out_unitp,*)
        !   IF (.NOT.allocated(Basis%d1gb)) THEN
        !     write(out_unitp,*)' Basis table d1gb is not allocated.'
        !   ELSE
-       !    ! CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
+          !CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
        !   END IF
        !   !write(out_unitp,*)
        !   IF (.NOT.allocated(Basis%d1gg)) THEN
        !     write(out_unitp,*)' Basis table d1gb is not allocated.'
        !   ELSE
-       !    ! CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+        !CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
        !   END IF
        !  ! write(out_unitp,*)
        !   IF (.NOT.allocated(Basis%d2gb)) THEN
        !     write(out_unitp,*)' Basis table d1gb is not allocated.'
        !   ELSE
-       !     !CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+       !CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
        !   END IF
        !  ! write(out_unitp,*)
        !   IF (.NOT.allocated(Basis%d2gg)) THEN
@@ -171,7 +171,7 @@ CONTAINS
        !   ELSE
        !     !CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
        !   END IF
-           ! CALL Write_RMat(Basis%S,out_unitp,5,name_info='S')
+       !CALL Write_RMat(Basis%S,out_unitp,5,name_info='d0gb')
 
         !   write(out_unitp,*) 'nb_basis',Basis%nb_basis
 
@@ -610,18 +610,19 @@ END SUBROUTINE construct_primitive_basis
    
        DO iq = 1, Basis%nq
            DO ib = 1, Basis%nb
-             CALL Construct_Basis_poly_Hermite_exp( Basis%scaleQ*( Basis%x(iq)-Basis%Q0),Basis%d0gb(iq,ib),&
-              Basis%d1gb(iq,ib,1),Basis%d2gb(iq,ib,1,1), ib-1,.TRUE.)
+             CALL Construct_Basis_poly_Hermite_exp( sx*( Basis%x(iq)-x0),Basis%d0gb(iq,ib),&
+              Basis%d1gb(iq,ib,1),Basis%d2gb(iq,ib,1,1), ib-1,.TRUE.)  !construction of the new Basis
               
-              CALL Construct_Basis_poly_Hermite_exp( SX*( Basis%x(iq)-X0),d0gb(iq,ib),&
+              CALL Construct_Basis_poly_Hermite_exp( Basis%scaleQ*( Basis%x(iq)-Basis%scaleQ),d0gb(iq,ib),&
               d1gb(iq,ib,1),d2gb(iq,ib,1,1), ib-1,.FALSE.)
               
            END DO
        END DO
-    
+         Basis%scaleQ = sx
+         Basis%Q0      = x0
        Basis%x(:) =  Basis%Q0 + Basis%x(:) /  Basis%SCALEQ
        Basis%w(:) =      Basis%w(:) / Basis%SCALEQ
-       print*,'construction of s'
+      ! print*,'construction of s'
        call  Buld_S(S=Basis%S,d0gb1=Basis%d0gb,d0gb2=d0gb,nb=Basis%nb,w1=Basis%w)
        
 
@@ -654,12 +655,12 @@ END SUBROUTINE construct_primitive_basis
       
           S = matmul(d0bgw,d0gb2)
         
-           CALL Write_RMat(S,out_unitp,5,name_info='<d0b1|d0b2>')
+           !CALL Write_RMat(S,out_unitp,5,name_info='<d0b1|d0b2>')
          
          
          
 
-          write(out_unitp,*) 'Beging Buld_s'
+          write(out_unitp,*) 'End Buld_s'
       
       END SUBROUTINE Buld_S
     
@@ -1043,14 +1044,19 @@ END SUBROUTINE construct_primitive_basis
     END IF
 
   END SUBROUTINE CheckOrtho_Basis
-  SUBROUTINE Scale_Basis(Basis,x0,sx)
+  SUBROUTINE Scale_Basis1(Basis,Q0,SQ0)
   USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
-    real(kind=Rk),       intent(in)     :: x0,sx
+    real(kind=Rk),       intent(in)     :: Q0,SQ0
+    real(kind=Rk)                       :: x0,sx
 
-    IF (Basis%nq == 0) RETURN
-    IF (abs(sx) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
+    x0 = Q0
+    sx  = SQ0
+    if( (x0-real(int(x0),kind=Rk) )<= 0.000000001_Rk)   x0 = real(int(x0),kind=Rk)
+    if( (sx-real(int(sx),kind=Rk) )<= 0.0000000001_RK)  sx = real(int(sx),kind=Rk)
+
+    IF ( Basis_IS_allocated(Basis) .and. abs(sx)> 0.000_Rk) THEN
 
       Basis%x(:) = x0 + Basis%x(:) / sx
       Basis%w(:) =      Basis%w(:) / sx
@@ -1059,27 +1065,62 @@ END SUBROUTINE construct_primitive_basis
       Basis%d1gb(:,:,:)   = Basis%d1gb(:,:,:)   * sqrt(sx)*sx
       Basis%d2gb(:,:,:,:) = Basis%d2gb(:,:,:,:) * sqrt(sx)*sx*sx
     ELSE
-      write(out_unitp,*) ' ERROR in Scale_Basis'
       write(out_unitp,*) ' sx is too small  or ...'
       write(out_unitp,*) ' the basis is not allocated.'
-      STOP 'ERROR in Scale_Basis'
+     stop 'sx too small or Basis is not allocated'
     END IF
+  END SUBROUTINE
 
-  END SUBROUTINE Scale_Basis
+    SUBROUTINE Scale_Basis(Basis,x,sQ)
+        USE UtilLib_m
 
-     SUBROUTINE Calc_basis(Basis2,Basis1,x0,sx)
+        TYPE(Basis_t),       intent(inout)  :: Basis
+        real(kind=Rk),       intent(in)     :: x,sQ
+        real(kind=Rk)                       :: x0,sx
+
+        x0 = x
+        sx  = SQ
+        if( (x0-real(int(x0),kind=Rk) )<= ONETENTH**8)   x0 = real(int(x0),kind=Rk)
+        if( (sx-real(int(sx),kind=Rk) )<= ONETENTH**8)   sx = real(int(sx),kind=Rk)
+        !write(15,*) x0,sx
+        IF (Basis%nq == 0) RETURN
+        IF (abs(sx) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
+
+            Basis%x(:) = x0 + Basis%x(:) / sx
+            Basis%w(:) =      Basis%w(:) / sx
+
+            Basis%d0gb(:,:)     = Basis%d0gb(:,:)     * sqrt(sx)
+            Basis%d1gb(:,:,:)   = Basis%d1gb(:,:,:)   * sqrt(sx)*sx
+            Basis%d2gb(:,:,:,:) = Basis%d2gb(:,:,:,:) * sqrt(sx)*sx*sx
+        ELSE
+            write(out_unitp,*) ' ERROR in Scale_Basis'
+            write(out_unitp,*) ' sx is too small  or ...'
+            write(out_unitp,*) ' the basis is not allocated.'
+            STOP 'ERROR in Scale_Basis'
+        END IF
+
+    END SUBROUTINE Scale_Basis
+
+     SUBROUTINE Calc_basis(Basis2,Basis1,Q0,sQ)
          USE UtilLib_m
          TYPE(Basis_t)   ,        INTENT(IN)        :: Basis1
          TYPE(Basis_t)   ,        INTENT(INOUT)     :: Basis2
-         REAL(kind=Rk),              INTENT(IN)     :: X0,SX
+         REAL(kind=Rk),              INTENT(IN)     :: Q0,SQ
          integer                                    :: ib1,ib2
+         REAL(kind=Rk)                              :: X0,SX
          write(out_unitp,*) 'Beging init_Basis'
 
         ! CALL Write_Basis(Basis1)
+         x0=Q0
+         sx = SQ
+         if( (x0-real(int(x0),kind=Rk) )<= ONETENTH**8)   x0 = real(int(x0),kind=Rk)
+         if( (sx-real(int(sx),kind=Rk) )<= ONETENTH**8)   sx = real(int(sx),kind=Rk)
 
          Call init_Basis1_TO_Basis2 (Basis2,Basis1)
+
          Basis2%tab_basis(1)%Q0      = X0
          Basis2%tab_basis(1)%SCALEQ  = SX
+
          Call construct_primitive_basis(Basis2)
 
          !CALL Write_Basis(Basis2)
@@ -1088,15 +1129,22 @@ END SUBROUTINE construct_primitive_basis
          END SUBROUTINE
 
 
-    SUBROUTINE Calc_S(Basis,X0,SX)
+    SUBROUTINE Calc_S(Basis,Q0,SQ)
         USE UtilLib_m
         TYPE(Basis_t)   ,        INTENT(INout)         :: Basis
-        real(kind = Rk)  ,        INTENT(IN)           :: X0,SX
+        real(kind = Rk)  , INTENT(IN)                 :: Q0,SQ
+        real(kind = Rk)                                :: X0,SX
+
         integer                                        :: ib1,ib2
 
         write(out_unitp,*) 'Beging Calc_S'
 
         ! CALL Write_Basis(Basis1)
+         X0= Q0
+        sx= SQ
+        if( (x0-real(int(x0),kind=Rk) )<= ONETENTH**8)   x0 = real(int(x0),kind=Rk)
+        if( (sx-real(int(sx),kind=Rk) )<= ONETENTH**8)   sx = real(int(sx),kind=Rk)
+
 
         Do  ib2 =1,Basis%tab_basis(1)%nb
             Do  ib1 =1,Basis%tab_basis(1)%nb

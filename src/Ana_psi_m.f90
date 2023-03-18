@@ -39,7 +39,7 @@
              integer                         :: Iq
 
               call Calc_Norm_OF_Psi(Psi_in,Norm)
-              write(out_unitp,*) 'Norm=',Norm
+             ! write(out_unitp,*) 'Norm=',Norm
              IF (debug) THEN
                 ! write(out_unitp,*) 'Beging AVQ,STD_DQ'
                  flush(out_unitp)
@@ -58,11 +58,10 @@
                   X   =  X+conjg(psi%CVec(Iq))*(psi%Basis%tab_basis(i_1D)%x(Iq)**2)*psi%CVec(Iq)*psi%Basis%tab_basis(i_1D)%w(Iq)
 
                   end do
-                     if(AVQ <= 0.00000000001) AVQ = ZERO
+
                     STD_DQ =sqrt(X-AVQ*AVQ)
                     SQ = ONE/(STD_DQ*sqrt(TWO))
-
-               Print*,"<psi|Q|psi> = ",AVQ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ,'SQ=',SQ
+               Print *,"<psi|Q|psi> = ",AVQ ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ,'SQ=',SQ
              CALL dealloc_psi(psi)
              IF (debug) THEN
                 ! write(out_unitp,*) 'END AVQ,STD_DQ'

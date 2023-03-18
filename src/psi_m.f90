@@ -200,7 +200,7 @@ contains
 
         psi_dt_2%CVec(:) =CZERO
         write(out_unitp,*) 'Begin Hagedorn projection'
-        write(out_unitp,*) 'writing psi_in'
+        !write(out_unitp,*) 'writing psi_in'
         !CALL Write_psi(psi_dt_1)
             !write(out_unitp,*) 'b1'
             !CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
@@ -213,7 +213,7 @@ contains
                 END DO
                 
             END DO
-            write(out_unitp,*) 'writing psi_out'
+           ! write(out_unitp,*) 'writing psi_out'
             !CALL Write_psi(psi_dt_2)
             write(out_unitp,*) 'END Hagedorn projection'
             

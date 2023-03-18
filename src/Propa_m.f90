@@ -174,6 +174,7 @@ contains
             CALL init_psi(psi_dt,Basis_2,cplx=.TRUE.,grid =.false.  )
 
              psi%CVec(:) = psi0%CVec(:)
+
         ! ******************************* Beging  propagation ********************************************************
         DO i=0,nt
             t = i*propa%delta_t
@@ -181,21 +182,27 @@ contains
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
             call  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
-            write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
-             if ( mod(i,25)== 0 ) then
+           ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
+             write(11,*)    t,Qt,E,SQt
+             if ( mod(i,5)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
               write(10,*) 
              end if
             CALL  march(psi,psi_dt,t,propa)
             if( propa%propa_name  == 'hagedorn' )  then
+                 print*,'psi%Basis'
+                call Write_Basis(psi%Basis)
+                 print*,'psi_dt%Basis'
 
-                call  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
-                call init_Basis1_TO_Basis2(Basis_1,Basis_0)
-                call construct_primitive_basis(Basis_1,Qt,SQt)
-                call Projection(psi,psi_dt)
-                call init_Basis1_TO_Basis2(Basis_2,Basis_0)
-                call construct_primitive_basis(Basis_2,Qt,SQt)
+                 call Write_Basis(psi_dt%Basis)
+                 call Hagedorn(psi,psi_dt,Basis_0)
+
+                 print*,'psi%Basis'
+                 call Write_Basis(psi%Basis)
+                 print*,'psi_dt%Basis'
+                 call Write_Basis(psi_dt%Basis)
+
 
                 else
 
@@ -208,7 +215,8 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.false.,print_basis=.false.,real_part=.false.)
+            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.true.&
+                    ,print_basis=.false.,t=t,int_print=16,real_part=.true.)
 
             flush(out_unitp)
         END IF
@@ -228,21 +236,18 @@ contains
         ! variables locales
         REAL(kind=Rk)                               :: Qt,SQt,Norm
         write(out_unitp,*) 'Beging Hagedorn'
-        call Calc_Norm_OF_Psi(psi_dt,Norm)
-        write(out_unitp,*) '<psi|psi> =',Norm
+        !call Calc_Norm_OF_Psi(psi_dt,Norm)
+       ! write(out_unitp,*) '<psi|psi> =',Norm
+
         CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
-
-
         CALL  Calc_basis(psi%Basis, Basis,Qt,SQt)
-
-
         CALL Calc_S(psi_dt%Basis,Qt,SQt)
-
         CALL Projection(psi,psi_dt)
         CALL  Calc_basis(psi_dt%Basis, Basis,Qt,SQt)
+
         write(out_unitp,*) 'End Hagedorn'
-        call Calc_Norm_OF_Psi(psi,Norm)
-        write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
+        !call Calc_Norm_OF_Psi(psi,Norm)
+        !write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
         IF (debug) THEN
             flush(out_unitp)
         END IF
