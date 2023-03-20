@@ -57,10 +57,12 @@
                   AVQ =  AVQ+conjg(psi%CVec(Iq))*psi%Basis%tab_basis(i_1D)%x(Iq)*psi%CVec(Iq)*psi%Basis%tab_basis(i_1D)%w(Iq)
                   X   =  X+conjg(psi%CVec(Iq))*(psi%Basis%tab_basis(i_1D)%x(Iq)**2)*psi%CVec(Iq)*psi%Basis%tab_basis(i_1D)%w(Iq)
 
-                  end do
+              end do
 
-                    STD_DQ =sqrt(X-AVQ*AVQ)
-                    SQ = ONE/(STD_DQ*sqrt(TWO))
+             STD_DQ =sqrt(X-AVQ*AVQ)
+             SQ = ONE/(STD_DQ*sqrt(TWO))
+             if( (x-real(int(x),kind=Rk) )<= ONETENTH**8)   x = real(int(x),kind=Rk)
+             if( (SQ-real(int(SQ),kind=Rk) )<= ONETENTH**8)   SQ = real(int(SQ),kind=Rk)
                Print *,"<psi|Q|psi> = ",AVQ ,"<psi|Q**2|psi> = ",X,"sqrt(<psi|Q**2|psi> - <psi|Q|psi> )= ", STD_DQ,'SQ=',SQ
              CALL dealloc_psi(psi)
              IF (debug) THEN
