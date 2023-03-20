@@ -34,7 +34,7 @@ write(out_unitp,*) 'pot_name'
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
   CALL construct_primitive_basis(Basis)
-  !Call Write_Basis(Basis_i)
+  !Call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
   write(out_unitp,*) 'Initialization of a complex psi'

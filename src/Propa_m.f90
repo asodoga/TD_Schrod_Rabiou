@@ -56,7 +56,7 @@ contains
         TYPE (psi_t),  intent(in)        :: psi0
         TYPE(propa_t), intent(inout)     :: propa
         logical, parameter               :: debug = .true.
-        TYPE(Basis_t) ,target            :: Basis_1,Basis_2,Basis_0
+        TYPE(Basis_t) ,target            :: Basis_1,Basis_2
 
         ! variables locales
         REAL(kind=Rk)                    :: t ,t_deltat, Norm,E,Qt,SQt
@@ -82,8 +82,6 @@ contains
 
             CALL init_Basis1_TO_Basis2 (Basis_1,psi0%Basis)
             CALL init_Basis1_TO_Basis2 (Basis_2,psi0%Basis)
-            CALL init_Basis1_TO_Basis2 (Basis_0,psi0%Basis)
-            CALL construct_primitive_basis(Basis_0)
             CALL construct_primitive_basis(Basis_1)
             CALL construct_primitive_basis(Basis_2)
 
@@ -101,7 +99,7 @@ contains
             call Calc_average_energy(psi,E)
            ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
              write(11,*)    t,Qt,E,SQt
-             if ( mod(i,5)== 0 ) then
+             if ( mod(i,1)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
               write(10,*) 
@@ -112,7 +110,7 @@ contains
                !call Write_Basis(psi%Basis)
                !print*,'psi_dt%Basis'
                !call Write_Basis(psi_dt%Basis)
-                 call Hagedorn(psi,psi_dt,Basis_0)
+                 call Hagedorn(psi,psi_dt)
                  !print*,'psi%Basis'
                  !call Write_Basis(psi%Basis)
                  !print*,'psi_dt%Basis'
@@ -136,12 +134,11 @@ contains
 
 
 
-    SUBROUTINE Hagedorn(psi,psi_dt,Basis)
+    SUBROUTINE Hagedorn(psi,psi_dt)
         USE psi_m
         USE Basis_m
 
         TYPE (psi_t),     intent(inout)             :: psi,psi_dt
-        TYPE (Basis_t)  ,  intent(in)               :: Basis
         logical, parameter                          :: debug = .true.
 
         ! variables locales
@@ -183,7 +180,6 @@ contains
         !===================================== beging Anapsi==================
         call Population(psi,pop)
         call Calc_average_energy(psi,E)
-        call Average_Q(psi,Qm)
         call Calc_Norm_OF_psi(psi, Norm)
         call Qpop(psi,Qp)
         write(3,*) t,E,Norm,pop
