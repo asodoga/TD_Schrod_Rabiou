@@ -953,7 +953,7 @@ CONTAINS
 
         S = matmul(d0bgw,d0gb2)
 
-        !CALL Write_RMat(S,out_unitp,5,name_info='<d0b1|d0b2>')
+        CALL Write_RMat(S,out_unitp,3,name_info='<d0b1|d0b2>')
 
 
 

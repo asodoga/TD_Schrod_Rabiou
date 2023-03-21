@@ -33,7 +33,7 @@ write(out_unitp,*) 'pot_name'
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
-  CALL construct_primitive_basis(Basis)
+  CALL construct_primitive_basis(Basis,ONE,ONE)
   !Call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
@@ -42,16 +42,19 @@ write(out_unitp,*) 'pot_name'
   CALL init_psi(psif,   Basis,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psi,    Basis,    cplx=.TRUE.   ,grid =.false.)
    call Read_tab_GWP(tab_GWP=tab_GWP,nb_GWP=1,nio=in_unitp)
-   call psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
+   !call psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
   ! call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.true.)
-
-    !CALL Projection(psif,psi0)
+    psi%CVec = CZERO
+    psi%CVec(1)=ONE
+    CALL Projection(psif,psi)
+    call Calc_Norm_OF_Psi(psi,Norm)
+    call Calc_Norm_OF_Psi(psif,Norm)
     !call Calc_average_energy(psi0,E)
-  call Calc_std_dev_AVQ_1D(psi0,1,AVQ,DQ)
+  !call Calc_std_dev_AVQ_1D(psi0,1,AVQ,DQ)
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  !STOP 'calcul de H|psi> est fait'
+  STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
   CALL propagation(Psif,Psi0,propa)

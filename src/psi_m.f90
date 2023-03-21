@@ -229,6 +229,7 @@ contains
         ELSE
             CALL Calc_Norm_OF_PsiBasis(psi,Norm)
         END IF
+        write(out_unitp,*) '<psiIpsi> =',Norm
     END SUBROUTINE Calc_Norm_OF_Psi
 
     SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g,Norm)

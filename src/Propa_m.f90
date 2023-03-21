@@ -124,8 +124,8 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psi=psif,psi_cplx=.true.,print_psi_grid=.true.&
-                    ,print_basis=.false.,t=t,int_print=16,real_part=.true.)
+            call write_psi(psi=psif,psi_cplx=.false.,print_psi_grid=.true.&
+                    ,print_basis=.false.,t=t,int_print=16,real_part=.false.)
 
             flush(out_unitp)
         END IF
@@ -151,6 +151,7 @@ contains
         CALL construct_primitive_basis(psi_dt%Basis,Qt,SQt)
         CALL Projection(psi,psi_dt)
         CALL construct_primitive_basis(psi%Basis,Qt,SQt)
+
         write(out_unitp,*) 'End Hagedorn'
         !call Calc_Norm_OF_Psi(psi,Norm)
         !write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
