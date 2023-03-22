@@ -934,6 +934,7 @@ CONTAINS
         real(kind=Rk),  INTENT(INOUT)     :: S(:,:)
         real(kind=Rk), INTENT(IN)         :: d0gb1(:,:),d0gb2(:,:),w1(:)
         real(kind=Rk),  ALLOCATABLE       :: d0bgw(:,:)
+        real(kind=Rk)                     :: det
 
         nq =size(w1)
         write(out_unitp,*) 'Beging Buld_s'
@@ -952,8 +953,12 @@ CONTAINS
         !write(*,*) ''
 
         S = matmul(d0bgw,d0gb2)
+        !DO ib=1,nb
+        !   S(ib,:)=S(ib,:)/sqrt(sum(S(ib,:)**2)) 
+        !END DO
 
-       ! CALL Write_RMat(S,out_unitp,5,name_info='<d0b1|d0b2>')
+
+       ! CALL Write_RMat(S,out_unitp,3,name_info='S')
 
 
 
@@ -961,22 +966,6 @@ CONTAINS
         write(out_unitp,*) 'End Buld_s'
 
     END SUBROUTINE Buld_S
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1074,24 +1063,24 @@ CONTAINS
         G2(:)=CZERO
         Call GridTOBasis_nD_cplx(B,G1,Basis)
         Call BasisTOGrid_nD_cplx(G2,B,Basis)
-        print*,'##############################################################'
+        print*,'---------------------------------------------------------------------'
 
         diff_g(:) = ABS(G1(:)-G2(:))
 
-        print*,'##############################################################'
+        print*,'---------------------------------------------------------------------'
         Write(out_unitp,*) 'maxval(diff_g(:))=',maxval(diff_g(:))
         Write(out_unitp,*) 'MINVAL(diff_g(:))=',MINVAL(diff_g(:))
-        print*,'##############################################################'
+        print*,'---------------------------------------------------------------------'
         G2(:)=CZERO
         B2(:)=CZERO
         B1(:)=CONE
         Call BasisTOGrid_nD_cplx(G2,B1,Basis)
         Call GridTOBasis_nD_cplx(B2,G2,Basis)
         diff_b(:) = ABS(B2(:)-B1(:))
-        print*,'##############################################################'
+        print*,'---------------------------------------------------------------------'
         Write(out_unitp,*) 'maxval(diff_b(:))=',maxval(diff_b(:))
         Write(out_unitp,*) 'MINVAL(diff_b(:))=',MINVAL(diff_b(:))
-        print*,'##############################################################'
+        print*,'---------------------------------------------------------------------'
 
 
 
