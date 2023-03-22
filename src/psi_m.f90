@@ -229,7 +229,7 @@ contains
         ELSE
             CALL Calc_Norm_OF_PsiBasis(psi,Norm)
         END IF
-        write(out_unitp,*) '<psiIpsi> =',Norm
+        !write(out_unitp,*) '<psi|psi> =',Norm
     END SUBROUTINE Calc_Norm_OF_Psi
 
     SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g,Norm)
@@ -495,11 +495,18 @@ contains
                 
         END DO
       !------------------transformation Grid to Basis-------------------------
-        call Calc_Norm_OF_Psi(psi_g,NormG)
-        print*,'NormG = ',NormG  
-        call GridTOBasis_nD_cplx(psi%CVec,psi_g%CVec,psi%Basis)
-        call Calc_Norm_OF_Psi(psi,NormB)
-        print*,'NormB = ',NormB
+      call Calc_Norm_OF_Psi(psi_g,NormG)
+      psi_g%CVec(:) = psi_g%CVec(:)/NormG
+      call Calc_Norm_OF_Psi(psi_g,NormG)
+      print*,'NormG = ',NormG
+      call GridTOBasis_nD_cplx(psi%CVec,psi_g%CVec,psi%Basis)
+      call Calc_Norm_OF_Psi(psi,NormB)
+      psi%CVec(:) = psi%CVec(:)/NormB
+      call Calc_Norm_OF_Psi(psi,NormB)
+      print*,'NormB = ',NormB
+      psi%CVec(:) = psi%CVec(:)/NormB
+      call Calc_Norm_OF_Psi(psi,NormB)
+      print*,'NormB (renormed)= ',NormB
         deallocate(Q)
         CALL dealloc_psi(psi_g)
 

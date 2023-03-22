@@ -98,7 +98,7 @@ contains
             call  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
             call Calc_average_energy(psi,E)
            ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
-             write(11,*)    t,Qt,E,SQt
+             write(11,*)    t,Qt,E,SQt,abs(dot_product(psi%CVec,psi%CVec))
              if ( mod(i,1)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
