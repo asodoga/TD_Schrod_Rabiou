@@ -206,13 +206,8 @@ contains
             !CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
             !write(out_unitp,*) 'b2'
             !CALL Write_RMat(psi_dt_2%Basis%tab_basis(1)%S,out_unitp,5)
-           
-            DO ib2=1,psi_dt_1%Basis%tab_basis(1)%nb
-                DO ib1=1,psi_dt_1%Basis%tab_basis(1)%nb
-                    psi_dt_2%CVec(ib2) = psi_dt_2%CVec(ib2) + psi_dt_1%Basis%tab_basis(1)%S(ib1,ib2)*psi_dt_1%CVec(ib1)
-                END DO
-                
-            END DO
+          !psi_dt_2%CVec = matmul( psi_dt_1%CVec , transpose(psi_dt_1%Basis%tab_basis(1)%S) )
+             psi_dt_2%CVec = matmul( psi_dt_1%CVec , psi_dt_1%Basis%tab_basis(1)%S )
            ! write(out_unitp,*) 'writing psi_out'
             !CALL Write_psi(psi_dt_2)
             write(out_unitp,*) 'END Hagedorn projection'
@@ -229,7 +224,7 @@ contains
         ELSE
             CALL Calc_Norm_OF_PsiBasis(psi,Norm)
         END IF
-        !write(out_unitp,*) '<psi|psi> =',Norm
+        write(out_unitp,*) '<psi|psi> =',Norm
     END SUBROUTINE Calc_Norm_OF_Psi
 
     SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g,Norm)

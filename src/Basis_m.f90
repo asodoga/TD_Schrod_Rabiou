@@ -953,12 +953,12 @@ CONTAINS
         !write(*,*) ''
 
         S = matmul(d0bgw,d0gb2)
-        !DO ib=1,nb
-        !   S(ib,:)=S(ib,:)/sqrt(sum(S(ib,:)**2)) 
-        !END DO
+        DO ib=1,nb
+           print*,sum(S(ib,:)**2)
+        END DO
 
 
-       ! CALL Write_RMat(S,out_unitp,3,name_info='S')
+        CALL Write_RMat(S,out_unitp,5,name_info='S')
 
 
 
