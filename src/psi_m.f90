@@ -224,7 +224,7 @@ contains
         ELSE
             CALL Calc_Norm_OF_PsiBasis(psi,Norm)
         END IF
-        write(out_unitp,*) '<psi|psi> =',Norm
+        !write(out_unitp,*) '<psi|psi> =',Norm
     END SUBROUTINE Calc_Norm_OF_Psi
 
     SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g,Norm)
