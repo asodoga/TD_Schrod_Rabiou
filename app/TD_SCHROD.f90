@@ -35,7 +35,8 @@ write(out_unitp,*) 'pot_name'
   CALL Read_Basis(Basis,nio=in_unitp)
   call  init_Basis1_TO_Basis2 (Basis0,Basis)
   CALL construct_primitive_basis(Basis)
-  !CALL construct_primitive_basis(Basis,-ONE,0.70710678118_Rk)
+  CALL construct_primitive_basis(Basis0,-ONE,0.70710678118_Rk)
+  !CALL construct_primitive_basis(Basis0,(-ONE+ONETENTH),0.70710678118_Rk)
  ! CALL construct_primitive_basis(Basis0,ZERO,ONE)
   !Call Write_Basis(Basis)
 !====================================================================
@@ -52,7 +53,7 @@ write(out_unitp,*) 'pot_name'
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  !STOP 'calcul de H|psi> est fait'
+  STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
   CALL propagation(Psif,Psi0,propa)
