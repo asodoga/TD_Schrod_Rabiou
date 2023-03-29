@@ -4,7 +4,7 @@
     option=1
    /
 &basis_nd name='dp' nb_basis=2/
-   &basis_nd name='HO' nb =20  nq=50 Q0 = -1.0 SCALEQ=  1.0/
+   &basis_nd name='HO' nb =50  nq=50 Q0 = -1.0 SCALEQ=  1.0/
       &basis_nd name= 'el' nb=1/
  &defGWP ndim=1  Elecindex = 1 Coef=(1.,0.)/
  &defWP0  sigma= 1.4142135623730951  Qeq= -1.0   imp_k=0.0 phase=0.0 /

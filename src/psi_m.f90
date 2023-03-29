@@ -481,12 +481,11 @@ contains
      !initialisation-----------------------------------------------------------------
       CALL init_psi(psi_g,   psi%Basis,    cplx=.TRUE.   ,grid =.true.)
       call calc_Q_grid(Q,psi%Basis)
-        
       psi%CVec(:) = CZERO
         gb( 1:psi%Basis%nq, 1:psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb)   =>    psi_g%CVec
         gb(:,:) = CZERO
         DO iq = 1,psi%Basis%nq
-         call  calc_Tab_GWP(Tab_GWP,Q(iq,:),gb(iq,:))
+          gb(iq,Tab_GWP(1)%Elecindex) =  calc_GWP(Tab_GWP(1),Q(iq,:))
                 
         END DO
       !------------------transformation Grid to Basis-------------------------
@@ -494,7 +493,7 @@ contains
       psi_g%CVec(:) = psi_g%CVec(:)/NormG
       call Calc_Norm_OF_Psi(psi_g,NormG)
       print*,'NormG = ',NormG
-      call GridTOBasis_nD_cplx(psi%CVec,psi_g%CVec,psi%Basis)
+      call GridTOBasis_nD_cplx(psi%CVec,psi_g%CVec,psi%Basis) 
       call Calc_Norm_OF_Psi(psi,NormB)
       psi%CVec(:) = psi%CVec(:)/NormB
       call Calc_Norm_OF_Psi(psi,NormB)

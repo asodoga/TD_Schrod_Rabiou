@@ -406,8 +406,8 @@ CONTAINS
     RECURSIVE SUBROUTINE construct_primitive_basis1(Basis,x,sx)
         USE UtilLib_m
         logical,             parameter      :: debug = .true.
-        real(kind=Rk) ,intent(in)           :: x,sx
-        !logical,             parameter      ::debug = .false.
+        real(kind=Rk) ,intent(in)           :: x(:),sx(:)
+        !logical,             parameter     ::debug = .false.
         TYPE(Basis_t),       intent(inout)  :: Basis
         integer, allocatable                :: NDend_q(:)
         integer, allocatable                :: NDend_b(:)
@@ -416,7 +416,7 @@ CONTAINS
         ! write(out_unitp,*) ' Begin  construct primitive  Basis '
         IF(allocated(Basis%tab_basis))THEN
             DO i=1,Basis%nb_basis
-                CALL construct_primitive_basis(Basis%tab_basis(i),x,sx)
+                CALL construct_primitive_basis1(Basis%tab_basis(i),x(i),sx(i))
             END DO
         ELSE
             SELECT CASE (Basis%Basis_name)
@@ -430,7 +430,7 @@ CONTAINS
             CASE ('fourier')
                 CALL Construct_Basis_Fourier(Basis)
             CASE ('herm','ho')
-                CALL Construct_Basis_Ho_HG(Basis,x,sx)
+                CALL Construct_Basis_Ho_HG(Basis,x(1),sx(1))
             CASE default
                 STOP 'ERROR  Noting to construct'
             END SELECT
@@ -449,7 +449,7 @@ CONTAINS
         logical,             parameter      :: debug = .true.
         !logical,             parameter     ::debug = .false.
         TYPE(Basis_t),       intent(inout)  :: Basis
-        real(kind=Rk) ,intent(in),optional  :: x,sx
+        real(kind=Rk) ,intent(in),optional  :: x(:),sx(:)
 
 
         if(present(x).and. present(sx)) then
