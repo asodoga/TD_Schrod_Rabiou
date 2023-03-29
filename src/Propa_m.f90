@@ -102,7 +102,7 @@ contains
              write(11,*)    t,Qt,E,SQt,Norm
             !WRITE (17,'(F6.3,2X,F6.3)')    t,E
             !WRITE (18,'(F6.3,2X,F6.3)')    t,Norm
-             if ( mod(i,250)== 0 ) then
+             if ( mod(i,1)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
               write(10,*) 

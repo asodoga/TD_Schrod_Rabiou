@@ -652,9 +652,9 @@ CONTAINS
 
             END DO
         END DO
-        !d0gb0 = sqrt(Basis%scaleQ)*d0gb0
-        !d0gbx = sqrt(sx)*d0gbx
-        w(:) =      w(:)*(Basis%SCALEQ)
+         d0gb0 = sqrt(Basis%scaleQ)*d0gb0
+         d0gbx = sqrt(sx)*d0gbx
+        !w(:) =      w(:)/(Basis%SCALEQ)
         ! print*,'construction of s'
         call  Buld_S(S=Basis%S,d0gb1=d0gb0,d0gb2=d0gbx,nb=Basis%nb,w1=w)
         Basis%SCALEQ  = sx
