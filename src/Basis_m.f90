@@ -403,7 +403,7 @@ CONTAINS
 
 
 
-    RECURSIVE SUBROUTINE construct_primitive_basis1(Basis,x,sx)
+   SUBROUTINE construct_primitive_basis1(Basis,x,sx)
         USE UtilLib_m
         logical,             parameter      :: debug = .true.
         real(kind=Rk) ,intent(in)           :: x(:),sx(:)
@@ -416,7 +416,27 @@ CONTAINS
         ! write(out_unitp,*) ' Begin  construct primitive  Basis '
         IF(allocated(Basis%tab_basis))THEN
             DO i=1,Basis%nb_basis
-                CALL construct_primitive_basis1(Basis%tab_basis(i),x(i),sx(i))
+
+                SELECT CASE (Basis%tab_basis(i)%Basis_name)
+                CASE('el')
+                    write(6,*) 'Electronic basis. Electronic state number:',Basis%tab_basis(i)%nb
+                    Basis%tab_basis(i)%nq = 0
+                CASE ('boxab')
+                    CALL Construct_Basis_Sin(Basis%tab_basis(i))
+                    Basis%tab_basis(i)%Q0      =Basis%tab_basis(i)%A
+                    Basis%tab_basis(i)%scaleQ  = pi/(Basis%tab_basis(i)%B-Basis%tab_basis(i)%A)
+                CASE ('fourier')
+                    CALL Construct_Basis_Fourier(Basis%tab_basis(i))
+                CASE ('herm','ho')
+                    CALL Construct_Basis_Ho_HG(Basis%tab_basis(i),x(i),sx(i))
+                CASE default
+                    STOP 'ERROR  Noting to construct'
+                END SELECT
+                !  this part wil not have sens for 'el' basis
+                CALL Scale_Basis(Basis%tab_basis(i),Basis%tab_basis(i)%Q0,Basis%tab_basis(i)%scaleQ)
+                CALL   Calc_tranpose_d0gb(Basis%tab_basis(i))
+                CALL Calc_dngg_grid(Basis%tab_basis(i))
+                CALL CheckOrtho_Basis(Basis%tab_basis(i),nderiv=2) 
             END DO
         ELSE
             SELECT CASE (Basis%Basis_name)
@@ -568,11 +588,10 @@ CONTAINS
 
 
 
-    SUBROUTINE Construct_Basis_Ho(Basis,Basis_H) ! HO :
+    SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
         USE UtilLib_m
 
         TYPE(Basis_t),       intent(inout)         :: Basis
-        TYPE(Basis_t),       intent(inout),optional   :: Basis_H
         integer                                    :: iq,ib
 
 
@@ -583,9 +602,6 @@ CONTAINS
         allocate(Basis%d0gb(Basis%nq,Basis%nb))
         allocate(Basis%d1gb(Basis%nq,Basis%nb,1))
         allocate(Basis%d2gb(Basis%nq,Basis%nb,1,1))
-        if ( present(Basis_H) ) then
-            allocate(Basis%d0gb(Basis%nq,Basis%nb))
-        end if
 
         DO iq = 1, Basis%nq
             DO ib = 1, Basis%nb
@@ -955,10 +971,6 @@ CONTAINS
         !write(*,*) ''
 
         S = matmul(d0bgw,d0gb2)
-        DO ib=1,nb
-           print*,sum(S(ib,:)**2)
-        END DO
-
 
         CALL Write_RMat(S,out_unitp,5,name_info='S')
 

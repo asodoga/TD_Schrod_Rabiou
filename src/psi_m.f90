@@ -18,7 +18,7 @@ module psi_m
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,write_psi_grid
    public :: write_psi_basis,Calc_Norm_OF_PsiBasis,Calc_Norm_OF_PsiGrid,Calc_Norm_OF_Psi
-   public:: Projection
+   public:: Projection,projection_1D,projection_nD
 contains
 
      SUBROUTINE copy_psi(psi_out,psi_in)
@@ -188,6 +188,85 @@ contains
     end if
 
   END SUBROUTINE write_psi
+
+
+  SUBROUTINE projection_1D(BBB2,BBB1,S)
+    USE UtilLib_m
+    
+     complex(kind=Rk), intent(in)             :: BBB1(:,:,:)
+     complex(kind=Rk), intent(inout)          :: BBB2(:,:,:)
+     Real (kind=Rk), intent(in)               :: S(:,:)
+     logical          , parameter             :: debug = .true.
+     integer                                  :: i1,i3
+       IF (debug) THEN
+         flush(out_unitp)
+       END IF
+       DO i3 = 1,ubound(BBB1, dim=3)
+       DO i1 = 1,ubound(BBB1, dim=1)
+         BBB2(i1,:,i3) = matmul(BBB1(i1,:,i3),S)
+       END DO
+       END DO
+       
+       IF (debug) THEN
+         flush(out_unitp)
+       END IF
+   END SUBROUTINE  projection_1D
+
+
+   SUBROUTINE projection_nD(BBB2,BBB1)
+    USE UtilLib_m
+    
+     TYPE(psi_t), intent(in) ,target              :: BBB1
+     TYPE(psi_t), intent(inout) ,target           :: BBB2
+     
+     
+     
+     !-----local parameters ---------------------------------------
+     logical          , parameter                 :: debug = .true.
+     integer , allocatable                        :: Ib1(:),Ib2(:),Iq3(:),Iq1(:),Iq2(:),Ib3(:)
+     integer                                      :: Inb,Ndim
+     complex (kind=Rk), pointer                   :: B1(:,:,:),B2(:,:,:)
+     real(kind=Rk),pointer                        :: S(:,:)
+     TYPE(psi_t) ,target                          :: BBB
+     
+     
+       IF (debug) THEN
+       
+         flush(out_unitp)
+     
+       END IF
+        print*, 'BBB1%CVec',BBB1%CVec
+       CALL init_psi(BBB,   BBB1%Basis,    cplx=.TRUE.   ,grid =.false.)
+       IF(BBB1%Grid) then
+         CALL GridTOBasis_nD_cplx(BBB%CVec,BBB1%CVec,BBB1%Basis)
+       ELSE
+         BBB%CVec(:)= BBB1%CVec(:)   
+       END IF
+       
+       Ndim = size(BBB1%Basis%tab_basis)
+       call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,BBB1%Basis) 
+       
+       
+       
+      DO   Inb = 1,Ndim-1      
+                 
+           S(1:Ib2(Inb),1:Ib2(Inb))  => BBB1%Basis%tab_basis(Inb)%S
+           B1( 1:Ib1(Inb),1:Ib2(inb),1:Ib3(Inb)) => BBB%CVec
+           B2( 1:Ib1(Inb),1:Ib2(Inb),1:Ib3(Inb)) => BBB2%CVec
+                 
+          CALL  projection_1D(B2,B1,S)
+                
+                        
+      END DO
+       
+        
+        print*, 'BBB2%CVec',BBB2%CVec
+        deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
+       
+       IF (debug) THEN
+         flush(out_unitp)
+       END IF
+   END SUBROUTINE  projection_nD
 
 
 

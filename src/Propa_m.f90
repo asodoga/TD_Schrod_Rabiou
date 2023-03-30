@@ -59,7 +59,9 @@ contains
         TYPE(Basis_t) ,target            :: Basis_1,Basis_2
 
         ! variables locales
-        REAL(kind=Rk)                    :: t ,t_deltat, Norm,E,Qt,SQt
+        REAL(kind=Rk)                    :: t ,t_deltat, Norm,E
+        REAL(kind=Rk) ,allocatable                 :: Qt(:),SQt(:)
+        integer                                    :: Ndim
 
         INTEGER                          :: i,nt,Iq,nf
         TYPE (psi_t)                     :: psi,psi_dt
@@ -77,8 +79,11 @@ contains
         endif
         open (unit = 10, file = "psi.dat")
         open (unit = 11, file = "x.dat")
+        Ndim =size(psi0%Basis%tab_basis)
+        allocate(Qt(Ndim),SQt(Ndim))
+        Qt(:)=ZERO ; SQt(:)= ONE
         nt = int((propa%tf-propa%t0)/propa%delta_t)
-        Qt= zero; E = ZERO
+         E = ZERO
 
             CALL init_Basis1_TO_Basis2 (Basis_1,psi0%Basis)
             CALL init_Basis1_TO_Basis2 (Basis_2,psi0%Basis)
@@ -95,7 +100,7 @@ contains
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
-            call  Calc_std_dev_AVQ_1D(psi,1,Qt,SQt)
+            call   Calc_AVQ_nD(psi,Qt,SQt)
             call Calc_average_energy(psi,E)
             call Calc_Norm_OF_Psi(psi,Norm)
            ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
@@ -127,8 +132,8 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            call write_psi(psi=psif,psi_cplx=.false.,print_psi_grid=.true.&
-                    ,print_basis=.false.,t=t,int_print=16,real_part=.false.)
+            !call write_psi(psi=psif,psi_cplx=.false.,print_psi_grid=.true.&
+              !      ,print_basis=.false.,t=t,int_print=16,real_part=.false.)
 
             flush(out_unitp)
         END IF
@@ -145,14 +150,18 @@ contains
         logical, parameter                          :: debug = .true.
 
         ! variables locales
-        REAL(kind=Rk)                               :: Qt,SQt,Norm
+        REAL(kind=Rk) ,allocatable                 :: Qt(:),SQt(:)
+        REAL(kind=Rk)                              :: Norm
+        integer                                    :: Ndim
         write(out_unitp,*) 'Beging Hagedorn'
         !call Calc_Norm_OF_Psi(psi_dt,Norm)
        ! write(out_unitp,*) '<psi|psi> =',Norm
-
-        CALL  Calc_std_dev_AVQ_1D(psi_dt,1,Qt,SQt)
+         Ndim =size(psi_dt%Basis%tab_basis)
+         allocate(Qt(Ndim),SQt(Ndim))
+         Qt(:)=ZERO ; SQt(:)= ONE
+        CALL   Calc_AVQ_nD(psi_dt,Qt,SQt)
         CALL construct_primitive_basis(psi_dt%Basis,Qt,SQt)
-        CALL Projection(psi,psi_dt)
+        CALL projection_nD(psi,psi_dt)
         CALL construct_primitive_basis(psi%Basis,Qt,SQt)
 
         write(out_unitp,*) 'End Hagedorn'

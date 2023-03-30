@@ -33,15 +33,15 @@ write(out_unitp,*) 'pot_name'
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
-  call  init_Basis1_TO_Basis2 (Basis0,Basis)
+  !call  init_Basis1_TO_Basis2 (Basis0,Basis)
   CALL construct_primitive_basis(Basis)
-  !CALL construct_primitive_basis(Basis0,-ONE,0.70710678118_Rk)
-  !CALL construct_primitive_basis(Basis0,(-ONE+ONETENTH),0.70710678118_Rk)
- ! CALL construct_primitive_basis(Basis0,ZERO,ONE)
+ ! CALL construct_primitive_basis(Basis0,ONE,)
+  !AVQ(:) =-ONE;SQ(:) =ONE
+  !CALL construct_primitive_basis(Basis0,AVQ,SQ)
   !Call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
-  write(out_unitp,*) 'Initialization of a complex psi'
+  write(out_unitp,*) 'Initialization of  psi0'
 
   CALL init_psi(psi0,   Basis,    cplx=.TRUE.   ,grid =.false.)
   CALL init_psi(psif,   Basis,    cplx=.TRUE.   ,grid =.false.)
@@ -49,8 +49,9 @@ write(out_unitp,*) 'pot_name'
 
   CALL Read_tab_GWP(tab_GWP=tab_GWP,nb_GWP=1,nio=in_unitp)
   CALL psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
-  AVQ(:) =ZERO;SQ(:) =ONE
-  Call  Calc_AVQ_nD(psi0,AVQ,SQ)
+  !call projection_nD(psif,psi0)
+
+  !Call  Calc_AVQ_nD(psi0,AVQ,SQ)
 
 
   !call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.false.)
@@ -58,10 +59,10 @@ write(out_unitp,*) 'pot_name'
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  STOP 'calcul de H|psi> est fait'
+  !STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
-  CALL propagation(Psif,Psi0,propa)
+  CALL propagation(psif,psi0,propa)
  ! CALL Write_psi(psif)
   write(out_unitp,*) 'deallocation'
   CALL dealloc_psi(psi0)
