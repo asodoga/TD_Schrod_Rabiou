@@ -204,7 +204,9 @@ contains
              !     Write(13,*) "  "
              !     Write(14,*) "  "
              ! else
-                 !Write(11,*) Q(iq,:),V(iq,1,1)
+                !Write(110,*) Q(iq,:),V(iq,1,1)
+                !if(mod(iq,25)==0) Write(110,*)
+                
              !     Write(12,*) Q(iq,:),V(iq,2,2)
              !     Write(13,*) Q(iq,:),V(iq,1,2)
              !     Write(14,*) Q(iq,:), V(iq,2,1)

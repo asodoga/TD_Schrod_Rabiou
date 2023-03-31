@@ -8,12 +8,12 @@ PROGRAM TD_SCHROD
   USE Ana_psi_m
   USE lanczos_m
   IMPLICIT NONE
-  TYPE (Basis_t), target         :: Basis,Basis0
+  TYPE (Basis_t), target         :: Basis
     TYPE (Op_t)                  :: H
   TYPE (psi_t)                   :: psi0,psif,psi
   TYPE(propa_t)                  :: propa
   TYPE (GWP_t),allocatable       :: tab_GWP(:)
-  real(Kind = Rk)                :: E,Norm,AVQ(2),SQ(2)
+  real(Kind = Rk)                :: E,Norm
 
 !====================================================================
 ! for QML
@@ -33,11 +33,7 @@ write(out_unitp,*) 'pot_name'
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
-  !call  init_Basis1_TO_Basis2 (Basis0,Basis)
   CALL construct_primitive_basis(Basis)
- ! CALL construct_primitive_basis(Basis0,ONE,)
-  !AVQ(:) =-ONE;SQ(:) =ONE
-  !CALL construct_primitive_basis(Basis0,AVQ,SQ)
   !Call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
@@ -49,13 +45,8 @@ write(out_unitp,*) 'pot_name'
 
   CALL Read_tab_GWP(tab_GWP=tab_GWP,nb_GWP=1,nio=in_unitp)
   CALL psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
-  !call projection_nD(psif,psi0)
-
-  !Call  Calc_AVQ_nD(psi0,AVQ,SQ)
-
-
   !call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.false.)
-    !call Calc_average_energy(psi0,E)
+  ! call Calc_average_energy(psi0,E)
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)

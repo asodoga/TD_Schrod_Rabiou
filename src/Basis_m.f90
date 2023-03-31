@@ -975,8 +975,6 @@ CONTAINS
         CALL Write_RMat(S,out_unitp,5,name_info='S')
 
 
-
-
         write(out_unitp,*) 'End Buld_s'
 
     END SUBROUTINE Buld_S
@@ -1348,20 +1346,21 @@ CONTAINS
         deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
     END SUBROUTINE BasisTOGrid_nD_cplx
 
-    SUBROUTINE Calc_Q_grid(Q,Basis)
+    SUBROUTINE Calc_Q_grid(Q,Basis,WnD)
 
         implicit none
-        TYPE (Basis_t)  ,intent(in)                         :: Basis
-        integer ,ALLOCATABLE                                :: Tab_iq(:),NDend(:)
-        integer                                             :: inb,ndim,iq
-        real(Kind = Rk), intent(inout),ALLOCATABLE          ::Q(:,:)
-        TYPE (NDindex_t)                                    :: NDindex
-        logical                                             ::Endloop
-        ndim = SIZE(Basis%tab_basis)-1
+        TYPE (Basis_t)  ,intent(in)                                  :: Basis
+        integer ,ALLOCATABLE                                         :: Tab_iq(:),NDend(:)
+        integer                                                      :: inb,ndim,iq
+        real(Kind = Rk), intent(inout),allocatable ,optional         :: Q(:,:)
+        real(Kind = Rk), intent(inout),allocatable ,optional         :: WnD(:)
+        TYPE (NDindex_t)                                             :: NDindex
+        logical                                                      :: Endloop
+        ndim = SIZE(Basis%tab_basis)-1         
         allocate(Tab_iq(Ndim))
         allocate(NDend(Ndim))
-        allocate(Q(Basis%nq,Ndim))
-
+        if (present(Q)) allocate(Q(Basis%nq,Ndim))
+        if (present(WnD)) allocate(WnD(Basis%nq))
         do inb= 1, Ndim
             NDend(inb) = Basis%NDindexq%NDend(inb)
         end do
@@ -1372,9 +1371,13 @@ CONTAINS
             Iq=Iq+1
             CALL increase_NDindex(Tab_iq,NDindex,Endloop)
             IF (Endloop) exit
+            if (present(WnD)) WnD(iq) = ONE
             do inb = 1,Ndim
-                Q(iq,inb) = Basis%tab_basis(inb)%X(Tab_iq(inb))
+                if (present(Q)) Q(iq,inb) = Basis%tab_basis(inb)%X(Tab_iq(inb))
+                if (present(WnD)) WnD(iq)  =WnD(iq)* Basis%tab_basis(inb)%w(Tab_iq(inb))
             end do
+            !  if (present(Q))   print*,iq,Q(iq,:)
+              ! if (present(WnD))  print*,iq,WnD(iq)
         END DO
     END SUBROUTINE Calc_Q_grid
 

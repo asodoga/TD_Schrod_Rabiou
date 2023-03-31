@@ -235,7 +235,7 @@ contains
          flush(out_unitp)
      
        END IF
-        print*, 'BBB1%CVec',BBB1%CVec
+        !print*, 'BBB1%CVec',BBB1%CVec(1:3)
        CALL init_psi(BBB,   BBB1%Basis,    cplx=.TRUE.   ,grid =.false.)
        IF(BBB1%Grid) then
          CALL GridTOBasis_nD_cplx(BBB%CVec,BBB1%CVec,BBB1%Basis)
@@ -244,9 +244,7 @@ contains
        END IF
        
        Ndim = size(BBB1%Basis%tab_basis)
-       call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,BBB1%Basis) 
-       
-       
+       call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,BBB1%Basis)  
        
       DO   Inb = 1,Ndim-1      
                  
@@ -260,7 +258,7 @@ contains
       END DO
        
         
-        print*, 'BBB2%CVec',BBB2%CVec
+       ! print*, 'BBB2%CVec',BBB2%CVec(1:3)
         deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
        
        IF (debug) THEN
@@ -565,8 +563,10 @@ contains
         gb(:,:) = CZERO
         DO iq = 1,psi%Basis%nq
           gb(iq,Tab_GWP(1)%Elecindex) =  calc_GWP(Tab_GWP(1),Q(iq,:))
-                
+          ! write(25,*)  Q(iq,:),   abs( gb(iq,Tab_GWP(1)%Elecindex))**2 
+           !if(mod(iq,10)==0) write(25,*)  
         END DO
+        !stop 'cc'
       !------------------transformation Grid to Basis-------------------------
       call Calc_Norm_OF_Psi(psi_g,NormG)
       psi_g%CVec(:) = psi_g%CVec(:)/NormG
@@ -585,7 +585,11 @@ contains
 
 
 
-  END SUBROUTINE    
+  END SUBROUTINE  
+
+
+
+
 
 
     subroutine test(Basis)

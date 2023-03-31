@@ -78,8 +78,12 @@ contains
 
         endif
         open (unit = 10, file = "psi.dat")
-        open (unit = 11, file = "x.dat")
-        Ndim =size(psi0%Basis%tab_basis)
+        open (unit = 11, file = "Qt.dat")
+        open (unit = 12, file = "E.dat")
+        open (unit = 13, file = "SQt.dat")
+        open (unit = 14, file = "Norm.dat")
+
+        Ndim =size(psi0%Basis%tab_basis)-1
         allocate(Qt(Ndim),SQt(Ndim))
         Qt(:)=ZERO ; SQt(:)= ONE
         nt = int((propa%tf-propa%t0)/propa%delta_t)
@@ -100,29 +104,24 @@ contains
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
             write(out_unitp,*) propa%propa_name2,i,t,t_deltat
-            call   Calc_AVQ_nD(psi,Qt,SQt)
+            CALL   Calc_AVQ_nD(Psi0=psi,AVQ=Qt,SQ=SQt)
             call Calc_average_energy(psi,E)
             call Calc_Norm_OF_Psi(psi,Norm)
            ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
-             write(11,*)    t,Qt,E,SQt,Norm
-            !WRITE (17,'(F6.3,2X,F6.3)')    t,E
-            !WRITE (18,'(F6.3,2X,F6.3)')    t,Norm
+             write(11 ,'(F10.6,2X,F10.6,F10.6,2X,F10.6)')    t,Qt
+             write(12 ,'(F10.6,2X,F10.6,F10.6,2X,F10.6)')    t,E
+             write(13 ,'(F10.6,2X,F10.6,F10.6,2X,F10.6)')    t,SQt
+             write(14 ,'(F10.6,2X,F10.6,F10.6,2X,F10.6)')    t,Norm
+
              if ( mod(i,1)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
               write(10,*) 
              end if
+
             CALL  march(psi,psi_dt,t,propa)
-            if( propa%propa_name  == 'hagedorn' )  then
-               !print*,'psi%Basis'
-               !call Write_Basis(psi%Basis)
-               !print*,'psi_dt%Basis'
-               !call Write_Basis(psi_dt%Basis)
+            if( propa%propa_name  == 'hagedorn' )  Then
                  call Hagedorn(psi,psi_dt)
-                 !print*,'psi%Basis'
-                 !call Write_Basis(psi%Basis)
-                 !print*,'psi_dt%Basis'
-                 !call Write_Basis(psi_dt%Basis)
                 else
                 psi%CVec(:) = psi_dt%CVec(:)
                 end if
@@ -156,10 +155,10 @@ contains
         write(out_unitp,*) 'Beging Hagedorn'
         !call Calc_Norm_OF_Psi(psi_dt,Norm)
        ! write(out_unitp,*) '<psi|psi> =',Norm
-         Ndim =size(psi_dt%Basis%tab_basis)
+         Ndim =size(psi_dt%Basis%tab_basis)-1
          allocate(Qt(Ndim),SQt(Ndim))
          Qt(:)=ZERO ; SQt(:)= ONE
-        CALL   Calc_AVQ_nD(psi_dt,Qt,SQt)
+        CALL   Calc_AVQ_nD(Psi0=psi_dt,AVQ=Qt,SQ=SQt)
         CALL construct_primitive_basis(psi_dt%Basis,Qt,SQt)
         CALL projection_nD(psi,psi_dt)
         CALL construct_primitive_basis(psi%Basis,Qt,SQt)
