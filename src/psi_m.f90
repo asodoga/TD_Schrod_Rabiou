@@ -244,7 +244,7 @@ contains
        END IF
        
        Ndim = size(BBB1%Basis%tab_basis)
-       call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,BBB1%Basis)  
+       call Calc_index( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,BBB1%Basis)  
        
       DO   Inb = 1,Ndim-1      
                  
