@@ -158,7 +158,7 @@ contains
          Ndim =size(psi_dt%Basis%tab_basis)-1
          allocate(Qt(Ndim),SQt(Ndim))
          Qt(:)=ZERO ; SQt(:)= ONE
-        CALL   Calc_AVQ_nD(Psi0=psi_dt,AVQ=Qt,SQ=SQt)
+        !CALL   Calc_AVQ_nD(Psi0=psi_dt,AVQ=Qt,SQ=SQt)
         CALL construct_primitive_basis(psi_dt%Basis,Qt,SQt)
         CALL projection_nD(psi,psi_dt)
         CALL construct_primitive_basis(psi%Basis,Qt,SQt)

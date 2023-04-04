@@ -259,7 +259,7 @@ contains
       Ndim = size(Basis%tab_basis)
       allocate(GGdef(Ndim-1,Ndim-1))
       CALL get_Qmodel_GGdef(GGdef)
-      call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,Basis)
+      call Calc_iqib( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Basis)
        KPsi_g(:) = CZERO
       DO inb = 1,Ndim-1
         KPsi_ggb(1:Iq1(inb),1:Iq2(inb),1:Iq3(inb))=> KPsi_g

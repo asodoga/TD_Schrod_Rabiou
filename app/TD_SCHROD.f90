@@ -13,7 +13,7 @@ PROGRAM TD_SCHROD
   TYPE (psi_t)                   :: psi0,psif,psi
   TYPE(propa_t)                  :: propa
   TYPE (GWP_t),allocatable       :: tab_GWP(:)
-  real(Kind = Rk)                :: E,Norm
+  real(Kind = Rk)                :: E,Norm,Sx(2),x(2)
 
 !====================================================================
 ! for QML
@@ -45,12 +45,14 @@ write(out_unitp,*) 'pot_name'
 
   CALL Read_tab_GWP(tab_GWP=tab_GWP,nb_GWP=1,nio=in_unitp)
   CALL psi_init_GWP0(psi=psi0,Tab_GWP=tab_GWP)
+  call test_basitogridgridtobasis(Basis)
+ ! call Calc_AVQ_nD0(psi0=psi0,AVQ=x,SQ=Sx)
   !call write_psi(psi=psi0,psi_cplx=.false.,print_psi_grid=.true.,print_basis=.false.,t=ZERO,int_print=100,real_part=.false.)
   ! call Calc_average_energy(psi0,E)
   !call Set_Op(H,Basis)
   ! CALL Make_Mat_OP(H)
   !call  write_Op(H)
-  !STOP 'calcul de H|psi> est fait'
+  STOP 'calcul de H|psi> est fait'
 
   CALL read_propa(propa)
   CALL propagation(psif,psi0,propa)

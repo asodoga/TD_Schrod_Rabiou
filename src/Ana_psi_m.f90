@@ -5,7 +5,7 @@
     implicit none
      private
      public:: Population,Qpop
-     public:: Calc_AVQ_1D,Calc_AVQ_nD 
+     public:: Calc_AVQ_nD0,Calc_AVQ_nD 
 
      contains
 
@@ -97,7 +97,7 @@
     END SUBROUTINE 
 
 
-    SUBROUTINE Calc_AVQ_nD(psi0,AVQ,AVQel,SQ,SQel)
+    SUBROUTINE Calc_AVQ_nD0(psi0,AVQ,AVQel,SQ,SQel)
       USE UtilLib_m
       
       type(psi_t) , intent(in) ,target                        :: psi0
@@ -139,6 +139,57 @@
       END IF
       CALL dealloc_psi(psi)
   END SUBROUTINE
+
+
+
+  SUBROUTINE Calc_AVQ_nD(psi0,AVQ,SQ)
+    USE UtilLib_m
+    
+    type(psi_t) , intent(in) ,target                        :: psi0
+    type(psi_t)              ,target                        :: psi
+    real(kind=Rk),intent(inout)                             :: AVQ(:),SQ(:)
+    real(kind=Rk),allocatable                               :: Q(:,:),W(:),X(:)
+    real(kind=Rk)                                           :: Norm
+    logical,         parameter                              :: debug = .true.
+    integer                                                 :: Inb,Ndim,Iq
+    
+    
+    IF (debug) THEN
+        flush(out_unitp)
+    END IF
+    
+    Ndim = size(psi0%Basis%tab_basis)-1 
+    call Calc_Norm_OF_Psi(psi0,Norm)
+    allocate(X(Ndim))   
+    call  init_psi(psi,   psi0%Basis,    cplx=.TRUE.   ,grid =.true.)
+    call Calc_Q_grid(Q=Q,Basis=psi0%Basis,WnD=W)
+     
+    IF(psi0%Grid) then
+      psi%CVec(:)= psi0%CVec(:)
+    ELSE
+      call BasisTOGrid_nD_cplx(psi%CVec,psi0%CVec,psi0%Basis)
+    END IF
+    SQ  = ZERO
+    X   = ZERO
+    AVQ = ZERO
+    DO  Inb = 1,Ndim
+       
+       AVQ(Inb) = dot_product(psi%CVec(:),W(:)*Q(:,Inb)*psi%CVec(:)) 
+       X(Inb)   = dot_product(psi%CVec(:),W(:)*Q(:,Inb)*Q(:,Inb)*psi%CVec(:)) 
+       X(Inb)   = X(Inb)/(Norm*Norm)
+       AVQ(Inb) = AVQ(Inb)/(Norm*Norm)
+       SQ(Inb)  = sqrt(X(Inb)-AVQ(Inb)*AVQ(Inb))
+       SQ(Inb)  = ONE/(SQ(Inb)*sqrt(TWO)) 
+        
+    END DO
+       
+      write(out_unitp,*) '<psi/Q/psi> =',AVQ
+      write(out_unitp,*) 'SQ =',SQ
+    IF (debug) THEN
+        flush(out_unitp)
+    END IF
+    CALL dealloc_psi(psi)
+END SUBROUTINE
 
 
 
