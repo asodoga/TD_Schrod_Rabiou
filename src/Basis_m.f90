@@ -406,6 +406,7 @@ CONTAINS
         USE UtilLib_m
         logical,             parameter      :: debug = .true.
         real(kind=Rk) ,intent(in)           :: x(:),sx(:)
+        real(kind=Rk)                       :: x0,sx0
         !logical,             parameter     ::debug = .false.
         TYPE(Basis_t),       intent(inout)  :: Basis
         integer, allocatable                :: NDend_q(:)
@@ -414,7 +415,10 @@ CONTAINS
         character (len=Name_len)            :: name
         ! write(out_unitp,*) ' Begin  construct primitive  Basis '
         IF(allocated(Basis%tab_basis))THEN
-            DO i=1,Basis%nb_basis
+            if(size(x) == 1 .And. size(sx) == 1) then
+                x0 = x(1); sx0 = sx(1)
+            end if
+            DO i=1,size(Basis%tab_basis)
 
                 SELECT CASE (Basis%tab_basis(i)%Basis_name)
                 CASE('el')
@@ -449,7 +453,7 @@ CONTAINS
             CASE ('fourier')
                 CALL Construct_Basis_Fourier(Basis)
             CASE ('herm','ho')
-                CALL Construct_Basis_Ho_HG(Basis,x(1),sx(1))
+                CALL Construct_Basis_Ho_HG(Basis,x0,sx0)
             CASE default
                 STOP 'ERROR  Noting to construct'
             END SELECT
@@ -473,11 +477,9 @@ CONTAINS
 
         if(present(x).and. present(sx)) then
             !write(out_unitp,*) ' S will be constructed for Ho Basis'
-            !stop 'cc'
             call construct_primitive_basis1(Basis,x,sx)
         else
             call construct_primitive_basis0(Basis)
-            !stop 'cc'
         end if
 
     END SUBROUTINE construct_primitive_basis
@@ -1175,56 +1177,57 @@ CONTAINS
    END SUBROUTINE  
  
    SUBROUTINE Calc_index( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Basis)
-     TYPE(Basis_t),     intent(in),target  :: Basis
-     integer,intent(inout) , allocatable   :: Ib1(:),Ib2(:),Iq3(:),Iq1(:),Iq2(:),Ib3(:)
-     integer                               :: Ndim
-     integer                               :: inb
+     TYPE(Basis_t),     intent(in),target           :: Basis
+     integer,intent(inout) , allocatable ,optional  :: Iq1(:),Iq2(:),Iq3(:)
+     integer,intent(inout) , allocatable ,optional  :: Ib1(:),Ib2(:),Ib3(:)
+     integer                                        :: Ndim
+     integer                                        :: inb
      
      
      Ndim = size(Basis%tab_basis)-1
  
-     allocate(Ib3(Ndim))
-     allocate(Ib2(Ndim))
-     allocate(Ib1(Ndim))
+    if ( present(Ib3) ) allocate(Ib3(Ndim))
+    if ( present(Ib2) ) allocate(Ib2(Ndim))
+    if ( present(Ib1) ) allocate(Ib1(Ndim))
  
-     allocate(Iq3(Ndim))
-     allocate(Iq2(Ndim))
-     allocate(Iq1(Ndim))
+     if ( present(Iq3) )allocate(Iq3(Ndim))
+     if ( present(Iq2) )allocate(Iq2(Ndim))
+     if ( present(Iq1) )allocate(Iq1(Ndim))
  
      DO inb = 1, Ndim
  
      IF (inb == 1)THEN
  
-       Iq1(1) = 1
-       Ib1(1) = 1
+        if ( present(Iq1) )  Iq1(1) = 1
+        if ( present(Ib1) )  Ib1(1) = 1
  
-       Iq2(1) =  Basis%tab_basis(1)%nq
-       Ib2(1) =  Basis%tab_basis(1)%nb
+        if ( present(Iq2) )  Iq2(1) =  Basis%tab_basis(1)%nq
+        if ( present(Ib2) )  Ib2(1) =  Basis%tab_basis(1)%nb
  
-       Iq3(1) =  Product(Basis%tab_basis(2:Ndim)%nq)*Basis%tab_basis(Ndim+1)%nb
-       Ib3(1) =  Product(Basis%tab_basis(2:Ndim+1)%nb)
+        if ( present(Iq3) )  Iq3(1) =  Product(Basis%tab_basis(2:Ndim)%nq)*Basis%tab_basis(Ndim+1)%nb
+        if ( present(Ib3) )  Ib3(1) =  Product(Basis%tab_basis(2:Ndim+1)%nb)
  
  
      ELSE IF (inb == Ndim) THEN
  
-       Iq1(inb) =  Product(Basis%tab_basis(1:Ndim-1)%nq)
-       Ib1(inb) =  Product(Basis%tab_basis(1:Ndim-1)%nb)
+        if ( present(Iq1) )  Iq1(inb) =  Product(Basis%tab_basis(1:Ndim-1)%nq)
+        if ( present(Ib1) )  Ib1(inb) =  Product(Basis%tab_basis(1:Ndim-1)%nb)
  
-       Ib2(inb) =  Basis%tab_basis(Ndim)%nb
-       Iq2(inb) =  Basis%tab_basis(Ndim)%nq
+       if ( present(Ib2) )   Ib2(inb) =  Basis%tab_basis(Ndim)%nb
+       if ( present(Iq2) )   Iq2(inb) =  Basis%tab_basis(Ndim)%nq
  
-       Ib3(inb) =  Basis%tab_basis(Ndim+1)%nb
-       Iq3(inb) =  Basis%tab_basis(Ndim+1)%nb
+       if ( present(Ib3) )   Ib3(inb) =  Basis%tab_basis(Ndim+1)%nb
+       if ( present(Iq3) )   Iq3(inb) =  Basis%tab_basis(Ndim+1)%nb
      ELSE
  
-       Iq1(inb) =  Product(Basis%tab_basis(1:inb-1)%nq)
-       Ib1(inb) =  Product(Basis%tab_basis(1:inb-1)%nb)
+       if ( present(Iq1) )   Iq1(inb) =  Product(Basis%tab_basis(1:inb-1)%nq)
+       if ( present(Ib1) )   Ib1(inb) =  Product(Basis%tab_basis(1:inb-1)%nb)
  
-       Iq2(inb) =  Basis%tab_basis(inb)%nq
-       Ib2(inb) =  Basis%tab_basis(inb)%nb
+       if ( present(Iq2) )   Iq2(inb) =  Basis%tab_basis(inb)%nq
+       if ( present(Ib2) )   Ib2(inb) =  Basis%tab_basis(inb)%nb
  
-       Ib3(inb) =  Product(Basis%tab_basis(inb+1:Ndim+1)%nb)
-       Iq3(inb) =  Product(Basis%tab_basis(inb+1:Ndim)%nq)*Basis%tab_basis(Ndim+1)%nb
+       if ( present(Ib3) )  Ib3(inb) =  Product(Basis%tab_basis(inb+1:Ndim+1)%nb)
+       if ( present(Iq3) )  Iq3(inb) =  Product(Basis%tab_basis(inb+1:Ndim)%nq)*Basis%tab_basis(Ndim+1)%nb
  
      END IF
     END DO
@@ -1316,7 +1319,7 @@ CONTAINS
  
  
      IF (debug) THEN
-       write(out_unitp,*) 'intent(OUTIN) :: G(:)',G
+       write(out_unitp,*) 'intent(INOUT) :: G(:)',G
        write(out_unitp,*) 'END BasisTOGrid_nD_cplx'
        flush(out_unitp)
      END IF
@@ -1342,20 +1345,20 @@ CONTAINS
      Integer,         allocatable                   :: Ib1(:),Ib2(:),Iq3(:),Iq1(:),Iq2(:),Ib3(:)
  
      IF (debug) THEN
-       write(out_unitp,*) 'BEGINNING GridTOBasis_Basis_rapide'
+       write(out_unitp,*) 'BEGINNING GridTOBasis_nD_cplx'
        write(out_unitp,*) 'intent(in) :: G(:)',G
        !Call Write_Basis(Basis)
        flush(out_unitp)
      END IF
  
      IF (.NOT. Basis_IS_Allocated(Basis)) THEN
-       write(out_unitp,*) ' ERROR in BasisTOGrid_Basi_rapides'
+       write(out_unitp,*) ' ERROR in BasisTOGrid_nD_cplx'
        write(out_unitp,*) " the basis is not Allocated."
        STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
      END IF
  
      IF (size(B) /= Basis%nb) THEN
-       write(out_unitp,*) ' ERROR in BasisTOGrid_Basis_rapide'
+       write(out_unitp,*) ' ERROR in BasisTOGrid_nD_cplx'
        write(out_unitp,*) ' the size of G is different from nb.'
        write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
        STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
@@ -1407,7 +1410,7 @@ CONTAINS
        Deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
  
      IF (debug) THEN
-      write(out_unitp,*) 'END GridTOBasis_Basis_rapide'
+      write(out_unitp,*) 'END GridTOBasis_nD_cplx'
       flush(out_unitp)
      END IF
    END SUBROUTINE 

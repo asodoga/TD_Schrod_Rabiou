@@ -98,8 +98,10 @@ contains
             CALL init_psi(psi_dt,Basis_2,cplx=.TRUE.,grid =.false.  )
 
              psi%CVec(:) = psi0%CVec(:)
+             call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
+              ,print_basis=.false.,t=ZERO,int_print=20,real_part=.false.)
 
-        ! ******************************* Beging  propagation ********************************************************
+        ! ---------------------------------- Beging  propagation----------------------------------------------------------
         DO i=0,nt
             t = i*propa%delta_t
             t_deltat = t + propa%delta_t
@@ -116,7 +118,7 @@ contains
              if ( mod(i,1)== 0 ) then
               call write_psi(psi=psi,psi_cplx=.false.,print_psi_grid=.true.&
                       ,print_basis=.false.,t=t,int_print=10,real_part=.false.)
-              write(10,*) 
+             ! write(10,*) 
              end if
 
             CALL  march(psi,psi_dt,t,propa)
@@ -131,8 +133,8 @@ contains
         IF (debug) THEN
             write(out_unitp,*) 'END propagation'
             write(out_unitp,*) 'norm,psi_dt',Norm
-            !call write_psi(psi=psif,psi_cplx=.false.,print_psi_grid=.true.&
-              !      ,print_basis=.false.,t=t,int_print=16,real_part=.false.)
+            call write_psi(psi=psif,psi_cplx=.false.,print_psi_grid=.true.&
+                    ,print_basis=.false.,t=t,int_print=22,real_part=.false.)
 
             flush(out_unitp)
         END IF
@@ -158,7 +160,7 @@ contains
          Ndim =size(psi_dt%Basis%tab_basis)-1
          allocate(Qt(Ndim),SQt(Ndim))
          Qt(:)=ZERO ; SQt(:)= ONE
-        !CALL   Calc_AVQ_nD(Psi0=psi_dt,AVQ=Qt,SQ=SQt)
+        CALL   Calc_AVQ_nD(Psi0=psi_dt,AVQ=Qt,SQ=SQt)
         CALL construct_primitive_basis(psi_dt%Basis,Qt,SQt)
         CALL projection_nD(psi,psi_dt)
         CALL construct_primitive_basis(psi%Basis,Qt,SQt)

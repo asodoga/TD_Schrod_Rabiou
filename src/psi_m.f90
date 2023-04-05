@@ -213,58 +213,76 @@ contains
    END SUBROUTINE  projection_1D
 
 
-   SUBROUTINE projection_nD(BBB2,BBB1)
+ 
+   SUBROUTINE projection_nD(B1,B2)
     USE UtilLib_m
+      !Logical,          parameter                   :: debug = .true.
+      Logical,         parameter                     :: debug = .false.
+      
+      TYPE(psi_t),  intent(in) ,target               :: B1
+      TYPE(psi_t),  intent(inout),target             :: B2
+      complex (kind=Rk),  pointer                    :: BBB1(:,:,:),BBB2(:,:,:)
+      complex(kind=Rk) ,  allocatable  ,target       :: BBB11(:),BBB22(:)
+      Integer                                        :: ib,i1,i3,inb,Ndim,iq
+      Integer,         allocatable                   :: Ib1(:),Ib2(:),Ib3(:)
+  
+      IF (debug) THEN
+        write(out_unitp,*) 'BEGINNING projection_nD'
+        write(out_unitp,*) 'intent(in) :: B1(:)',B1%CVec
+        flush(out_unitp)
+      END IF
+  
     
-     TYPE(psi_t), intent(in) ,target              :: BBB1
-     TYPE(psi_t), intent(inout) ,target           :: BBB2
-     
-     
-     
-     !-----local parameters ---------------------------------------
-     logical          , parameter                 :: debug = .true.
-     integer , allocatable                        :: Ib1(:),Ib2(:),Iq3(:),Iq1(:),Iq2(:),Ib3(:)
-     integer                                      :: Inb,Ndim
-     complex (kind=Rk), pointer                   :: B1(:,:,:),B2(:,:,:)
-     real(kind=Rk),pointer                        :: S(:,:)
-     TYPE(psi_t) ,target                          :: BBB
-     
-     
-       IF (debug) THEN
-       
-         flush(out_unitp)
-     
-       END IF
-        !print*, 'BBB1%CVec',BBB1%CVec(1:3)
-       CALL init_psi(BBB,   BBB1%Basis,    cplx=.TRUE.   ,grid =.false.)
-       IF(BBB1%Grid) then
-         CALL GridTOBasis_nD_cplx(BBB%CVec,BBB1%CVec,BBB1%Basis)
-       ELSE
-         BBB%CVec(:)= BBB1%CVec(:)   
-       END IF
-       
-       Ndim = size(BBB1%Basis%tab_basis)
-       call Calc_index( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,BBB1%Basis)  
-       
-      DO   Inb = 1,Ndim-1      
-                 
-           S(1:Ib2(Inb),1:Ib2(Inb))  => BBB1%Basis%tab_basis(Inb)%S
-           B1( 1:Ib1(Inb),1:Ib2(inb),1:Ib3(Inb)) => BBB%CVec
-           B2( 1:Ib1(Inb),1:Ib2(Inb),1:Ib3(Inb)) => BBB2%CVec
-                 
-          CALL  projection_1D(B2,B1,S)
-                
-                        
+  
+      Ndim = size(B1%Basis%tab_basis)-1
+      
+      Call Calc_index( Ib1=Ib1,Ib2=Ib2,Ib3=Ib3,Basis=B1%Basis)
+      Allocate(BBB11(Ib1(1)*Ib2(1)*Ib3(1)))
+  
+      BBB11=ZERO
+
+      BBB1(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => B1%CVec
+      BBB2(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => BBB11
+
+      call  projection_1D(BBB2,BBB1,B1%Basis%tab_basis(1)%S)
+      nullify(BBB1)
+      nullify(BBB2)
+      DO inb = 2,Ndim-1
+  
+        Allocate(BBB22(Ib1(inb)*Ib2(inb)*Ib3(inb)))
+  
+        BBB22=ZERO
+  
+        BBB1( 1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))    => BBB11
+        BBB2( 1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))    => BBB22
+  
+        Call projection_1D(BBB2,BBB1,B1%Basis%tab_basis(inb)%S)
+  
+        BBB11=BBB22
+  
+        deallocate(BBB2)
       END DO
-       
-        
-       ! print*, 'BBB2%CVec',BBB2%CVec(1:3)
-        deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
-       
-       IF (debug) THEN
-         flush(out_unitp)
-       END IF
-   END SUBROUTINE  projection_nD
+  
+      B2%CVec(:) = ZERO
+  
+      BBB1(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => BBB11
+      BBB2(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => B2%CVec
+  
+      Call projection_1D(BBB2,BBB1,B1%Basis%tab_basis(Ndim)%S)
+  
+      Deallocate (Ib1,Ib2,Ib3)
+      nullify(BBB1)
+      nullify(BBB2)
+      Deallocate (BBB11)
+  
+      IF (debug) THEN
+       write(out_unitp,*) 'END projection_nD'
+       !write(out_unitp,*) 'intent(inout) :: B2(:)',B2%CVec
+       flush(out_unitp)
+      END IF
+    END SUBROUTINE 
+    
+
 
 
 
@@ -277,17 +295,10 @@ contains
 
         psi_dt_2%CVec(:) =CZERO
         write(out_unitp,*) 'Begin Hagedorn projection'
-        !write(out_unitp,*) 'writing psi_in'
-        !CALL Write_psi(psi_dt_1)
-            !write(out_unitp,*) 'b1'
-            !CALL Write_RMat(psi_dt_1%Basis%tab_basis(1)%S,out_unitp,5)
-            !write(out_unitp,*) 'b2'
-            !CALL Write_RMat(psi_dt_2%Basis%tab_basis(1)%S,out_unitp,5)
-          !psi_dt_2%CVec = matmul( psi_dt_1%CVec , transpose(psi_dt_1%Basis%tab_basis(1)%S) )
-             psi_dt_2%CVec = matmul( psi_dt_1%CVec , psi_dt_1%Basis%tab_basis(1)%S )
-           ! write(out_unitp,*) 'writing psi_out'
-            !CALL Write_psi(psi_dt_2)
-            write(out_unitp,*) 'END Hagedorn projection'
+
+        psi_dt_2%CVec = matmul( psi_dt_1%CVec , psi_dt_1%Basis%tab_basis(1)%S )
+
+        write(out_unitp,*) 'END Hagedorn projection'
             
     END SUBROUTINE Projection
 
@@ -459,9 +470,9 @@ contains
         real(kind=Rk)                 , intent(in)     ,optional        :: t
         integer                       , intent(in)     ,optional        :: nio
         logical                       ,  intent(in)                     :: print_cplx,real_part
-        complex(Kind= Rk)             , pointer                         ::psige(:,:)
+        complex(Kind= Rk)             , pointer                         :: psige(:,:)
         integer                                                         :: iq ,Ndim
-        real(Kind= Rk)               , allocatable                      ::Q(:,:)
+        real(Kind= Rk)               , allocatable                      :: Q(:,:)
 
 
         Ndim = size(psi%Basis%tab_basis)
@@ -475,18 +486,22 @@ contains
                   
                    do iq =1, psi%Basis%nq
                        write(nio,*)  Q(iq,:), real(psige(iq,:),kind=Rk),aimag(psige(iq,:)),t
+                       if ( mod(iq,psi%Basis%tab_basis(1)%nq ) ==0) write(nio,*)                                               
                    end do
                elseif(present(t))then
                    do iq=1, psi%Basis%nq
                        write(*,*) Q(iq,:),  real(psige(iq,:),kind=Rk),aimag(psige(iq,:)),t
+                       if ( mod(iq,psi%Basis%tab_basis(1)%nq )==0 ) write(*,*) 
                    end do
                elseif(present(nio))  then
                    do iq =1, psi%Basis%nq
                        write(nio,*) Q(iq,:), real(psige(iq,:),kind=Rk),aimag(psige(iq,:))
+                       if ( mod(iq,psi%Basis%tab_basis(1)%nq ) ==0) write(nio,*) 
                    end do
                elseif(.not. present(nio) .and.  .not. present(t))then
                    do iq =1, psi%Basis%nq
                        write(out_unitp,*) Q(iq,:),  real(psige(iq,:),kind=Rk),aimag(psige(iq,:))
+                       if ( mod(iq,psi%Basis%tab_basis(1)%nq )==0 ) write(out_unitp,*) 
                    end do
                else
                    print*,'no default case'
@@ -522,18 +537,22 @@ contains
             if (present(nio) .and. present(t)) then
                 do iq =1, psi%Basis%nq
                     write(nio,*) t, Q(iq,:), abs( psige(iq,:))**2 
+                    if ( mod(iq,psi%Basis%tab_basis(1)%nq )==0 ) write(nio,*) 
                 end do
             elseif(present(t))then
                 do iq=1, psi%Basis%nq
                     write(*,*) t ,Q(iq,:) ,  abs( psige(iq,:))**2 
+                    if ( mod(iq,psi%Basis%tab_basis(1)%nq )==0 ) write(*,*) 
                 end do
             elseif(present(nio))  then
                 do iq =1, psi%Basis%nq
                     write(nio,*) Q(iq,:), abs( psige(iq,:))**2 
+                    if ( mod(iq,psi%Basis%tab_basis(1)%nq )==0 ) write(nio,*) 
                 end do
             elseif(.not. present(nio) .and.  .not. present(t))then
                 do iq =1, psi%Basis%nq
                     write(out_unitp,*) Q(iq,:), abs( psige(iq,:))**2 
+                    if ( mod(iq,psi%Basis%tab_basis(1)%nq ) ==0) write(out_unitp,*) 
                 end do
             else
                 print*,'no default case'
@@ -572,14 +591,20 @@ contains
       psi_g%CVec(:) = psi_g%CVec(:)/NormG
       call Calc_Norm_OF_Psi(psi_g,NormG)
       print*,'NormG = ',NormG
+      
       call GridTOBasis_nD_cplx(psi%CVec,psi_g%CVec,psi%Basis) 
+
       call Calc_Norm_OF_Psi(psi,NormB)
       psi%CVec(:) = psi%CVec(:)/NormB
       call Calc_Norm_OF_Psi(psi,NormB)
+
       print*,'NormB = ',NormB
+
       psi%CVec(:) = psi%CVec(:)/NormB
       call Calc_Norm_OF_Psi(psi,NormB)
+
       print*,'NormB (renormed)= ',NormB
+
         deallocate(Q)
         CALL dealloc_psi(psi_g)
 

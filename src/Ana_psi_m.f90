@@ -176,11 +176,12 @@
        
        AVQ(Inb) = dot_product(psi%CVec(:),W(:)*Q(:,Inb)*psi%CVec(:)) 
        X(Inb)   = dot_product(psi%CVec(:),W(:)*Q(:,Inb)*Q(:,Inb)*psi%CVec(:)) 
+       
        X(Inb)   = X(Inb)/(Norm*Norm)
        AVQ(Inb) = AVQ(Inb)/(Norm*Norm)
        SQ(Inb)  = sqrt(X(Inb)-AVQ(Inb)*AVQ(Inb))
        SQ(Inb)  = ONE/(SQ(Inb)*sqrt(TWO)) 
-        
+
     END DO
        
       write(out_unitp,*) '<psi/Q/psi> =',AVQ
