@@ -243,10 +243,10 @@ contains
 
       BBB1(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => B1%CVec
       BBB2(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => BBB11
+      !print*,Ib1(1),Ib2(1),Ib3(1)
 
       call  projection_1D(BBB2,BBB1,B1%Basis%tab_basis(1)%S)
-      nullify(BBB1)
-      nullify(BBB2)
+      
       DO inb = 2,Ndim-1
   
         Allocate(BBB22(Ib1(inb)*Ib2(inb)*Ib3(inb)))
@@ -255,6 +255,7 @@ contains
   
         BBB1( 1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))    => BBB11
         BBB2( 1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))    => BBB22
+       ! print*,Ib1(inb),Ib2(inb),Ib3(inb)
   
         Call projection_1D(BBB2,BBB1,B1%Basis%tab_basis(inb)%S)
   
@@ -267,14 +268,12 @@ contains
   
       BBB1(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => BBB11
       BBB2(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => B2%CVec
+      !print*,Ib1(Ndim),Ib2(Ndim),Ib3(Ndim)
   
       Call projection_1D(BBB2,BBB1,B1%Basis%tab_basis(Ndim)%S)
   
       Deallocate (Ib1,Ib2,Ib3)
-      nullify(BBB1)
-      nullify(BBB2)
-      Deallocate (BBB11)
-  
+      !Deallocate (BBB11)
       IF (debug) THEN
        write(out_unitp,*) 'END projection_nD'
        !write(out_unitp,*) 'intent(inout) :: B2(:)',B2%CVec
