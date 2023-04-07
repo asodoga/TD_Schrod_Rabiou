@@ -164,7 +164,7 @@ contains
          Qt(:)=ZERO ; SQt(:)= ONE
         call Calc_AVQ_nD(Psi0=psi_dt,AVQ=Qt,SQ=SQt)
         call construct_primitive_basis(psi_dt%Basis,Qt,SQt)
-        call projection_nD(psi,psi_dt)
+        call projection(psi,psi_dt)
         call construct_primitive_basis(psi%Basis,Qt,SQt)
         write(out_unitp,*) 'e out'
         call Calc_average_energy(psi,E)

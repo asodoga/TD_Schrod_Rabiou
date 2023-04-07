@@ -18,7 +18,7 @@ module psi_m
 
    public :: psi_t,write_psi,init_psi,dealloc_psi,write_psi_grid
    public :: write_psi_basis,Calc_Norm_OF_PsiBasis,Calc_Norm_OF_PsiGrid,Calc_Norm_OF_Psi
-   public:: Projection,projection_1D,projection_nD
+   public:: Projection
 contains
 
      SUBROUTINE copy_psi(psi_out,psi_in)
@@ -189,113 +189,57 @@ contains
 
   END SUBROUTINE write_psi
 
-
-  SUBROUTINE projection_1D(BBB2,BBB1,S)
-    USE UtilLib_m
-    
-     complex(kind=Rk), intent(in)             :: BBB1(:,:,:)
-     complex(kind=Rk), intent(inout)          :: BBB2(:,:,:)
-     Real (kind=Rk), intent(in)               :: S(:,:)
-     logical          , parameter             :: debug = .true.
-     integer                                  :: i1,i3
-       IF (debug) THEN
-         flush(out_unitp)
-       END IF
-       DO i3 = 1,ubound(BBB1, dim=3)
-       DO i1 = 1,ubound(BBB1, dim=1)
-         BBB2(i1,:,i3) = matmul(BBB1(i1,:,i3),S)
-       END DO
-       END DO
-       
-       IF (debug) THEN
-         flush(out_unitp)
-       END IF
-   END SUBROUTINE  projection_1D
-
-
- 
-   SUBROUTINE projection_nD(B1,B2)
-    USE UtilLib_m
-      !Logical,          parameter                   :: debug = .true.
-      Logical,         parameter                     :: debug = .false.
-      
-      TYPE(psi_t),  intent(in) ,target               :: B1
-      TYPE(psi_t),  intent(inout),target             :: B2
-      complex (kind=Rk),  pointer                    :: BBB1(:,:,:),BBB2(:,:,:)
-      complex(kind=Rk) ,  allocatable  ,target       :: BBB11(:),BBB22(:)
-      Integer                                        :: ib,i1,i3,inb,Ndim,iq
-      Integer,         allocatable                   :: Ib1(:),Ib2(:),Ib3(:)
-  
-      IF (debug) THEN
-        write(out_unitp,*) 'BEGINNING projection_nD'
-        write(out_unitp,*) 'intent(in) :: B1(:)',B1%CVec
-        flush(out_unitp)
-      END IF
-  
-    
-  
-      Ndim = size(B1%Basis%tab_basis)-1
-      
-      Call Calc_index( Ib1=Ib1,Ib2=Ib2,Ib3=Ib3,Basis=B1%Basis)
-      Allocate(BBB11(Ib1(1)*Ib2(1)*Ib3(1)))
-  
-      BBB11=ZERO
-
-      BBB1(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => B1%CVec
-      BBB2(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => BBB11
-      !print*,Ib1(1),Ib2(1),Ib3(1)
-
-      call  projection_1D(BBB2,BBB1,B1%Basis%tab_basis(1)%S)
-      
-      DO inb = 2,Ndim-1
-  
-        Allocate(BBB22(Ib1(inb)*Ib2(inb)*Ib3(inb)))
-  
-        BBB22=ZERO
-  
-        BBB1( 1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))    => BBB11
-        BBB2( 1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))    => BBB22
-       ! print*,Ib1(inb),Ib2(inb),Ib3(inb)
-  
-        Call projection_1D(BBB2,BBB1,B1%Basis%tab_basis(inb)%S)
-  
-        BBB11=BBB22
-  
-        deallocate(BBB2)
-      END DO
-  
-      B2%CVec(:) = ZERO
-  
-      BBB1(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => BBB11
-      BBB2(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => B2%CVec
-      !print*,Ib1(Ndim),Ib2(Ndim),Ib3(Ndim)
-  
-      Call projection_1D(BBB2,BBB1,B1%Basis%tab_basis(Ndim)%S)
-  
-      Deallocate (Ib1,Ib2,Ib3)
-      !Deallocate (BBB11)
-      IF (debug) THEN
-       write(out_unitp,*) 'END projection_nD'
-       !write(out_unitp,*) 'intent(inout) :: B2(:)',B2%CVec
-       flush(out_unitp)
-      END IF
-    END SUBROUTINE 
-    
-
-
-
-
     SUBROUTINE Projection(psi_dt_2,psi_dt_1)
-        TYPE(psi_t), intent(in)        :: psi_dt_1
-        TYPE(psi_t), intent(inout)     :: psi_dt_2
+        TYPE(psi_t), intent(in)     ,target             :: psi_dt_1
+        TYPE(psi_t), intent(inout)  ,target             :: psi_dt_2
+        complex (kind=Rk),  pointer                     :: BBB1(:,:,:),BBB2(:,:,:)
+        complex (kind=Rk),allocatable,target            :: B1(:),B2(:)
 
-        logical,  parameter            :: debug = .true.
-        integer                        :: ib1,ib2
+        logical,  parameter                             :: debug = .true.
+        integer                                         :: inb,i1,i3,Ndim
+        Integer,         allocatable                    :: Ib1(:),Ib2(:),Ib3(:)
 
-        psi_dt_2%CVec(:) =CZERO
+
+        Call Calc_index( Ib1=Ib1,Ib2=Ib2,Ib3=Ib3,Basis=psi_dt_1%Basis)
+        Ndim = size(psi_dt_1%Basis%tab_basis)-1
         write(out_unitp,*) 'Begin Hagedorn projection'
 
-        psi_dt_2%CVec = matmul( psi_dt_1%CVec , psi_dt_1%Basis%tab_basis(1)%S )
+        If(Ndim==1) then
+           BBB1(1:Ib1(1),1:Ib2(1),1:Ib3(1))     => psi_dt_1%CVec
+           BBB2(1:Ib1(1),1:Ib2(1),1:Ib3(1))     => psi_dt_2%CVec
+   
+           psi_dt_2%CVec(:) =CZERO
+           DO i3 = 1,ubound(BBB1, dim=3)
+           DO i1 = 1,ubound(BBB1, dim=1)
+              BBB2(i1,:,i3) = matmul(BBB1(i1,:,i3),psi_dt_1%Basis%tab_basis(1)%S)
+           END DO
+           END DO
+      else
+           allocate( B1(Ib1(1)*Ib2(1)*Ib3(1) ) )
+           BBB1(1:Ib1(1),1:Ib2(1),1:Ib3(1))     => psi_dt_1%CVec
+           BBB2(1:Ib1(1),1:Ib2(1),1:Ib3(1))     => B1
+
+           DO i3 = 1,ubound(BBB1, dim=3)
+           DO i1 = 1,ubound(BBB1, dim=1)
+              BBB2(i1,:,i3) = matmul(BBB1(i1,:,i3),psi_dt_1%Basis%tab_basis(1)%S)
+           END DO
+           END DO
+
+          Do inb = 2,Ndim
+            allocate( B2(Ib1(inb)*Ib2(inb)*Ib3(inb) ) )
+            BBB1(1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))     => B1
+            BBB2(1:Ib1(inb),1:Ib2(inb),1:Ib3(inb))     => B2
+            DO i3 = 1,ubound(BBB1, dim=3)
+            DO i1 = 1,ubound(BBB1, dim=1)
+               BBB2(i1,:,i3) = matmul(BBB1(i1,:,i3),psi_dt_1%Basis%tab_basis(inb)%S)
+            END DO
+            END DO
+            B1 = B2
+            B2 = CZERO
+            if(inb==Ndim) psi_dt_2%CVec = B1
+          END DO
+           
+      END IF
 
         write(out_unitp,*) 'END Hagedorn projection'
             

@@ -1120,25 +1120,19 @@ CONTAINS
     TYPE(Basis_t)    , intent(in),target        :: Basis
     complex (kind=Rk), intent(inout)            :: BB(:,:,:)
     complex (kind=Rk),  intent(in)              :: GG(:,:,:)
-    complex(kind=Rk), allocatable               :: d0bgw(:,:)
-    Logical          , parameter                :: debug = .true.
-    Integer                                     :: i1,i3,ib
+    logical          , parameter                :: debug = .true.
+    Integer                                     :: i1,i3
  
  
      IF (debug) THEN
        flush(out_unitp)
      END IF
  
-     d0bgw = transpose(Basis%d0gb)
-     DO ib=1,Basis%nb
-       d0bgw(ib,:) = d0bgw(ib,:) * Basis%w(:)
-     END DO
- 
-     BB(:,:,:) = ZERO
+     BB = CZERO
      DO i3=1,ubound(GG,dim=3)
      DO i1=1,ubound(GG,dim=1)
  
-       BB(i1,:,i3) =  matmul( d0bgw  ,GG(i1,:,i3))
+       BB(i1,:,i3) =  matmul( Basis%d0bgw  ,GG(i1,:,i3))
  
      END DO
      END DO
@@ -1160,10 +1154,11 @@ CONTAINS
        IF (debug) THEN
          flush(out_unitp)
        END IF
- 
+        
+       GB = CZERO 
        DO i3 = 1,ubound(BB, dim=3)
        DO i1 = 1,ubound(BB, dim=1)
- 
+   
          GB(i1,:,i3) =  matmul( Basis%d0gb , BB(i1,:,i3))
  
        END DO
@@ -1247,7 +1242,7 @@ CONTAINS
       complex (kind=Rk),  intent(in),target        :: B(:) !Vector on base,
       complex (kind=Rk),  intent(inout),target     :: G(:) !Vector on the grid, out
       complex (kind=Rk), pointer                   :: BBG(:,:,:)
-      complex (kind=Rk), pointer                   :: BBB(:,:,:)
+      complex (kind=Rk), pointer                   :: BBB(:,:,:),GGB(:,:,:)
       integer , allocatable                        :: Ib3(:),Iq1(:),Iq2(:),ib1(:),ib2(:),iq3(:)
       complex (kind=Rk), pointer                   :: GBB(:,:,:)
       complex (kind=Rk) ,allocatable,target        :: GBB1(:),GGB2(:)
@@ -1285,38 +1280,44 @@ CONTAINS
  
        Ndim = size(Basis%tab_basis)-1
        Call Calc_index( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Basis)
+       if(Ndim == 1) then
+          BBB(1:Ib1(1),1:Ib2(1),1:Ib3(1)) => B
+          GGB(1:Iq1(1),1:Iq2(1),1:Iq3(1)) => G
+          G= CZERO
+          Call BasisTOGrid_1D_cplx(GGB,BBB,Basis%tab_basis(1))
+        else
+           
+           Allocate(GBB1(iq1(1)*iq2(1)*ib3(1)))
+           BBB(1:iq1(1),1:ib2(1),1:ib3(1)) => B
+           GBB(1:iq1(1),1:iq2(1),1:ib3(1)) => GBB1
+           GBB1 = CZERO
+     
+           Call BasisTOGrid_1D_cplx(GBB,BBB,Basis%tab_basis(1))
+     
+           DO inb = 2,Ndim-1
+     
+             Allocate(GGB2(iq1(inb)*iq2(inb)*ib3(inb)))
+     
+             BBB(1:iq1(Inb),1:ib2(inb),1:ib3(inb)) => GBB1
+     
+             GBB(1:iq1(inb),1:iq2(inb),1:ib3(inb)) => GGB2
+     
+             Call BasisTOGrid_1D_cplx(GBB,BBB,Basis%tab_basis(inb))
+     
+             GBB1=GGB2
+      
+            Deallocate(GGB2)
  
-       Allocate(GBB1(iq1(1)*iq2(1)*ib3(1)))
+           END DO
  
-       BBB(1:iq1(1),1:ib2(1),1:ib3(1)) => B
-       GBB(1:iq1(1),1:iq2(1),1:ib3(1)) => GBB1
- 
-       Call BasisTOGrid_1D_cplx(GBB,BBB,Basis%tab_basis(1))
- 
-       DO inb = 2,Ndim-1
- 
-         Allocate(GGB2(iq1(inb)*iq2(inb)*ib3(inb)))
- 
-         BBB(1:iq1(Inb),1:ib2(inb),1:ib3(inb)) => GBB1
- 
-         GBB(1:iq1(inb),1:iq2(inb),1:ib3(inb)) => GGB2
- 
-         Call BasisTOGrid_1D_cplx(GBB,BBB,Basis%tab_basis(inb))
- 
-         GBB1=GGB2
- 
-         Deallocate(GGB2)
- 
-       END DO
- 
-       BBB(1:iq1(Ndim),1:ib2(Ndim),1:ib3(Ndim)) => GBB1
- 
-       GBB(1:iq1(Ndim),1:iq2(Ndim),1:ib3(Ndim)) => G
- 
-       Call BasisTOGrid_1D_cplx(GBB,BBB,Basis%tab_basis(Ndim))
-       Deallocate(Ib1,Iq1,Iq2,Ib2,Ib3,Iq3)
- 
- 
+            BBB(1:iq1(Ndim),1:ib2(Ndim),1:ib3(Ndim)) => GBB1
+      
+            GBB(1:iq1(Ndim),1:iq2(Ndim),1:ib3(Ndim)) => G
+      
+            Call BasisTOGrid_1D_cplx(GBB,BBB,Basis%tab_basis(Ndim))
+            Deallocate(Ib1,Iq1,Iq2,Ib2,Ib3,Iq3)
+      
+        END IF
  
      IF (debug) THEN
        write(out_unitp,*) 'intent(INOUT) :: G(:)',G
@@ -1375,40 +1376,47 @@ CONTAINS
        Ndim = size(Basis%tab_basis)-1
        
        Call Calc_index( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Basis)
-       Allocate(BGG1(Ib1(1)*Ib2(1)*Iq3(1)))
- 
-       BGG1=ZERO
- 
-       GGG(1:Ib1(1),1:Iq2(1),1:Iq3(1))    => G
-       GGB(1:Ib1(1),1:Ib2(1),1:Iq3(1))    => BGG1
- 
-       Call GridTOBasis_1D_cplx(GGB,GGG,Basis%tab_basis(1))
- 
-       DO inb = 2,Ndim-1
- 
-         Allocate(BGG2(Ib1(inb)*Ib2(inb)*Iq3(inb)))
- 
-         BGG2=ZERO
- 
-         GGG( 1:Ib1(inb),1:Iq2(inb),1:Iq3(inb))    => BGG1
-         GGB( 1:Ib1(inb),1:Ib2(inb),1:Iq3(inb))    => BGG2
- 
-         Call GridTOBasis_1D_cplx(GGB,GGG,Basis%tab_basis(inb))
- 
-         BGG1=BGG2
- 
-         deallocate(BGG2)
-       END DO
- 
-       B(:) = ZERO
- 
-       GGG(1:Ib1(Ndim),1:Iq2(Ndim),1:Iq3(Ndim)) => BGG1
-       GGB(1:Ib1(Ndim),1:Ib2(Ndim),1:Iq3(Ndim)) => B
- 
-       Call GridTOBasis_1D_cplx(GGB,GGG,Basis%tab_basis(Ndim))
- 
-       Deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
- 
+     If(Ndim == 1) then
+        B=CZERO
+        GGB(1:Iq1(1),1:Iq2(1),1:Iq3(1))    => G
+        BBB(1:Ib1(1),1:Ib2(1),1:Ib3(1))    => B
+        !print*,Iq1(1),Iq2(1),Iq3(1)
+        !print*,Ib1(1),Ib2(1),Ib3(1)
+        Call GridTOBasis_1D_cplx(BBB,GGB,Basis%tab_basis(1))
+     else
+
+        Allocate(BGG1(Ib1(1)*Ib2(1)*Iq3(1)))
+        BGG1=CZERO
+        GGG(1:Ib1(1),1:Iq2(1),1:Iq3(1))    => G
+        GGB(1:Ib1(1),1:Ib2(1),1:Iq3(1))    => BGG1
+
+        Call GridTOBasis_1D_cplx(GGB,GGG,Basis%tab_basis(1))
+
+        DO inb = 2,Ndim-1
+
+          Allocate(BGG2(Ib1(inb)*Ib2(inb)*Iq3(inb)))
+
+          BGG2=CZERO
+
+          GGG( 1:Ib1(inb),1:Iq2(inb),1:Iq3(inb))    => BGG1
+          GGB( 1:Ib1(inb),1:Ib2(inb),1:Iq3(inb))    => BGG2
+
+          Call GridTOBasis_1D_cplx(GGB,GGG,Basis%tab_basis(inb))
+
+          BGG1=BGG2
+
+          deallocate(BGG2)
+        END DO
+
+        B(:) = CZERO
+
+        GGG(1:Ib1(Ndim),1:Iq2(Ndim),1:Iq3(Ndim)) => BGG1
+        GGB(1:Ib1(Ndim),1:Ib2(Ndim),1:Iq3(Ndim)) => B
+
+        Call GridTOBasis_1D_cplx(GGB,GGG,Basis%tab_basis(Ndim))
+
+        Deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
+    END IF
      IF (debug) THEN
       write(out_unitp,*) 'END GridTOBasis_nD_cplx'
       flush(out_unitp)
