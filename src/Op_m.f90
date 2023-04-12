@@ -197,7 +197,7 @@ contains
           call Calc_Q_grid(Q,Basis)
           Do iq=1,Basis%nq
 
-              CALL sub_pot(V(iq,:,:),Q(iq,:),0)
+              CALL sub_pot(V(iq,:,:),Q(iq,:),1)
              ! if(mod(iq,1000)==0)then
              !     Write(11,*) "  "
              !     Write(12,*) "  "
@@ -267,8 +267,8 @@ contains
         d2gg(1:Iq2(inb),1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
         DO i3=1,ubound(Psi_ggb,dim=3)
            DO i1=1,ubound(Psi_ggb,dim=1)
-              !KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*GGdef(inb,inb)*matmul(d2gg,Psi_ggb(i1,:,i3))
-               KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*matmul(d2gg,Psi_ggb(i1,:,i3))
+              KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*GGdef(inb,inb)*matmul(d2gg,Psi_ggb(i1,:,i3))
+              ! KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*matmul(d2gg,Psi_ggb(i1,:,i3))
            END DO
         END DO
       END DO

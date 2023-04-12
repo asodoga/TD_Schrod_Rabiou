@@ -26,7 +26,7 @@ MODULE Basis_m
         real(kind=Rk),   allocatable :: w(:)
         real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis functions d0gb(nq,nb)
         real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis functions d2gb(nq,nb,1)
-        real(kind=Rk),   allocatable :: d1gg(:,:,:)    ! basis functions d2gg(nq,nq,1)
+        real(kind=Rk),   allocatable :: d1gg(:,:,:)    ! basis functions d1gg(nq,nq,1)
         real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
         real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
         real(kind=Rk),   allocatable :: d0bgw(:,:)     ! transpose of basis functions d0gb(nb,nq)
