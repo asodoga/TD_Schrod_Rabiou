@@ -195,74 +195,6 @@ END SUBROUTINE
 
 
 
-
-     
-SUBROUTINE Calc_impk_1D(psi_in,impk,ib)
-  USE UtilLib_m
-  logical,         parameter               :: debug = .false.
-  TYPE(Psi_t), intent(in)                  :: psi_in
-  TYPE(Psi_t)                              :: psi
-  complex (kind=Rk),allocatable            :: psi_gb(:,:)
-  logical                                  :: Endloop_q
-  real(kind=Rk),intent(inout)              :: impk
-  real(kind=Rk),allocatable                :: impkel(:),X(:,:,:,:)
-  integer  ,intent(in)                     :: ib
-  real(kind=Rk)                            :: WnD
-  real(kind=Rk),allocatable                :: N(:)
-  integer,        allocatable              :: Tab_iq(:)
-  integer                                  :: iq,inbe,inb
-  IF (debug) THEN
-      write(out_unitp,*) 'Beging impk_1D'
-      flush(out_unitp)
-  END IF 
-  allocate(N(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-  allocate(impkel(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-  CALL init_psi(psi,   psi_in%Basis,    cplx=.TRUE.   ,grid =.true.)
-  IF(psi_in%Grid) then
-      psi%CVec(:)= psi_in%CVec(:)
-  ELSE
-      CALL BasisTOGrid_nD_cplx(psi%CVec,psi_in%CVec,psi_in%Basis)
-  END IF
-  Allocate(Psi_gb(psi%Basis%nq,psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb))
-  Allocate(Tab_iq(size(Psi%Basis%tab_basis)-1))
-  psi_gb(:,:) = reshape(psi%CVec,shape= [psi%Basis%nq,psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb])
-  X = ZERO
-  N(:) = ZERO
-  DO inbe = 1,psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb !electronic state
-    
-      impkel(inbe) = ZERO
-      Call Init_tab_ind(Tab_iq,psi%Basis%NDindexq)
-      Iq = 0
-      DO
-          Iq = Iq+1
-          CALL increase_NDindex(Tab_iq,psi%Basis%NDindexq,Endloop_q)
-          IF (Endloop_q) exit
-          WnD= ONE
-          DO inb = 1,size(psi%Basis%tab_basis)-1
-              WnD  =WnD*psi%Basis%tab_basis(inb)%w(tab_iq(inb))
-          END DO
-          X(:,:,:,:) = psi%Basis%tab_basis(ib)%d2gg
-          N(inbe) = N(inbe) + conjg(psi_gb(iq,inbe))*psi_gb(iq,inbe)*WnD
-          impkel(inbe) = impkel(inbe) + conjg(psi_gb(iq,inbe))*psi_gb(iq,inbe)
-      END DO
-  END DO
-  DO inbe = 1,Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb !electronic state
-      if(N(inbe) /= ZERO)  impkel(inbe) = impkel(inbe)/(N(inbe)**2)
-  END DO
-  impk = sum(impkel)/(Sum(N)**2)
-  Deallocate(Tab_iq)
-  Deallocate(Psi_gb)
-  CALL dealloc_psi(psi)
-  IF (debug) THEN
-      write(out_unitp,*) 'END impk_1D'
-      flush(out_unitp)
-  END IF
-
-END SUBROUTINE
-
-
-
-
      subroutine Population(Psi,Pop)
             implicit none
             type (Psi_t) ,intent(in)              ,target        :: Psi
@@ -280,7 +212,7 @@ END SUBROUTINE
             end do
           ! write(*,*) Pop
 
-         end subroutine 
+         end subroutine Population
 
 
 

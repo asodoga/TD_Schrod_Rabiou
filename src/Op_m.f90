@@ -268,7 +268,7 @@ contains
         DO i3=1,ubound(Psi_ggb,dim=3)
            DO i1=1,ubound(Psi_ggb,dim=1)
               KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*GGdef(inb,inb)*matmul(d2gg,Psi_ggb(i1,:,i3))
-              ! KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*matmul(d2gg,Psi_ggb(i1,:,i3))
+               !KPsi_ggb(i1,:,i3) =KPsi_ggb(i1,:,i3)-HALF*matmul(d2gg,Psi_ggb(i1,:,i3))
            END DO
         END DO
       END DO

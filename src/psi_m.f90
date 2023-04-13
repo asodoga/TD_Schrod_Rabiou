@@ -189,7 +189,7 @@ contains
 
   END SUBROUTINE write_psi
 
-    SUBROUTINE projection(psi_dt_2,psi_dt_1)
+    SUBROUTINE Projection(psi_dt_2,psi_dt_1)
         TYPE(psi_t), intent(in)     ,target             :: psi_dt_1
         TYPE(psi_t), intent(inout)  ,target             :: psi_dt_2
         complex (kind=Rk),  pointer                     :: BBB1(:,:,:),BBB2(:,:,:)
@@ -208,7 +208,7 @@ contains
            BBB1(1:Ib1(1),1:Ib2(1),1:Ib3(1))     => psi_dt_1%CVec
            BBB2(1:Ib1(1),1:Ib2(1),1:Ib3(1))     => psi_dt_2%CVec
    
-           psi_dt_2%CVec(:) = CZERO
+           psi_dt_2%CVec(:) =CZERO
            DO i3 = 1,ubound(BBB1, dim=3)
            DO i1 = 1,ubound(BBB1, dim=1)
               BBB2(i1,:,i3) = matmul(BBB1(i1,:,i3),psi_dt_1%Basis%tab_basis(1)%S)

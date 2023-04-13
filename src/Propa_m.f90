@@ -52,15 +52,15 @@ contains
       USE Basis_m
 
       TYPE(psi_t), intent(inout)       :: psif
-      TYPE(psi_t), intent(inout)       :: psi0
+      TYPE(psi_t), intent(in)          :: psi0
       TYPE(propa_t), intent(inout)     :: propa
       logical, parameter               :: debug = .true.
       TYPE(Basis_t), target            :: Basis_1, Basis_2
 
       ! variables locales
       REAL(kind=Rk)                    :: t, t_deltat, Norm, E, y
-      complex(kind=Rk)                 ::  x
       REAL(kind=Rk), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:)
+      complex(kind=Rk)                 ::  x
       integer                          :: Ndim
 
       INTEGER                          :: i, nt, Iq, nf
@@ -82,13 +82,12 @@ contains
       open (unit=12, file="E.dat")
       open (unit=13, file="SQt.dat")
       open (unit=14, file="Norm.dat")
-      open (unit=15, file="Auto_corr_func.dat2")
+      open (unit=15, file="Auto_corr_func.dat")
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
       Qt(:) = ZERO; SQt(:) = ONE
       nt = int((propa%tf - propa%t0)/propa%delta_t)
-      allocate (Auto_corr_function(0:nt))
       E = ZERO
 
       CALL init_Basis1_TO_Basis2(Basis_1, psi0%Basis)
@@ -100,7 +99,6 @@ contains
       CALL init_psi(psi_dt, Basis_2, cplx=.TRUE., grid=.false.)
 
       psi%CVec(:) = psi0%CVec(:)
-      psi_dt%CVec(:) = CZERO
       call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
                      , print_basis=.false., t=ZERO, int_print=20, real_part=.false.)
 
@@ -112,7 +110,6 @@ contains
          CALL Calc_AVQ_nD(Psi0=psi, AVQ=Qt, SQ=SQt)
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
-         !call Calc_Auto_corr(psi0, psi, x, y, propa%propa_name)
          ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
          write (11, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, Qt
          write (12, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, E
@@ -131,10 +128,11 @@ contains
          else
             psi%CVec(:) = psi_dt%CVec(:)
          end if
+
          call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
          write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
-      END DO
 
+      END DO
       psif = psi_dt
       CALL Calc_Norm_OF_Psi(psif, Norm)
       IF (debug) THEN

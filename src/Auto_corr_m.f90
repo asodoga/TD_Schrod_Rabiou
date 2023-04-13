@@ -1,5 +1,6 @@
 module Auto_corr_m
    USE UtilLib_m
+   USE Ana_psi_m
    USE psi_m
 
    implicit none
@@ -11,41 +12,48 @@ contains
       USE UtilLib_m
       USE psi_m
 
-      TYPE(psi_t), intent(inout)         :: psi0, psi_dt
+      TYPE(psi_t), intent(in)                 :: psi0, psi_dt
       complex(kind=Rk), intent(inout)         :: corre_coeff
-      real(kind=Rk), intent(inout)         :: arg_corre_coeff
-      !real(kind=Rk)     ,intent(in)            ::T
-      character(*), intent(in)            :: propa_name
+      real(kind=Rk), intent(inout)            :: arg_corre_coeff
+      !real(kind=Rk)     ,intent(in)          :: T
+      character(*), intent(in)                :: propa_name
 
       !local variables---------------------------------------------------
-      TYPE(psi_t)                             :: psi, psi1
-      real(kind=Rk)                            :: X, Y
+      TYPE(psi_t)                             :: psi
+      real(kind=Rk)                           :: X, Y
+      real(kind=Rk), allocatable              :: Qt(:), SQt(:)
+      integer                                 :: Ndim
 
-      CALL init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
-      CALL init_psi(psi1, psi0%Basis, cplx=.TRUE., grid=.false.)
-
-      IF (psi0%Grid) then
-         call GridTOBasis_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
-      ELSE
-         psi%CVec(:) = psi0%CVec(:)
-      END IF
+      write (out_unitp, *) 'Beging Calc_Auto_corr'
 
       if (propa_name == 'hagedorn') then
-         psi1%CVec = CZERO
-         psi_dt%Basis => psi0%Basis
-         call projection(psi1, psi_dt)
-         corre_coeff = dot_product(psi1%CVec, psi_dt%CVec)
+
+         call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
+         psi%CVec = CZERO
+         Ndim = size(psi0%Basis%tab_basis) - 1
+         allocate (Qt(Ndim), SQt(Ndim))
+         Qt(:) = ZERO; SQt(:) = ONE
+
+         call Calc_AVQ_nD(psi0=psi0, AVQ=Qt, SQ=SQt)
+         call construct_primitive_basis(psi_dt%Basis, Qt, SQt)
+         call projection(psi, psi_dt)
+
+         corre_coeff = dot_product(psi0%CVec, psi%CVec)
          X = real(corre_coeff, kind=RK)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
+         call dealloc_psi(psi)
 
       else
-         corre_coeff = dot_product(psi%CVec, psi_dt%CVec)
+         corre_coeff = dot_product(psi0%CVec, psi_dt%CVec)
          X = real(corre_coeff, kind=RK)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
       end if
       write (out_unitp, *) 'corre_coeff =', corre_coeff, 'arg_corre_coeff=', arg_corre_coeff
+
+      write (out_unitp, *) 'End Calc_Auto_corr'
+
    End SUBROUTINE
 
    SUBROUTINE Calc_fft_Auto_corr(autocor_function, time, fft_autocor_function, delta_t, N)
@@ -76,3 +84,4 @@ contains
    END SUBROUTINE
 
 end module Auto_corr_m
+
