@@ -78,11 +78,11 @@ contains
 
       end if
       open (unit=10, file="psi.dat")
-      open (unit=11, file="Qt.dat")
+      open (unit=11, file="Qt.datdot1045")
       open (unit=12, file="E.dat")
       open (unit=13, file="SQt.dat")
       open (unit=14, file="Norm.dat")
-      open (unit=15, file="Auto_corr_func.dat")
+      open (unit=15, file="Auto_corr_func.dat1045")
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
@@ -158,21 +158,21 @@ contains
       REAL(kind=Rk)                              :: Norm, E
       integer                                    :: Ndim
       write (out_unitp, *) 'Beging Hagedorn'
+
       !call Calc_Norm_OF_Psi(psi_dt,Norm)
       ! write(out_unitp,*) '<psi|psi> =',Norm
-      write (out_unitp, *) 'in e'
-      call Calc_average_energy(psi_dt, E)
+
       Ndim = size(psi_dt%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
       Qt(:) = ZERO; SQt(:) = ONE
+
       call Calc_AVQ_nD(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt)
       call projection(psi, psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt)
-      write (out_unitp, *) 'e out'
-      call Calc_average_energy(psi, E)
 
       write (out_unitp, *) 'End Hagedorn'
+
       !call Calc_Norm_OF_Psi(psi,Norm)
       !write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
       IF (debug) THEN

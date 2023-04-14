@@ -22,23 +22,28 @@ contains
       TYPE(psi_t)                             :: psi
       real(kind=Rk)                           :: X, Y
       real(kind=Rk), allocatable              :: Qt(:), SQt(:)
-      integer                                 :: Ndim
+      integer                                 :: Ndim, Inb
 
       write (out_unitp, *) 'Beging Calc_Auto_corr'
 
       if (propa_name == 'hagedorn') then
 
-         call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
+         call init_psi(psi, psi_dt%Basis, cplx=.TRUE., grid=.false.)
          psi%CVec = CZERO
          Ndim = size(psi0%Basis%tab_basis) - 1
          allocate (Qt(Ndim), SQt(Ndim))
          Qt(:) = ZERO; SQt(:) = ONE
 
-         call Calc_AVQ_nD(psi0=psi0, AVQ=Qt, SQ=SQt)
-         call construct_primitive_basis(psi_dt%Basis, Qt, SQt)
-         call projection(psi, psi_dt)
+         Do Inb = 1, Ndim
+            Qt(Inb) = psi_dt%Basis%tab_basis(Inb)%Q0
+            SQt(Inb) = psi_dt%Basis%tab_basis(Inb)%scaleQ
+         End do
 
-         corre_coeff = dot_product(psi0%CVec, psi%CVec)
+         call construct_primitive_basis(psi0%Basis, Qt, SQt)
+         call projection(psi, psi0)
+
+         corre_coeff = dot_product(psi%CVec, psi_dt%CVec)
+         !corre_coeff = corre_coeff/(dot_product(psi_dt%CVec, psi_dt%CVec))
          X = real(corre_coeff, kind=RK)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
