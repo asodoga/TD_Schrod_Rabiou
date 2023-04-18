@@ -21,7 +21,7 @@ module Propa_m
 
    public :: march_taylor, marh_RK4th, read_propa
    public :: propagation, Hagedorn
-   public :: mEyeHPsi, write_propa, Analyse
+   public :: mEyeHPsi, write_propa, Analyse, creat_file_unit
 
 contains
 
@@ -47,6 +47,7 @@ contains
       ! write(out_unitp,*) '<psi_dt|psi_dt> = ',Norm , 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =',abs(Norm0-Norm)
 
    END SUBROUTINE
+
    SUBROUTINE propagation(psif, psi0, propa)
       USE psi_m
       USE Basis_m
@@ -77,12 +78,12 @@ contains
          flush (out_unitp)
 
       end if
-      open (unit=10, file="psi.dat")
-      open (unit=11, file="Qt.datdot1045")
-      open (unit=12, file="E.dat")
-      open (unit=13, file="SQt.dat")
-      open (unit=14, file="Norm.dat")
-      open (unit=15, file="Auto_corr_func.dat1045")
+      call creat_file_unit(nio=10, name='psi', propa=propa)
+      call creat_file_unit(nio=11, name='Qt', propa=propa)
+      call creat_file_unit(nio=12, name='E', propa=propa)
+      call creat_file_unit(nio=13, name='SQt', propa=propa)
+      call creat_file_unit(nio=14, name='Norm', propa=propa)
+      call creat_file_unit(nio=15, name='Auto_corr_func', propa=propa)
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
@@ -451,5 +452,18 @@ contains
          write (24, *) df(iq, :)
       end do
    end subroutine diff
+
+   subroutine creat_file_unit(nio, name, propa)
+      character(*), intent(in)    :: name
+      type(propa_t), intent(in)   :: propa
+      character(100)              :: name_tot
+      integer, intent(in)         :: nio
+
+      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.dat'
+      name_tot = trim(name_tot)
+
+      open (unit=nio, file=name_tot)
+
+   end subroutine
 
 end module Propa_m
