@@ -9,14 +9,14 @@ PROGRAM TD_SCHROD
    USE lanczos_m
    IMPLICIT NONE
    TYPE(Basis_t), target          :: Basis
-   TYPE(Op_t)                     :: H
+   !TYPE(Op_t)                     :: H
    TYPE(psi_t)                    :: psi0, psif, psi
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
-   real(Kind=Rk)                  :: E, Norm
+   ! real(Kind=Rk)                  :: E, Norm
 !====================================================================
 ! for QML
-   integer :: ndim, nsurf, option, iq, ib
+   integer :: ndim, nsurf, option
    logical :: adiabatic
    character(len=16)                  :: pot_name
 

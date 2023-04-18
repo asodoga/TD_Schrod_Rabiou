@@ -16,14 +16,11 @@ contains
       TYPE(psi_t), intent(in)                 :: psi0, psi_dt
       complex(kind=Rk), intent(inout)         :: corre_coeff
       real(kind=Rk), intent(inout)            :: arg_corre_coeff
-      !real(kind=Rk)     ,intent(in)          :: T
       character(*), intent(in)                :: propa_name
 
       !local variables---------------------------------------------------
       TYPE(psi_t)                             :: psi
       real(kind=Rk)                           :: X, Y
-      real(kind=Rk), allocatable              :: Qt(:), SQt(:)
-      integer                                 :: Ndim, Inb
 
       write (out_unitp, *) 'Beging Calc_Auto_corr'
 
@@ -31,8 +28,6 @@ contains
 
          call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
          psi%CVec = CZERO
-         !call Hagedorn1(psi2=psi, psi1=psi_dt, q10=psi_dt%Basis%tab_basis(1)%Q0, q20=Psi0%Basis%tab_basis(1)%Q0 ,&
-         !sci=psi_dt%Basis%tab_basis(1)%scaleQ, scj=psi%Basis%tab_basis(1)%scaleQ)
          call Hagedorn0(psi, psi_dt)
          corre_coeff = dot_product(Psi0%CVec, psi%CVec)
          X = real(corre_coeff, kind=RK)
@@ -79,40 +74,15 @@ contains
       END DO !omega
    END SUBROUTINE
 
-   SUBROUTINE Hagedorn1(psi2, psi1, q10, q20, sci, scj)
-      USE UtilLib_m
-      USE psi_m
-      TYPE(psi_t), intent(in)        :: psi1
-      TYPE(psi_t), intent(inout)     :: psi2
-      real(Kind=Rk), allocatable     :: S(:, :)
-      real(kind=Rk), intent(in)      :: q10, q20, sci, scj
-      integer                        :: iq, jq
-
-      allocate (S(size(psi1%CVec), size(psi1%CVec)))
-      !print *, 'psi1%CVec', psi1%CVec
-
-      Do iq = 1, size(psi1%CVec)
-         Do jq = 1, size(psi1%CVec)
-            CALL Hermite_product_integral(S(iq, jq), psi1%Basis%tab_basis(1)%X,&
-            & psi1%Basis%tab_basis(1)%W, iq, jq, q10, q20, sci, scj)
-         End Do
-      End Do
-      psi2%CVec = matmul(psi1%CVec, S)
-
-      !print *, 'psi2%CVec', psi2%CVec
-
-      deallocate (S)
-   END SUBROUTINE
-
    SUBROUTINE Hagedorn0(psi_dt_2, psi_dt_1)
-      TYPE(psi_t), intent(in), target             :: psi_dt_1
-      TYPE(psi_t), intent(inout), target             :: psi_dt_2
-      complex(kind=Rk), pointer                     :: BBB1(:, :, :), BBB2(:, :, :)
+      TYPE(psi_t), intent(in), target                  :: psi_dt_1
+      TYPE(psi_t), intent(inout), target               :: psi_dt_2
+      complex(kind=Rk), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
       complex(kind=Rk), allocatable, target            :: B1(:), B2(:)
-      logical, parameter                             :: debug = .true.
-      integer                                         :: inb, i1, i3, Ndim, iq, jq
-      Integer, allocatable                    :: Ib1(:), Ib2(:), Ib3(:)
-      real(Kind=Rk), allocatable                      :: S(:, :)
+      !logical, parameter                              :: debug = .true.
+      integer                                          :: inb, i1, i3, Ndim, iq, jq
+      Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
+      real(Kind=Rk), allocatable                       :: S(:, :)
 
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1

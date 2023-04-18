@@ -639,25 +639,25 @@ CONTAINS
       END DO
       d0gb0 = sqrt(Basis%scaleQ)*d0gb0
       d0gbx = sqrt(sx)*d0gbx
-      !w(:) =      w(:)/(Basis%SCALEQ)
-      ! print*,'construction of s'
       call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
       Basis%SCALEQ = sx
       Basis%Q0 = x0
 
       !----------------------------   deallocation of local variables ----------------------------------------------------
+
       deallocate (x)
       deallocate (w)
       deallocate (d0gb0)
       deallocate (d0gbx)
       deallocate (d1gb)
       deallocate (d2gb)
+
    END SUBROUTINE Construct_Basis_Ho_HG
 
    FUNCTION poly_Hermite(x, l)
       Implicit none
-      real(kind=Rk):: poly_Hermite
-      real(kind=Rk):: pl0, pl1, pl2, norme, x
+      real(kind=Rk)  :: poly_Hermite
+      real(kind=Rk)  :: pl0, pl1, pl2, norme, x
       integer        :: i, l
 
       IF (l < 0) THEN
@@ -691,8 +691,8 @@ CONTAINS
 
    FUNCTION gamma_perso(n)
       Implicit none
-      real(kind=Rk)  :: gamma_perso
-      real(kind=Rk)  :: a
+      real(kind=Rk)    :: gamma_perso
+      real(kind=Rk)    :: a
       integer          :: i, n
 
       IF (n <= 0) THEN
@@ -711,7 +711,7 @@ CONTAINS
       Implicit none
       integer       ::i
       integer       :: nq
-      real(kind=Rk):: dp0, dp1, dp2, p0, p1, p2, x
+      real(kind=Rk) :: dp0, dp1, dp2, p0, p1, p2, x
 
       p1 = ONE
       dp1 = ZERO
@@ -735,10 +735,10 @@ CONTAINS
 
    SUBROUTINE herroot(x, nq, dp2, p1)
       Implicit none
-      integer          :: i
-      integer          :: nq
+      integer                   :: i
+      integer                   :: nq
       real(kind=Rk), parameter  :: eps = TEN**(-TWELVE) ! 1.0d-12
-      real(kind=Rk)  :: d, dp2, p1, p2, x
+      real(kind=Rk)             :: d, dp2, p1, p2, x
 
       DO i = 1, 10
          CALL herrec(p2, dp2, p1, x, nq)
@@ -754,9 +754,9 @@ CONTAINS
 
    SUBROUTINE hercom(nq, xp, w)
       Implicit none
-      integer        :: i, nq
-      real(kind=Rk):: cc, dp2, p1, s, temp, x
-      real(kind=Rk):: w(nq), xp(nq)
+      integer         :: i, nq
+      real(kind=Rk)   :: cc, dp2, p1, s, temp, x
+      real(kind=Rk)   :: w(nq), xp(nq)
 
       CC = 1.7724538509_Rk*gamma_perso(nq)/(TWO**(nq - 1))
 
@@ -795,7 +795,7 @@ CONTAINS
 
       logical        :: deriv
       integer        :: l
-      real(kind=RK):: pexp, x, d0gb, d1gb, d2gb
+      real(kind=RK)  :: pexp, x, d0gb, d1gb, d2gb
 
       IF (deriv) THEN
          d0gb = poly_Hermite(x, l)
@@ -828,12 +828,12 @@ CONTAINS
       USE UtilLib_m
 
       TYPE(Basis_t), intent(in)     :: Basis
-      integer, intent(in)     :: nderiv
+      integer, intent(in)           :: nderiv
 
-      integer                      :: ib, jb
-      real(kind=Rk), ALLOCATABLE   :: S(:, :)
-      real(kind=Rk), ALLOCATABLE   :: d0bgw(:, :)
-      real(kind=Rk)                :: Sii, Sij
+      integer                       :: ib, jb
+      real(kind=Rk), ALLOCATABLE    :: S(:, :)
+      real(kind=Rk), ALLOCATABLE    :: d0bgw(:, :)
+      real(kind=Rk)                 :: Sii, Sij
 
       IF (Basis%Basis_name == 'el') Then
          print *, 'This routine is .not. possible Basis el'
@@ -1309,8 +1309,6 @@ CONTAINS
          B = CZERO
          GGB(1:Iq1(1), 1:Iq2(1), 1:Iq3(1)) => G
          BBB(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B
-         !print*,Iq1(1),Iq2(1),Iq3(1)
-         !print*,Ib1(1),Ib2(1),Ib3(1)
          Call GridTOBasis_1D_cplx(BBB, GGB, Basis%tab_basis(1))
       else
 
@@ -1452,7 +1450,7 @@ CONTAINS
 
       !  Hf = Hfi *Hfj = He(J,x)*He(J,x)
 
-      Hf = Hfi*Hfj
+      Hf = sqrt(sci)*sqrt(scj)*Hfi*Hfj
 
    END SUBROUTINE Hermite_double_product_func
 
