@@ -458,8 +458,9 @@ contains
       type(propa_t), intent(in)   :: propa
       character(100)              :: name_tot
       integer, intent(in)         :: nio
-
-      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.dat'
+      character(len=5)            :: dt
+      ! write (dt, *) propa%delta_t
+      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.dat'!'_'//dt//'
       name_tot = trim(name_tot)
 
       open (unit=nio, file=name_tot)
