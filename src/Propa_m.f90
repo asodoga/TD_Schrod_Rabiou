@@ -124,6 +124,7 @@ contains
          end if
 
          CALL march(psi, psi_dt, t, propa)
+         print *, 'Auto_corr_function avant la proj=', abs(dot_product(psi0%CVec, psi_dt%CVec))
          if (propa%propa_name == 'hagedorn') Then
             call Hagedorn(psi, psi_dt)
          else
@@ -458,9 +459,13 @@ contains
       type(propa_t), intent(in)   :: propa
       character(100)              :: name_tot
       integer, intent(in)         :: nio
-      character(len=5)            :: dt
-      ! write (dt, *) propa%delta_t
-      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.dat'!'_'//dt//'
+      character(len=20)           :: dt
+      character(len=8)            :: fmt
+
+      fmt = "(E0.1)"
+
+      write (dt, fmt) propa%delta_t
+      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'_'//trim(dt)//'.dat'
       name_tot = trim(name_tot)
 
       open (unit=nio, file=name_tot)
