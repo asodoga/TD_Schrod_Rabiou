@@ -10,7 +10,7 @@ mkdir -p ../results
 ./TD_SCHROD.x <DAT_files/dat_Hagedorn1> resultat
  #rename -v 's/.dat/nb1.dat/' *.dat
 #cp *.dat ../results
-rm *.dat
-rm fort.*
-rm resultat
+#rm *.dat
+#rm fort.*
+#rm resultat
 #make clean

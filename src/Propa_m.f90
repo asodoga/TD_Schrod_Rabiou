@@ -124,7 +124,6 @@ contains
          end if
 
          CALL march(psi, psi_dt, t, propa)
-         print *, 'Auto_corr_function avant la proj=', abs(dot_product(psi0%CVec, psi_dt%CVec))
          if (propa%propa_name == 'hagedorn') Then
             call Hagedorn(psi, psi_dt)
          else

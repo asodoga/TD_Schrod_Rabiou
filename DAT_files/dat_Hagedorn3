@@ -11,5 +11,5 @@
  
   
 
-   &prop t0  = 0  tf  = 20 delta_t =0.1  eps= 0.00000001
+   &prop t0  = 0  tf  = 20 delta_t =0.01   eps= 0.00000001
         max_iter =  500 propa_name ='hagedorn'  propa_name2 = 'taylor' /

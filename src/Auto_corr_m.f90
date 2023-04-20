@@ -29,14 +29,14 @@ contains
          call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
          psi%CVec = CZERO
          call Hagedorn0(psi, psi_dt)
-         corre_coeff = dot_product(Psi0%CVec, psi%CVec)
+         corre_coeff = dot_product(Psi0%CVec, psi%CVec)/dot_product(Psi%CVec, psi%CVec)
          X = real(corre_coeff, kind=RK)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
          call dealloc_psi(psi)
 
       else
-         corre_coeff = dot_product(psi0%CVec, psi_dt%CVec)
+         corre_coeff = dot_product(psi0%CVec, psi_dt%CVec)/dot_product(psi_dt%CVec, psi_dt%CVec)
          X = real(corre_coeff, kind=RK)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
