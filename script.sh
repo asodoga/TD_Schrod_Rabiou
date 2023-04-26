@@ -8,6 +8,10 @@ make
 #./TD_SCHROD.x <DAT_files/dat_fourier> resultat
 mkdir -p ../results
 ./TD_SCHROD.x <DAT_files/dat_Hagedorn1> resultat
+./TD_SCHROD.x <DAT_files/dat_non_Hagedorn1> resultat
+
+paste psi_Ha_hagedorn_taylor.dat psi_NHa_non_hagedorn_taylor.dat | awk '{print $2-$6,$3-$7 }'> psi_diff
+
  #rename -v 's/.dat/nb1.dat/' *.dat
 #cp *.dat ../results
 #rm *.dat

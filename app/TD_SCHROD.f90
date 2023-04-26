@@ -13,7 +13,7 @@ PROGRAM TD_SCHROD
    TYPE(psi_t)                    :: psi0, psif, psi
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
-   real(Kind=Rk)                  :: E, Norm, x(1) = ONE, sx(1) = ONE
+   real(Kind=Rk)                  :: E, Norm, x(1) = ONE, sx(1) = ONE/sqrt(TWO)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
@@ -32,8 +32,8 @@ PROGRAM TD_SCHROD
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unitp)
-   call init_Basis1_TO_Basis2(Basis0, Basis)
-   call construct_primitive_basis(Basis0, x=x, sx=sx)
+   !call init_Basis1_TO_Basis2(Basis0, Basis)
+   !call construct_primitive_basis(Basis0, x=x, sx=sx)
    call construct_primitive_basis(Basis)
    !Call Write_Basis(Basis)
 !====================================================================
@@ -50,7 +50,7 @@ PROGRAM TD_SCHROD
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   STOP 'calcul de H|psi> est fait'
+   !STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

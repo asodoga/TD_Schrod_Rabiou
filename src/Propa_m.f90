@@ -65,7 +65,7 @@ contains
       integer                          :: Ndim
 
       INTEGER                          :: i, nt, Iq, nf
-      TYPE(psi_t)                      :: psi, psi_dt
+      TYPE(psi_t)                      :: psi, psi_dt, psi00
       if (debug) then
 
          write (out_unitp, *) 'BEGINNIG propagation', propa%t0, propa%tf, propa%delta_t
@@ -84,6 +84,8 @@ contains
       call creat_file_unit(nio=13, name='SQt', propa=propa)
       call creat_file_unit(nio=14, name='Norm', propa=propa)
       call creat_file_unit(nio=15, name='Auto_corr_func', propa=propa)
+      call creat_file_unit(nio=16, name='psi_Ha', propa=propa)
+      call creat_file_unit(nio=17, name='psi_NHa', propa=propa)
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
@@ -98,6 +100,7 @@ contains
 
       CALL init_psi(psi, Basis_1, cplx=.TRUE., grid=.false.)
       CALL init_psi(psi_dt, Basis_2, cplx=.TRUE., grid=.false.)
+      CALL init_psi(psi00, psi0%Basis, cplx=.TRUE., grid=.false.)
 
       psi%CVec(:) = psi0%CVec(:)
       call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
@@ -139,8 +142,16 @@ contains
       IF (debug) THEN
          write (out_unitp, *) 'END propagation'
          write (out_unitp, *) 'norm,psi_dt', Norm
-         call write_psi(psi=psif, psi_cplx=.false., print_psi_grid=.true. &
-                        , print_basis=.false., t=t, int_print=22, real_part=.false.)
+
+         if (propa%propa_name == 'hagedorn') Then
+            psi00%CVec = CZERO
+            call Hagedorn0(psi00, psi)
+            call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
+                           , print_basis=.false., t=t, int_print=16, real_part=.true.)
+         else
+            call write_psi(psi=psif, psi_cplx=.true., print_psi_grid=.false. &
+                           , print_basis=.false., t=t, int_print=17, real_part=.true.)
+         end if
 
          flush (out_unitp)
       END IF
