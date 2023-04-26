@@ -170,6 +170,7 @@ contains
       call Calc_AVQ_nD(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt)
       call projection(psi, psi_dt)
+      !call Hagedorn0(psi_dt_2=psi, psi_dt_1=psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt)
 
       write (out_unitp, *) 'End Hagedorn'
@@ -464,7 +465,7 @@ contains
       fmt = "(E0.1)"
 
       write (dt, fmt) propa%delta_t
-      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'_'//trim(dt)//'.dat'
+      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.dat'
       name_tot = trim(name_tot)
 
       open (unit=nio, file=name_tot)

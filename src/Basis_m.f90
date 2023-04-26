@@ -8,7 +8,7 @@ MODULE Basis_m
    PUBLIC :: Basis_t, Read_Basis, Write_Basis, Basis_IS_allocated, Deallocate_Basis, Basis_IS_allocatedtot
    PUBLIC :: Calc_dngg_grid, Calc_tranpose_d0gb, test_basitogridgridtobasis
    PUBLIC :: GridTOBasis_nD_cplx, BasisTOGrid_nD_cplx
-   PUBLIC :: Calc_Q_grid, Calc_index
+   PUBLIC :: Calc_Q_grid, Calc_index, hercom
    PUBLIC :: Scale_Basis, Buld_S, init_Basis1_TO_Basis2
    PUBLIC :: construct_primitive_basis, construct_primitive_basis0, construct_primitive_basis1
    PUBLIC :: Hermite_double_product_func, Construct_poly_Hermite, Hermite_product_integral
@@ -586,6 +586,70 @@ CONTAINS
 
    SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx) ! HO HAGEDORN:
       USE UtilLib_m
+      TYPE(Basis_t), intent(inout)                         :: Basis
+      integer                                              :: iq, ib
+      real(kind=Rk), intent(in)                            :: x0, sx
+      real(kind=Rk)                                        :: x3, s3,s1,s2,x1,x2
+      real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
+      real(kind=Rk), allocatable                           :: x(:), w(:)
+      !----------------------------   deallocation----------------------------------------------------
+      if (allocated(Basis%x)) deallocate (Basis%x)
+      if (allocated(Basis%w)) deallocate (Basis%w)
+      if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
+      if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
+      if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
+      !----------------------------allocation of x and w for new  construction-------------------------------------------
+      allocate (Basis%x(Basis%nq))
+      allocate (Basis%w(Basis%nq))
+      allocate (x(Basis%nq))
+      allocate (w(Basis%nq))
+      !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
+      call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+      call hercom(Basis%nq, x(:), w(:))
+      ! test------------------------------------------------------------------------------------------------------
+      s1 =Basis%scaleQ ; s2 =sx; x1 = Basis%Q0;  x2 = x0
+      s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+      x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+      w(:) = w(:)/s3
+      x(:) = x3 + Basis%x(:)/s3
+      !------------------------------------------------------------------------------------------------------------
+      !----------------------------allocation of d0gb,d1gb, d2gb  for new  construction-----------------------------------
+      allocate (Basis%d0gb(Basis%nq, Basis%nb))
+      allocate (Basis%d1gb(Basis%nq, Basis%nb, 1))
+      allocate (Basis%d2gb(Basis%nq, Basis%nb, 1, 1))
+      !----------------------------this allocation is for construction of S(:,:)------------------------------------------
+      allocate (d0gb0(Basis%nq, Basis%nb))
+      allocate (d0gbx(Basis%nq, Basis%nb))
+      allocate (d1gb(Basis%nq, Basis%nb, 1))
+      allocate (d2gb(Basis%nq, Basis%nb, 1, 1))
+      !----------------------------calculation of d0gb,d1gb, d2gb  for new  Basis-------------------------------------------
+      DO iq = 1, Basis%nq
+         DO ib = 1, Basis%nb
+            CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq), Basis%d0gb(iq, ib), &
+                                                  Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)  !construction of the new Basis
+            !------------------------for s(:,:) -------------------------------------------------------
+            CALL Construct_Basis_poly_Hermite_exp(Basis%scaleQ*(x(iq) - Basis%Q0), d0gb0(iq, ib), &
+                                                  d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+            CALL Construct_Basis_poly_Hermite_exp(sx*(x(iq) - x0), d0gbx(iq, ib), &
+                                                  d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+         END DO
+      END DO
+      d0gb0 = sqrt(Basis%scaleQ)*d0gb0
+      d0gbx = sqrt(sx)*d0gbx
+      call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
+      Basis%SCALEQ = sx
+      Basis%Q0 = x0
+      !----------------------------   deallocation of local variables ----------------------------------------------------
+      deallocate (x)
+      deallocate (w)
+      deallocate (d0gb0)
+      deallocate (d0gbx)
+      deallocate (d1gb)
+      deallocate (d2gb)
+   END SUBROUTINE
+
+   SUBROUTINE Construct_Basis_Ho_HG1(Basis, x0, sx) ! HO HAGEDORN:
+      USE UtilLib_m
 
       TYPE(Basis_t), intent(inout)                  :: Basis
       integer                                             :: iq, ib
@@ -652,7 +716,7 @@ CONTAINS
       deallocate (d1gb)
       deallocate (d2gb)
 
-   END SUBROUTINE Construct_Basis_Ho_HG
+   END SUBROUTINE
 
    FUNCTION poly_Hermite(x, l)
       Implicit none
