@@ -103,8 +103,8 @@ contains
       CALL init_psi(psi00, psi0%Basis, cplx=.TRUE., grid=.false.)
 
       psi%CVec(:) = psi0%CVec(:)
-      call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
-                     , print_basis=.false., t=ZERO, int_print=20, real_part=.false.)
+      !call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
+      !               , print_basis=.false., t=ZERO, int_print=20, real_part=.false.)
 
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
       DO i = 0, nt
@@ -133,8 +133,13 @@ contains
             psi%CVec(:) = psi_dt%CVec(:)
          end if
 
-         call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
-         write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+         if (propa%propa_name == 'hagedorn') Then
+            call Calc_Auto_corr(psi0, psi, x, y, propa%propa_name)
+            write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+         else
+            call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
+            write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+         end if
 
       END DO
       psif = psi_dt
