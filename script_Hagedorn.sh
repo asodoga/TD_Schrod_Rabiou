@@ -28,11 +28,4 @@ rm *.dat
 #rm fort.*
 rm resultat
 #make clean
-./TD_SCHROD.x <DAT_files/dat_Hagedorn4> resultat
- rename -v 's/.dat/nb4.dat/' *.dat
-cp *.dat ../results
-rm *.dat
-#rm fort.*
-rm resultat
-#make clean
 

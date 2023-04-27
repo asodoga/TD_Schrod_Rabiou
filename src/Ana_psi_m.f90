@@ -136,13 +136,13 @@ contains
    SUBROUTINE Calc_AVQ_nD(psi0, AVQ, SQ)
       USE UtilLib_m
 
-      type(psi_t), intent(in), target                        :: psi0
-      type(psi_t), target                        :: psi
+      type(psi_t), intent(in), target                          :: psi0
+      type(psi_t), target                                      :: psi
       real(kind=Rk), intent(inout)                             :: AVQ(:), SQ(:)
       real(kind=Rk), allocatable                               :: Q(:, :), W(:), X(:)
-      real(kind=Rk)                                           :: Norm
-      logical, parameter                              :: debug = .true.
-      integer                                                 :: Inb, Ndim, Iq
+      real(kind=Rk)                                            :: Norm
+      logical, parameter                                       :: debug = .true.
+      integer                                                  :: Inb, Ndim, Iq
 
       IF (debug) THEN
          flush (out_unitp)
@@ -171,6 +171,7 @@ contains
          AVQ(Inb) = AVQ(Inb)/(Norm*Norm)
          SQ(Inb) = sqrt(X(Inb) - AVQ(Inb)*AVQ(Inb))
          SQ(Inb) = ONE/(SQ(Inb)*sqrt(TWO))
+         write (out_unitp, *) 'SQ =', 2*SQ(Inb)
 
       END DO
 

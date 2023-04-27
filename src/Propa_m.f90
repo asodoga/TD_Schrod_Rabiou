@@ -136,9 +136,17 @@ contains
          if (propa%propa_name == 'hagedorn') Then
             call Calc_Auto_corr(psi0, psi, x, y, propa%propa_name)
             write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+            psi00%CVec = CZERO
+            call Hagedorn0(psi00, psi)
+            call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
+                           , print_basis=.false., t=t, int_print=16, real_part=.true.)
+            write (16, *), ''
          else
             call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
             write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+            call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
+                           , print_basis=.false., t=t, int_print=17, real_part=.true.)
+            write (17, *), ''
          end if
 
       END DO
@@ -148,16 +156,16 @@ contains
          write (out_unitp, *) 'END propagation'
          write (out_unitp, *) 'norm,psi_dt', Norm
 
-         if (propa%propa_name == 'hagedorn') Then
-            psi00%CVec = CZERO
-            call Hagedorn0(psi00, psi)
-            call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
-                           , print_basis=.false., t=t, int_print=16, real_part=.true.)
-         else
-            call write_psi(psi=psif, psi_cplx=.true., print_psi_grid=.false. &
-                           , print_basis=.false., t=t, int_print=17, real_part=.true.)
-         end if
-
+         ! if (propa%propa_name == 'hagedorn') Then
+         !    psi00%CVec = CZERO
+         !    call Hagedorn0(psi00, psi)
+         !    call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
+         !                   , print_basis=.false., t=t, int_print=16, real_part=.true.)
+         ! else
+         !    call write_psi(psi=psif, psi_cplx=.true., print_psi_grid=.false. &
+         !                   , print_basis=.false., t=t, int_print=17, real_part=.true.)
+         ! end if
+!
          flush (out_unitp)
       END IF
 
@@ -250,7 +258,7 @@ contains
       write (out_unitp, *) 'BEGINNIG march_taylor  ', t, propa%delta_t
       !write(out_unitp,*) 'psi',psi%CVec
       Rkk = ONE
-      alpha = TEN**15
+      alpha = TEN**10
         !!======================debut ordre 1==========================
       !psi_dt%CVec    = psi%CVec
       !CALL calc_OpPsi(H,psi,Hpsi)
@@ -277,7 +285,7 @@ contains
          Hpsi%CVec(:) = CZERO
          call Calc_Norm_OF_Psi(psi0, Norm)
          Norm = Rkk*Norm
-         write (out_unitp, *) '<Hpsi|Hpsi> = ', kk, Norm
+         write (out_unitp, *) 'sqrt(<Hpsi|Hpsi>) = ', kk, Norm
          if (Norm >= alpha) then
             stop "wrong choice of delta_t"
          elseif (Norm <= propa%eps) Then

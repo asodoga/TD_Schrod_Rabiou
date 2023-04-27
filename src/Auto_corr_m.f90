@@ -209,12 +209,12 @@ contains
          x2 = psi_dt_2%Basis%tab_basis(1)%Q0
          s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
          s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
-        
+
          s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
          x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
          w(:) = w(:)/s3
          x(:) = x3 + x(:)/s3
-            
+
          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
             Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
                CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
@@ -243,14 +243,12 @@ contains
          x2 = psi_dt_2%Basis%tab_basis(1)%Q0
          s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
          s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
-        
-        
+
          s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
          x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
          w(:) = w(:)/s3
          x(:) = x3 + x(:)/s3
-        
-        
+
          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
             Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
                CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
@@ -277,14 +275,12 @@ contains
             x2 = psi_dt_2%Basis%tab_basis(Inb)%Q0
             s1 = psi_dt_1%Basis%tab_basis(Inb)%scaleQ
             s2 = psi_dt_2%Basis%tab_basis(Inb)%scaleQ
-           
-           
+
             s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
             x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
             w(:) = w(:)/s3
             x(:) = x3 + x(:)/s3
-           
-           
+
             Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
                Do jq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
                   CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)

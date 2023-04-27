@@ -20,7 +20,7 @@ PROGRAM TD_SCHROD
    logical :: adiabatic
    character(len=16)                  :: pot_name
 
-   ndim = 1
+   ndim = 2
    nsurf = 1
    pot_name = 'read_model'
    adiabatic = .false.

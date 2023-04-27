@@ -14,7 +14,7 @@ paste psi_Ha_hagedorn_taylor.dat psi_NHa_non_hagedorn_taylor.dat | awk '{print $
 
  #rename -v 's/.dat/nb1.dat/' *.dat
 #cp *.dat ../results
-rm *.dat
+#rm *.dat
 #rm fort.*
-rm resultat
+#rm resultat
 #make clean
