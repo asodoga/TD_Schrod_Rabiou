@@ -294,6 +294,7 @@ contains
             END DO
             B1 = B2
             B2 = CZERO
+            deallocate (B2)
             if (inb == Ndim) psi_dt_2%CVec = B1
             deallocate (S, x, w)
          END DO
