@@ -115,10 +115,10 @@ contains
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
          ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
-         write (11, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, Qt
-         write (12, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, E
-         write (13, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, SQt
-         write (14, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, Norm
+         write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
+         write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
+         write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
+         write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
 
          if (mod(i, 1) == 0) then
             call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
@@ -143,7 +143,7 @@ contains
             write (16, *), ''
          else
             call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
-            write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+            write (15, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, abs(x), y
             call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
                            , print_basis=.false., t=t, int_print=17, real_part=.true.)
             write (17, *), ''

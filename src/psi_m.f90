@@ -18,7 +18,7 @@ module psi_m
 
    public :: psi_t, write_psi, init_psi, dealloc_psi, write_psi_grid
    public :: write_psi_basis, Calc_Norm_OF_PsiBasis, Calc_Norm_OF_PsiGrid, Calc_Norm_OF_Psi
-   public:: Projection
+   public:: Projection, psi0_init
 contains
 
    SUBROUTINE copy_psi(psi_out, psi_in)
@@ -183,14 +183,14 @@ contains
    END SUBROUTINE write_psi
 
    SUBROUTINE Projection(psi_dt_2, psi_dt_1)
-      TYPE(psi_t), intent(in), target             :: psi_dt_1
-      TYPE(psi_t), intent(inout), target             :: psi_dt_2
-      complex(kind=Rk), pointer                     :: BBB1(:, :, :), BBB2(:, :, :)
+      TYPE(psi_t), intent(in), target                  :: psi_dt_1
+      TYPE(psi_t), intent(inout), target               :: psi_dt_2
+      complex(kind=Rk), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
       complex(kind=Rk), allocatable, target            :: B1(:), B2(:)
 
-      logical, parameter                             :: debug = .true.
-      integer                                         :: inb, i1, i3, Ndim
-      Integer, allocatable                    :: Ib1(:), Ib2(:), Ib3(:)
+      logical, parameter                               :: debug = .true.
+      integer                                          :: inb, i1, i3, Ndim
+      Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
 
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
@@ -490,6 +490,46 @@ contains
       end if
 
    END SUBROUTINE
+
+   SUBROUTINE psi0_init(psi0)
+      type(psi_t), intent(inout)        ::psi0
+      type(psi_t), target               ::psi
+      complex(Kind=Rk), allocatable     ::g(:)
+      real(Kind=Rk), allocatable        ::Q(:, :)
+      complex(Kind=Rk), pointer         ::gb(:, :)
+      real(Kind=Rk)                     ::Dq, Dphi, NormG, NormB, Q0
+      integer                           ::iq
+      DQ = 1.474256632_Rk
+      Dphi = 0.181095798_Rk
+      Q0 = ZERO
+      !open (unit = 19, file = "psi0_Retinal")
+      call calc_Q_grid(Q, Psi0%Basis)
+      allocate (g(psi0%Basis%nq))
+      CALL init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
+      DO iq = 1, psi0%Basis%nq
+         g(iq) = exp(-((Q(iq, 1) - Q0)/Dphi)**2)/sqrt(sqrt(pi/TWO)*Dphi)
+         g(iq) = g(iq)*exp(-((Q(iq, 2) - Q0)/DQ)**2)/sqrt(sqrt(pi/TWO)*DQ)
+
+      END DO
+      psi%CVec(:) = CZERO
+      gb(1:psi0%Basis%nq, 1:psi0%Basis%tab_basis(size(psi0%Basis%tab_basis))%nb) => psi%CVec
+      gb(:, 1) = CZERO
+      gb(:, 2) = g(:)
+      call Calc_Norm_OF_Psi(psi, NormG)
+      print *, 'NormG = ', NormG
+      psi%CVec = psi%CVec/NormG
+      call Calc_Norm_OF_Psi(psi, NormG)
+      print *, 'renormed NormG = ', NormG
+      call GridTOBasis_nD_cplx(psi0%CVec, psi%CVec, psi0%Basis)
+      call Calc_Norm_OF_Psi(psi0, NormB)
+      print *, 'NormB = ', NormB
+      psi0%CVec = psi0%CVec/NormB
+      call Calc_Norm_OF_Psi(psi, NormB)
+      print *, 'renormed NormB = ', NormB
+      deallocate (g)
+      deallocate (Q)
+      CALL dealloc_psi(psi)
+   END SUBROUTINE psi0_init
 
    SUBROUTINE psi_init_GWP0(psi, Tab_GWP)
       USE UtilLib_m

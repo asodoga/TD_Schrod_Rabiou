@@ -249,11 +249,18 @@ contains
          w(:) = w(:)/s3
          x(:) = x3 + x(:)/s3
 
-         Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-            Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-               CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
+         if (psi_dt_1%Basis%tab_basis(1)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(1)%Basis_name == 'ho') then
+            Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
+               Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
+                  CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
+               End Do
             End Do
-         End Do
+         else
+            S(:, :) = ZERO
+            Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
+               S(iq, iq) = ONE
+            End Do
+         end if
          !----------------------------------------------------------------------------------
          DO i3 = 1, ubound(BBB1, dim=3)
          DO i1 = 1, ubound(BBB1, dim=1)
@@ -280,13 +287,21 @@ contains
             x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
             w(:) = w(:)/s3
             x(:) = x3 + x(:)/s3
+            if (psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'ho') then
 
-            Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-               Do jq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-                  CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
+               Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
+                  Do jq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
+                     CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
+                  End Do
                End Do
-            End Do
-            !----------------------------------------------------------------------------------
+
+            else
+               S(:, :) = ZERO
+               Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
+                  S(iq, iq) = ONE
+               End Do
+            end if
+            ! ---------------------------------------------------------------------------------
             DO i3 = 1, ubound(BBB1, dim=3)
             DO i1 = 1, ubound(BBB1, dim=1)
                BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
@@ -297,7 +312,9 @@ contains
             deallocate (B2)
             if (inb == Ndim) psi_dt_2%CVec = B1
             deallocate (S, x, w)
+
          END DO
+
       END IF
       write (out_unitp, *) 'END Hagedorn projection'
    END SUBROUTINE

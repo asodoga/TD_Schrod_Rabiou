@@ -13,15 +13,15 @@ PROGRAM TD_SCHROD
    TYPE(psi_t)                    :: psi0, psif, psi
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
-   real(Kind=Rk)                  :: E, Norm, x(1) = ONE, sx(1) = ONE/sqrt(TWO)
+   real(Kind=Rk)                  :: E, Norm !, x(1) = ONE, sx(1) = ONE/sqrt(TWO)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
    logical :: adiabatic
    character(len=16)                  :: pot_name
 
-   ndim = 3
-   nsurf = 1
+   ndim = 2
+   nsurf = 2
    pot_name = 'read_model'
    adiabatic = .false.
    option = 1
@@ -44,9 +44,11 @@ PROGRAM TD_SCHROD
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psi, Basis, cplx=.TRUE., grid=.false.)
 
-   call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
-   call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
-   !call Calc_average_energy(psi0,E)
+   !call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
+   !call test_basitogridgridtobasis(Basis)
+   !call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
+   call psi0_init(psi0)
+   call Calc_average_energy(psi0, E)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)

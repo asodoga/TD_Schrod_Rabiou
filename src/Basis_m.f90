@@ -345,13 +345,13 @@ CONTAINS
 
    RECURSIVE SUBROUTINE construct_primitive_basis0(Basis)
       USE UtilLib_m
-      logical, parameter      :: debug = .true.
-      !logical,             parameter      ::debug = .false.
-      TYPE(Basis_t), intent(inout)  :: Basis
-      integer, allocatable                :: NDend_q(:)
-      integer, allocatable                :: NDend_b(:)
-      integer                             :: nb, nq, i, j
-      character(len=Name_len)            :: name
+      logical, parameter                     :: debug = .true.
+      !logical,             parameter        ::debug = .false.
+      TYPE(Basis_t), intent(inout)           :: Basis
+      integer, allocatable                   :: NDend_q(:)
+      integer, allocatable                   :: NDend_b(:)
+      integer                                :: nb, nq, i, j
+      character(len=Name_len)                :: name
       ! write(out_unitp,*) ' Begin  construct primitive  Basis '
       IF (allocated(Basis%tab_basis)) THEN
          allocate (NDend_q(Basis%nb_basis - 1))
@@ -475,7 +475,7 @@ CONTAINS
    SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(inout)  :: Basis
+      TYPE(Basis_t), intent(inout)        :: Basis
       real(kind=Rk)                       :: dx
       integer                             :: ib, iq, nb, nq
 
@@ -509,7 +509,7 @@ CONTAINS
    SUBROUTINE Construct_Basis_Fourier(Basis) !basis_name fourier[-pi,pi]
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(inout)  :: Basis
+      TYPE(Basis_t), intent(inout)        :: Basis
       real(kind=Rk)                       :: dx
       integer                             :: ib, iq, nb, nq, k
 
@@ -589,7 +589,7 @@ CONTAINS
       TYPE(Basis_t), intent(inout)                         :: Basis
       integer                                              :: iq, ib
       real(kind=Rk), intent(in)                            :: x0, sx
-      real(kind=Rk)                                        :: x3, s3,s1,s2,x1,x2
+      real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
       real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
       real(kind=Rk), allocatable                           :: x(:), w(:)
       !----------------------------   deallocation----------------------------------------------------
@@ -607,7 +607,7 @@ CONTAINS
       call hercom(Basis%nq, Basis%x(:), Basis%w(:))
       call hercom(Basis%nq, x(:), w(:))
       ! test------------------------------------------------------------------------------------------------------
-      s1 =Basis%scaleQ ; s2 =sx; x1 = Basis%Q0;  x2 = x0
+      s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
       s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
       x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
       w(:) = w(:)/s3
@@ -976,9 +976,9 @@ CONTAINS
 
       integer                           :: ib, jb, iq, nq
       integer, INTENT(IN)               :: nb
-      real(kind=Rk), INTENT(INOUT)     :: S(:, :)
+      real(kind=Rk), INTENT(INOUT)      :: S(:, :)
       real(kind=Rk), INTENT(IN)         :: d0gb1(:, :), d0gb2(:, :), w1(:)
-      real(kind=Rk), ALLOCATABLE       :: d0bgw(:, :)
+      real(kind=Rk), ALLOCATABLE        :: d0bgw(:, :)
       real(kind=Rk)                     :: det
 
       nq = size(w1)
@@ -1026,7 +1026,7 @@ CONTAINS
       USE UtilLib_m
       TYPE(Basis_t), intent(inout)    :: Basis
       integer                         :: ib
-      logical, parameter     ::debug = .false.
+      logical, parameter              ::debug = .false.
 
       IF (debug) THEN
          write (out_unitp, *) 'BEGINNING Calc_dngg_grid'
@@ -1128,10 +1128,10 @@ CONTAINS
 
    SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis)
       USE UtilLib_m
-      TYPE(Basis_t), intent(in), target        :: Basis
-      complex(kind=Rk), intent(inout)            :: BB(:, :, :)
-      complex(kind=Rk), intent(in)              :: GG(:, :, :)
-      logical, parameter                :: debug = .true.
+      TYPE(Basis_t), intent(in), target           :: Basis
+      complex(kind=Rk), intent(inout)             :: BB(:, :, :)
+      complex(kind=Rk), intent(in)                :: GG(:, :, :)
+      logical, parameter                          :: debug = .true.
       Integer                                     :: i1, i3
 
       IF (debug) THEN
@@ -1238,15 +1238,15 @@ CONTAINS
       USE UtilLib_m
       USE NDindex_m
       !Logical,           parameter                 :: debug = .true.
-      Logical, parameter                   :: debug = .false.
-      TYPE(Basis_t), intent(in)                  :: Basis
-      complex(kind=Rk), intent(in), target        :: B(:) !Vector on base,
-      complex(kind=Rk), intent(inout), target     :: G(:) !Vector on the grid, out
-      complex(kind=Rk), pointer                   :: BBG(:, :, :)
-      complex(kind=Rk), pointer                   :: BBB(:, :, :), GGB(:, :, :)
-      integer, allocatable                        :: Ib3(:), Iq1(:), Iq2(:), ib1(:), ib2(:), iq3(:)
-      complex(kind=Rk), pointer                   :: GBB(:, :, :)
-      complex(kind=Rk), allocatable, target        :: GBB1(:), GGB2(:)
+      Logical, parameter                            :: debug = .false.
+      TYPE(Basis_t), intent(in)                     :: Basis
+      complex(kind=Rk), intent(in), target          :: B(:) !Vector on base,
+      complex(kind=Rk), intent(inout), target       :: G(:) !Vector on the grid, out
+      complex(kind=Rk), pointer                     :: BBG(:, :, :)
+      complex(kind=Rk), pointer                     :: BBB(:, :, :), GGB(:, :, :)
+      integer, allocatable                          :: Ib3(:), Iq1(:), Iq2(:), ib1(:), ib2(:), iq3(:)
+      complex(kind=Rk), pointer                     :: GBB(:, :, :)
+      complex(kind=Rk), allocatable, target         :: GBB1(:), GGB2(:)
 
       Integer                                       :: ib, iq, nq, nb, inb, Ndim
       Integer                                       :: jb, jb1, jb2
@@ -1264,17 +1264,17 @@ CONTAINS
          STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
       END IF
 
-      IF (size(B) /= Basis%nb) THEN
+      IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
          write (out_unitp, *) ' ERROR in BasisTOGrid_Basis'
          write (out_unitp, *) ' the size of B is different from nb.'
-         write (out_unitp, *) ' size(B), Basis%nb', size(B), Basis%nb
+         write (out_unitp, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
          STOP 'ERROR in BasisTOGrid_Basis: wrong B size.'
       END IF
 
-      IF (size(G) /= Basis%nq) THEN
+      IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
          write (out_unitp, *) ' ERROR in GridTOBasis_Basis'
          write (out_unitp, *) ' the size of G is different from nq.'
-         write (out_unitp, *) ' size(G), Basis%nq', size(G), Basis%nq
+         write (out_unitp, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
          STOP 'ERROR in BasisTOGrid_Basis: wrong G size..'
       END IF
 
@@ -1328,16 +1328,16 @@ CONTAINS
 
    SUBROUTINE GridTOBasis_nD_cplx(B, G, Basis)
       USE UtilLib_m
-      !Logical,          parameter                   :: debug = .true.
-      Logical, parameter                     :: debug = .false.
-      TYPE(Basis_t), intent(in), target             :: Basis
-      complex(kind=Rk), intent(in), target         :: G(:)
-      complex(kind=Rk), intent(inout), target       :: B(:)
-      complex(kind=Rk), pointer                    :: BBB(:, :, :), GGB(:, :, :)
-      complex(kind=Rk), allocatable, target       :: BGG1(:), BGG2(:)
-      complex(kind=Rk), pointer                     :: GGG(:, :, :)
-      Integer                                        :: ib, i1, i3, inb, Ndim, iq
-      Integer, allocatable                   :: Ib1(:), Ib2(:), Iq3(:), Iq1(:), Iq2(:), Ib3(:)
+      !Logical,          parameter                     :: debug = .true.
+      Logical, parameter                               :: debug = .false.
+      TYPE(Basis_t), intent(in), target                :: Basis
+      complex(kind=Rk), intent(in), target             :: G(:)
+      complex(kind=Rk), intent(inout), target          :: B(:)
+      complex(kind=Rk), pointer                        :: BBB(:, :, :), GGB(:, :, :)
+      complex(kind=Rk), allocatable, target            :: BGG1(:), BGG2(:)
+      complex(kind=Rk), pointer                        :: GGG(:, :, :)
+      Integer                                          :: ib, i1, i3, inb, Ndim, iq
+      Integer, allocatable                             :: Ib1(:), Ib2(:), Iq3(:), Iq1(:), Iq2(:), Ib3(:)
 
       IF (debug) THEN
          write (out_unitp, *) 'BEGINNING GridTOBasis_nD_cplx'
@@ -1352,17 +1352,17 @@ CONTAINS
          STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
       END IF
 
-      IF (size(B) /= Basis%nb) THEN
+      IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
          write (out_unitp, *) ' ERROR in BasisTOGrid_nD_cplx'
          write (out_unitp, *) ' the size of G is different from nb.'
-         write (out_unitp, *) ' size(B), Basis%nb', size(B), Basis%nb
+         write (out_unitp, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
          STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
       END IF
 
-      IF (size(G) /= Basis%nq) THEN
+      IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
          write (out_unitp, *) ' ERROR in GridTOBasis_Basis'
          write (out_unitp, *) ' the size of G is different from nq.'
-         write (out_unitp, *) ' size(G), Basis%nq', size(G), Basis%nq
+         write (out_unitp, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
          STOP 'ERROR in GridTOBasis_Basis: wrong G size'
       END IF
 
@@ -1417,12 +1417,12 @@ CONTAINS
    SUBROUTINE Calc_Q_grid(Q, Basis, WnD)
 
       implicit none
-      TYPE(Basis_t), intent(in)                                  :: Basis
+      TYPE(Basis_t), intent(in)                                    :: Basis
       integer, ALLOCATABLE                                         :: Tab_iq(:), NDend(:)
       integer                                                      :: inb, ndim, iq
-      real(Kind=Rk), intent(inout), allocatable, optional         :: Q(:, :)
-      real(Kind=Rk), intent(inout), allocatable, optional         :: WnD(:)
-      TYPE(NDindex_t)                                             :: NDindex
+      real(Kind=Rk), intent(inout), allocatable, optional          :: Q(:, :)
+      real(Kind=Rk), intent(inout), allocatable, optional          :: WnD(:)
+      TYPE(NDindex_t)                                              :: NDindex
       logical                                                      :: Endloop
       ndim = SIZE(Basis%tab_basis) - 1
       allocate (Tab_iq(Ndim))
