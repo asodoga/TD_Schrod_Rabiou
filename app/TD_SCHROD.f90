@@ -9,11 +9,11 @@ PROGRAM TD_SCHROD
    USE lanczos_m
    IMPLICIT NONE
    TYPE(Basis_t), target          :: Basis, Basis0
-   !TYPE(Op_t)                     :: H
+   !TYPE(Op_t)                    :: H
    TYPE(psi_t)                    :: psi0, psif, psi
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
-   real(Kind=Rk)                  :: E, Norm !, x(1) = ONE, sx(1) = ONE/sqrt(TWO)
+   real(Kind=Rk)                  :: E, Norm, x(2), y1(2), y2(2) != ONE, sx(1) = ONE/sqrt(TWO)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
@@ -49,6 +49,8 @@ PROGRAM TD_SCHROD
    !call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
+   !call Calc_AVQ_nD0(psi0=psi0, SQ=X)
+   !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
