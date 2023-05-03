@@ -95,11 +95,11 @@ contains
    SUBROUTINE Calc_AVQ_nD0(psi0, AVQ, AVQel, SQ, SQel)
       USE UtilLib_m
 
-      type(psi_t), intent(in), target                        :: psi0
-      type(psi_t), target                        :: psi
-      real(kind=Rk), intent(inout), optional                   :: AVQ(:), SQ(:)
+      type(psi_t), intent(in), target                         :: psi0
+      type(psi_t), target                                     :: psi
+      real(kind=Rk), intent(inout), optional                  :: AVQ(:), SQ(:)
       real(kind=Rk), intent(inout), optional                  :: AVQel(:, :), SQel(:, :)
-      logical, parameter                              :: debug = .true.
+      logical, parameter                                      :: debug = .true.
       integer                                                 :: Inb, Ndim
 
       IF (debug) THEN
@@ -180,17 +180,16 @@ contains
       IF (debug) THEN
          flush (out_unitp)
       END IF
-      !ddddd
       CALL dealloc_psi(psi)
    END SUBROUTINE
 
    subroutine Population(Psi, Pop)
       implicit none
-      type(Psi_t), intent(in), target        :: Psi
-      complex(kind=Rk), pointer                           :: Psi_bb(:, :)
-      real(Kind=Rk), intent(inout), allocatable          ::Pop(:)
-      integer                                              :: inb
-      real(Kind=Rk)                                      :: Norm
+      type(Psi_t), intent(in), target                 :: Psi
+      complex(kind=Rk), pointer                       :: Psi_bb(:, :)
+      real(Kind=Rk), intent(inout), allocatable       ::Pop(:)
+      integer                                         :: inb
+      real(Kind=Rk)                                   :: Norm
 
       Psi_bb(1:Psi%Basis%nb, 1:Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb) => Psi%CVec
       call Calc_Norm_OF_Psi(Psi, Norm)
@@ -198,20 +197,19 @@ contains
       do inb = 1, Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb
          Pop(inb) = dot_product(Psi_bb(:, inb), Psi_bb(:, inb))/Norm
       end do
-      ! write(*,*) Pop
 
    end subroutine Population
 
    SUBROUTINE Qpop(Psi, Qp)
       USE Basis_m
       USE UtilLib_m
-      type(Psi_t), intent(in), target         :: Psi
-      type(Psi_t), target                       :: Psi_g
+      type(Psi_t), intent(in), target               :: Psi
+      type(Psi_t), target                           :: Psi_g
       complex(kind=Rk), pointer                     :: psi_gb(:, :)
 
       real(kind=Rk), intent(inout)                  :: Qp(:)
-      real(kind=Rk)                                :: Norm(2)
-      logical, parameter                  :: debug = .true.
+      real(kind=Rk)                                 :: Norm(2)
+      logical, parameter                            :: debug = .true.
       integer                                       :: iq, inb, ndim
 
       IF (debug) THEN

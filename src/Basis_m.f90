@@ -394,64 +394,41 @@ CONTAINS
 
    SUBROUTINE construct_primitive_basis1(Basis, x, sx)
       USE UtilLib_m
-      logical, parameter      :: debug = .true.
+      logical, parameter                  :: debug = .true.
       real(kind=Rk), intent(in)           :: x(:), sx(:)
       real(kind=Rk)                       :: x0, sx0
       !logical,             parameter     ::debug = .false.
-      TYPE(Basis_t), intent(inout)  :: Basis
+      TYPE(Basis_t), intent(inout)        :: Basis
       integer, allocatable                :: NDend_q(:)
       integer, allocatable                :: NDend_b(:)
       integer                             :: nb, nq, i, j
-      character(len=Name_len)            :: name
+      character(len=Name_len)             :: name
+
       ! write(out_unitp,*) ' Begin  construct primitive  Basis '
+
       IF (allocated(Basis%tab_basis)) THEN
          if (size(x) == 1 .And. size(sx) == 1) then
             x0 = x(1); sx0 = sx(1)
          end if
-         DO i = 1, size(Basis%tab_basis)
 
-            SELECT CASE (Basis%tab_basis(i)%Basis_name)
-            CASE ('el')
-               write (6, *) 'Electronic basis. Electronic state number:', Basis%tab_basis(i)%nb
-               Basis%tab_basis(i)%nq = 0
-            CASE ('boxab')
-               CALL Construct_Basis_Sin(Basis%tab_basis(i))
-               Basis%tab_basis(i)%Q0 = Basis%tab_basis(i)%A
-               Basis%tab_basis(i)%scaleQ = pi/(Basis%tab_basis(i)%B - Basis%tab_basis(i)%A)
-            CASE ('fourier')
-               CALL Construct_Basis_Fourier(Basis%tab_basis(i))
-            CASE ('herm', 'ho')
-               CALL Construct_Basis_Ho_HG(Basis%tab_basis(i), x(i), sx(i))
-            CASE default
-               STOP 'ERROR  Noting to construct'
-            END SELECT
-            !  this part wil not have sens for 'el' basis
-            CALL Scale_Basis(Basis%tab_basis(i), Basis%tab_basis(i)%Q0, Basis%tab_basis(i)%scaleQ)
-            CALL Calc_tranpose_d0gb(Basis%tab_basis(i))
-            CALL Calc_dngg_grid(Basis%tab_basis(i))
-            CALL CheckOrtho_Basis(Basis%tab_basis(i), nderiv=2)
+         DO i = 1, size(Basis%tab_basis)
+            if (Basis%tab_basis(i)%Basis_name == 'herm' .or. Basis%tab_basis(i)%Basis_name == 'ho') then
+               call Construct_Basis_Ho_HG(Basis%tab_basis(i), x(i), sx(i))
+               call Scale_Basis(Basis%tab_basis(i), Basis%tab_basis(i)%Q0, Basis%tab_basis(i)%scaleQ)
+               call Calc_tranpose_d0gb(Basis%tab_basis(i))
+               call Calc_dngg_grid(Basis%tab_basis(i))
+               call CheckOrtho_Basis(Basis%tab_basis(i), nderiv=2)
+            end if
+
          END DO
       ELSE
-         SELECT CASE (Basis%Basis_name)
-         CASE ('el')
-            write (6, *) 'Electronic basis. Electronic state number:', basis%nb
-            basis%nq = 0
-         CASE ('boxab')
-            CALL Construct_Basis_Sin(Basis)
-            Basis%Q0 = Basis%A
-            Basis%scaleQ = pi/(Basis%B - Basis%A)
-         CASE ('fourier')
-            CALL Construct_Basis_Fourier(Basis)
-         CASE ('herm', 'ho')
-            CALL Construct_Basis_Ho_HG(Basis, x0, sx0)
-         CASE default
-            STOP 'ERROR  Noting to construct'
-         END SELECT
-         !  this part wil not have sens for 'el' basis
-         CALL Scale_Basis(Basis, Basis%Q0, Basis%scaleQ)
-         CALL Calc_tranpose_d0gb(Basis)
-         CALL Calc_dngg_grid(Basis)
-         CALL CheckOrtho_Basis(Basis, nderiv=2)
+         if (Basis%Basis_name == 'herm' .or. Basis%Basis_name == 'ho') then
+            call Construct_Basis_Ho_HG(Basis, x0, sx0)
+            call Scale_Basis(Basis, Basis%Q0, Basis%scaleQ)
+            call Calc_tranpose_d0gb(Basis)
+            call Calc_dngg_grid(Basis)
+            call CheckOrtho_Basis(Basis, nderiv=2)
+         end if
       END IF
       ! write(out_unitp,*) ' End  construct  primitive Basis '
    END SUBROUTINE construct_primitive_basis1

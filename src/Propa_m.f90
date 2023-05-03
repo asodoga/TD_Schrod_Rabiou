@@ -60,7 +60,7 @@ contains
 
       ! variables locales
       REAL(kind=Rk)                    :: t, t_deltat, Norm, E, y
-      REAL(kind=Rk), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:)
+      REAL(kind=Rk), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:)
       complex(kind=Rk)                 ::  x
       integer                          :: Ndim
 
@@ -84,11 +84,13 @@ contains
       call creat_file_unit(nio=13, name='SQt', propa=propa)
       call creat_file_unit(nio=14, name='Norm', propa=propa)
       call creat_file_unit(nio=15, name='Auto_corr_func', propa=propa)
-      call creat_file_unit(nio=16, name='psi_Ha', propa=propa)
-      call creat_file_unit(nio=17, name='psi_NHa', propa=propa)
+      !call creat_file_unit(nio=16, name='psi_Ha', propa=propa)
+      !call creat_file_unit(nio=17, name='psi_NHa', propa=propa)
+      call creat_file_unit(nio=18, name='pop', propa=propa)
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
+      allocate (populat(psi0%Basis%tab_basis(Ndim + 1)%nb))
       Qt(:) = ZERO; SQt(:) = ONE
       nt = int((propa%tf - propa%t0)/propa%delta_t)
       E = ZERO
@@ -111,14 +113,15 @@ contains
          t = i*propa%delta_t
          t_deltat = t + propa%delta_t
          write (out_unitp, *) propa%propa_name2, i, t, t_deltat
-         CALL Calc_AVQ_nD(Psi0=psi, AVQ=Qt, SQ=SQt)
+         CALL Calc_AVQ_nD0(Psi0=psi, AVQ=Qt, SQ=SQt)
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
-         ! write(11,*)    t, 'Qt=',Qt,'E=',E,'SQt=',SQt
+         call Population(psi, populat)
          write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
          write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
          write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
          write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
+         write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
 
          if (mod(i, 1) == 0) then
             call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
@@ -191,7 +194,7 @@ contains
       allocate (Qt(Ndim), SQt(Ndim))
       Qt(:) = ZERO; SQt(:) = ONE
 
-      call Calc_AVQ_nD(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
+      call Calc_AVQ_nD0(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt)
       call projection(psi, psi_dt)
       !call Hagedorn0(psi_dt_2=psi, psi_dt_1=psi_dt)
