@@ -139,18 +139,18 @@ contains
       type(psi_t), intent(in), target                          :: psi0
       type(psi_t), target                                      :: psi
       real(kind=Rk), intent(inout)                             :: AVQ(:), SQ(:)
-      real(kind=Rk), allocatable                               :: Q(:, :), W(:), X(:)
+      real(kind=Rk), allocatable                               :: Q(:, :), W(:), Xe(:, :)
       real(kind=Rk)                                            :: Norm
       logical, parameter                                       :: debug = .true.
-      integer                                                  :: Inb, Ndim, Iq
+      integer                                                  :: Inb, Ndim, Iq, inbe
+      complex(kind=Rk), pointer                                :: BB(:, :)
+      real(kind=Rk), allocatable                               :: Qte(:, :), SQe(:, :)
 
       IF (debug) THEN
          flush (out_unitp)
       END IF
 
       Ndim = size(psi0%Basis%tab_basis) - 1
-      call Calc_Norm_OF_Psi(psi0, Norm)
-      allocate (X(Ndim))
       call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
       call Calc_Q_grid(Q=Q, Basis=psi0%Basis, WnD=W)
 
@@ -159,21 +159,25 @@ contains
       ELSE
          call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
       END IF
+      allocate (Xe(Ndim, psi%Basis%tab_basis(Ndim + 1)%nb))
       SQ = ZERO
-      X = ZERO
+      Xe = ZERO
       AVQ = ZERO
-      DO Inb = 1, Ndim
+      BB(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim + 1)%nb) => psi%CVec
+      allocate (SQe(Ndim, psi%Basis%tab_basis(Ndim + 1)%nb), Qte(Ndim, psi%Basis%tab_basis(Ndim + 1)%nb))
 
-         AVQ(Inb) = dot_product(psi%CVec(:), W(:)*Q(:, Inb)*psi%CVec(:))
-         X(Inb) = dot_product(psi%CVec(:), W(:)*Q(:, Inb)*Q(:, Inb)*psi%CVec(:))
+      DO inbe = 1, psi%Basis%tab_basis(Ndim + 1)%nb
+         DO Inb = 1, Ndim
 
-         X(Inb) = X(Inb)/(Norm*Norm)
-         AVQ(Inb) = AVQ(Inb)/(Norm*Norm)
-         SQ(Inb) = sqrt(X(Inb) - AVQ(Inb)*AVQ(Inb))
-         SQ(Inb) = ONE/(SQ(Inb)*sqrt(TWO))
-         write (out_unitp, *) 'SQ =', 2*SQ(Inb)
+            Qte(Inb, inbe) = dot_product(BB(:, inbe), W(:)*Q(:, Inb)*BB(:, inbe))
 
-      END DO
+            Xe(Inb, inbe) = dot_product(BB(:, inbe), W(:)*Q(:, Inb)*Q(:, Inb)*BB(:, inbe))
+
+            SQe(Inb, inbe) = sqrt(Xe(Inb, inbe) - Qte(Inb, inbe)*Qte(Inb, inbe))
+            SQ(Inb) = ONE/(SQe(Inb, inbe)*sqrt(TWO))
+
+         END DO
+      End do
 
       write (out_unitp, *) '<psi/Q/psi> =', AVQ
       write (out_unitp, *) 'SQ =', SQ
