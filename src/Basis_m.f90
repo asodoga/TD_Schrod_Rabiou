@@ -14,26 +14,26 @@ MODULE Basis_m
    PUBLIC :: Hermite_double_product_func, Construct_poly_Hermite, Hermite_product_integral
 
    TYPE :: Basis_t
-      integer                      :: nb_basis = 0
-      integer                      :: nb = 0
-      integer                      :: nq = 0
-      real(kind=Rk)                :: Q0 = 0_Rk
-      real(kind=Rk)                :: scaleQ = 0_Rk
-      real(kind=Rk)                :: A = 0_Rk
-      real(kind=Rk)                :: B = 0_Rk
+      integer                       :: nb_basis = 0
+      integer                       :: nb = 0
+      integer                       :: nq = 0
+      real(kind=Rk)                 :: Q0 = 0_Rk
+      real(kind=Rk)                 :: scaleQ = 0_Rk
+      real(kind=Rk)                 :: A = 0_Rk
+      real(kind=Rk)                 :: B = 0_Rk
       character(len=:), allocatable :: Basis_name
-      real(kind=Rk), allocatable :: x(:)
-      real(kind=Rk), allocatable :: w(:)
-      real(kind=Rk), allocatable :: d0gb(:, :)      ! basis functions d0gb(nq,nb)
-      real(kind=Rk), allocatable :: d1gb(:, :, :)    ! basis functions d2gb(nq,nb,1)
-      real(kind=Rk), allocatable :: d1gg(:, :, :)    ! basis functions d2gg(nq,nq,1)
-      real(kind=Rk), allocatable :: d2gb(:, :, :, :)  ! basis functions d2gb(nq,nb,1,1)
-      real(kind=Rk), allocatable :: d2gg(:, :, :, :)  ! basis functions d2gg(nq,nq,1,1)
-      real(kind=Rk), allocatable :: d0bgw(:, :)     ! transpose of basis functions d0gb(nb,nq)
-      real(kind=Rk), allocatable :: S(:, :)         ! for Hagedorn transformation
-      TYPE(NDindex_t)              :: NDindexq
-      TYPE(NDindex_t)              :: NDindexb
-      TYPE(Basis_t), allocatable :: tab_basis(:)   !  for more than one Basis.
+      real(kind=Rk), allocatable    :: x(:)
+      real(kind=Rk), allocatable    :: w(:)
+      real(kind=Rk), allocatable    :: d0gb(:, :)      ! basis functions d0gb(nq,nb)
+      real(kind=Rk), allocatable    :: d1gb(:, :, :)    ! basis functions d2gb(nq,nb,1)
+      real(kind=Rk), allocatable    :: d1gg(:, :, :)    ! basis functions d2gg(nq,nq,1)
+      real(kind=Rk), allocatable    :: d2gb(:, :, :, :)  ! basis functions d2gb(nq,nb,1,1)
+      real(kind=Rk), allocatable    :: d2gg(:, :, :, :)  ! basis functions d2gg(nq,nq,1,1)
+      real(kind=Rk), allocatable    :: d0bgw(:, :)     ! transpose of basis functions d0gb(nb,nq)
+      real(kind=Rk), allocatable    :: S(:, :)         ! for Hagedorn transformation
+      TYPE(NDindex_t)               :: NDindexq
+      TYPE(NDindex_t)               :: NDindexb
+      TYPE(Basis_t), allocatable    :: tab_basis(:)   !  for more than one Basis.
 
    END TYPE Basis_t
 
@@ -41,7 +41,7 @@ CONTAINS
 
    RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
-      TYPE(Basis_t), intent(in)  :: Basis
+      TYPE(Basis_t), intent(in)    :: Basis
       logical                      :: alloc
       integer                      :: i
 
