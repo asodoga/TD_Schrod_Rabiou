@@ -189,7 +189,7 @@ contains
       call Calc_Q_grid(Q, Basis)
       Do iq = 1, Basis%nq
 
-         CALL sub_pot(V(iq, :, :), Q(iq, :), 1)
+         CALL sub_pot(V(iq, :, :), Q(iq, :), 0)
          ! if(mod(iq,1000)==0)then
          !     Write(11,*) "  "
          !     Write(12,*) "  "
@@ -228,17 +228,17 @@ contains
       USE Basis_m
       USE UtilLib_m
       USE Molec_m
-      TYPE(Basis_t), intent(in), target      :: Basis
-      complex(kind=Rk), intent(in), target        :: Psi_g(:)
+      TYPE(Basis_t), intent(in), target            :: Basis
+      complex(kind=Rk), intent(in), target         :: Psi_g(:)
       complex(kind=Rk), intent(inout), target      :: KPsi_g(:)
-      complex(kind=Rk), pointer                   :: Psi_ggb(:, :, :)
-      real(kind=Rk), pointer                   :: d2gg(:, :)
-      complex(kind=Rk), pointer                   :: KPsi_ggb(:, :, :)
+      complex(kind=Rk), pointer                    :: Psi_ggb(:, :, :)
+      real(kind=Rk), pointer                       :: d2gg(:, :)
+      complex(kind=Rk), pointer                    :: KPsi_ggb(:, :, :)
       real(kind=Rk), allocatable                   :: GGdef(:, :)
-      real(Kind=Rk)                               ::Mass_qphi(2)
-      logical, parameter                 :: debug = .true.
+      real(Kind=Rk)                                ::Mass_qphi(2)
+      logical, parameter                           :: debug = .true.
       integer                                      :: iq, i1, i3, inb, Ndim
-      integer, allocatable                        :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
+      integer, allocatable                         :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
 
       IF (debug) THEN
          !write(out_unitp,*) 'BEGINNING Kpsi'
@@ -256,8 +256,8 @@ contains
          d2gg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
          DO i3 = 1, ubound(Psi_ggb, dim=3)
             DO i1 = 1, ubound(Psi_ggb, dim=1)
-               KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, Psi_ggb(i1, :, i3))
-               !KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*matmul(d2gg, Psi_ggb(i1, :, i3))
+               !KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, Psi_ggb(i1, :, i3))
+               KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*matmul(d2gg, Psi_ggb(i1, :, i3))
             END DO
          END DO
       END DO
