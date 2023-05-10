@@ -13,13 +13,12 @@ PROGRAM TD_SCHROD
    TYPE(psi_t)                    :: psi0, psif, psi
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
-   real(Kind=Rk)                  :: E, Norm, x(2), y1(2), y2(2) != ONE, sx(1) = ONE/sqrt(TWO)
+   real(Kind=Rk)                  :: E, Norm, K(1)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
    logical :: adiabatic
    character(len=16)                  :: pot_name
-
    ndim = 1
    nsurf = 1
    pot_name = 'read_model'
@@ -44,17 +43,18 @@ PROGRAM TD_SCHROD
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psi, Basis, cplx=.TRUE., grid=.false.)
 
-   !call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
+   call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
    !call test_basitogridgridtobasis(Basis)
-   !call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
-   call psi0_init(psi0)
+   call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
+   !call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
+   !call Calc_Av_imp_k_nD(psi0, K)
    !call Calc_AVQ_nD0(psi0=psi0, SQ=X)
    !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   STOP 'calcul de H|psi> est fait'
+   !STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

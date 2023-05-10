@@ -60,7 +60,7 @@ contains
 
       ! variables locales
       REAL(kind=Rk)                    :: t, t_deltat, Norm, E, y
-      REAL(kind=Rk), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:)
+      REAL(kind=Rk), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:), K(:)
       complex(kind=Rk)                 ::  x
       integer                          :: Ndim
 
@@ -87,9 +87,11 @@ contains
       !call creat_file_unit(nio=16, name='psi_Ha', propa=propa)
       !call creat_file_unit(nio=17, name='psi_NHa', propa=propa)
       call creat_file_unit(nio=18, name='pop', propa=propa)
+      call creat_file_unit(nio=19, name='imp_k', propa=propa)
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim))
+      allocate (K(Ndim))
       allocate (populat(psi0%Basis%tab_basis(Ndim + 1)%nb))
       Qt(:) = ZERO; SQt(:) = ONE
       nt = int((propa%tf - propa%t0)/propa%delta_t)
@@ -117,12 +119,13 @@ contains
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
          call Population(psi, populat)
+         call Calc_Av_imp_k_nD(psi, K)
          write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
          write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
          write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
          write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
          write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
-
+         write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, K
          if (mod(i, 1) == 0) then
             call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
                            , print_basis=.false., t=t, int_print=10, real_part=.false.)

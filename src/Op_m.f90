@@ -165,11 +165,12 @@ contains
 
       complex(kind=Rk), intent(in), target           :: Psi_g(:)
       complex(kind=Rk), intent(inout)                :: HPsi_g(:)
-      type(Basis_t), intent(in), target           :: Basis
-      complex(kind=Rk), allocatable, target           ::VPsi_g(:), KPsi_g(:)
-      complex(kind=Rk), pointer                     :: VPsi_gb(:, :), Psi_gb(:, :)
-      real(kind=Rk), allocatable                    :: V(:, :, :), Q(:, :)
-      INTEGER                                       ::iq, i2, j2, i1, Ndim
+      type(Basis_t), intent(in), target              :: Basis
+      complex(kind=Rk), allocatable, target          :: VPsi_g(:), KPsi_g(:)
+      complex(kind=Rk), pointer                      :: VPsi_gb(:, :), Psi_gb(:, :)
+      real(kind=Rk), allocatable                     :: V(:, :, :), Q(:, :)
+      INTEGER                                        :: iq, i2, j2, i1, Ndim
+      complex(kind=Rk), allocatable                  :: Ppsi_g(:)
       !open(11, file = 'Pot_Retinal11.dat')
       !open(12, file = 'Pot_Retinal22.dat')
       !open(13, file = 'Pot_Retinal12.dat')
@@ -180,10 +181,12 @@ contains
       ! action potential V|Psi_g>
       Ndim = size(Basis%tab_basis)
       allocate (VPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
+      allocate (Ppsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
       allocate (KPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
       allocate (V(Basis%nq, Basis%tab_basis(Ndim)%nb, Basis%tab_basis(Ndim)%nb))
       V(:, :, :) = ZERO
       VPsi_g(:) = CZERO
+      Ppsi_g(:) = CZERO
       KPsi_g(:) = CZERO
       HPsi_g(:) = CZERO
       call Calc_Q_grid(Q, Basis)
@@ -215,8 +218,9 @@ contains
 
       END DO
       ! action potential K|Psi_g>
+      call Ppsi_nD(Ppsi_g, Psi_g, Basis)
       call Kpsi_nD(KPsi_g, Psi_g, Basis)
-      HPsi_g(:) = VPsi_g(:) + KPsi_g(:)
+      HPsi_g(:) = VPsi_g(:) + KPsi_g(:) + Ppsi_g(:)
 
       DEALLOCATE (VPsi_g)
       DEALLOCATE (KPsi_g)
@@ -267,5 +271,51 @@ contains
          flush (out_unitp)
       END IF
    END SUBROUTINE Kpsi_nD
+
+   SUBROUTINE Ppsi_nD(Ppsi_g, Psi_g, Basis)
+      USE Basis_m
+      USE UtilLib_m
+      USE Molec_m
+      TYPE(Basis_t), intent(in), target            :: Basis
+      complex(kind=Rk), intent(in), target         :: psi_g(:)
+      complex(kind=Rk), intent(inout), target      :: Ppsi_g(:)
+      complex(kind=Rk), pointer                    :: psi_ggb(:, :, :)
+      real(kind=Rk), pointer                       :: d1gg(:, :, :)
+      real(kind=Rk)                                :: p
+      complex(kind=Rk), pointer                    :: Ppsi_ggb(:, :, :)
+      real(kind=Rk), allocatable                   :: GGdef(:, :)
+      logical, parameter                           :: debug = .true.
+      integer                                      :: i1, i3, inb, Ndim
+      integer, allocatable                         :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
+      IF (debug) THEN
+         !write(out_unitp,*) 'BEGINNING Ppsi'
+         flush (out_unitp)
+      END IF
+      Ndim = size(Basis%tab_basis)
+      allocate (GGdef(Ndim - 1, Ndim - 1))
+      CALL get_Qmodel_GGdef(GGdef)
+      call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
+      Ppsi_g(:) = CZERO
+      DO inb = 1, Ndim - 1
+         Ppsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Ppsi_g
+         psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
+         d1gg(1:Iq2(inb), 1:Iq2(inb), 1:1) => Basis%tab_basis(inb)%d1gg
+         p = Basis%tab_basis(inb)%Imp_k
+         DO i3 = 1, ubound(Psi_ggb, dim=3)
+            DO i1 = 1, ubound(Psi_ggb, dim=1)
+               !Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) - EYE*p*GGdef(inb, inb)*matmul(d1gg(:, :, 1), psi_ggb(i1, :, i3))
+               !Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) + HALF*p*p*GGdef(inb, inb)*psi_ggb(i1, :, i3)
+               Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) - EYE*p*matmul(d1gg(:, :, 1), psi_ggb(i1, :, i3))
+               Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) + HALF*p*p*psi_ggb(i1, :, i3)
+            END DO
+         END DO
+      END DO
+
+      Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
+      IF (debug) THEN
+         !        write(out_unitp,*) 'END Ppsi_nD'
+         flush (out_unitp)
+      END IF
+   END SUBROUTINE
 
 end module Op_m

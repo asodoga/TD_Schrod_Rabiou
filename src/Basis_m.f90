@@ -27,7 +27,7 @@ MODULE Basis_m
       real(kind=Rk), allocatable    :: w(:)
       real(kind=Rk), allocatable    :: d0gb(:, :)        ! basis functions d0gb(nq,nb)
       real(kind=Rk), allocatable    :: d1gb(:, :, :)     ! basis functions d2gb(nq,nb,1)
-      real(kind=Rk), allocatable    :: d1gg(:, :, :)     ! basis functions d2gg(nq,nq,1)
+      real(kind=Rk), allocatable    :: d1gg(:, :, :)     ! basis functions d1gg(nq,nq,1)
       real(kind=Rk), allocatable    :: d2gb(:, :, :, :)  ! basis functions d2gb(nq,nb,1,1)
       real(kind=Rk), allocatable    :: d2gg(:, :, :, :)  ! basis functions d2gg(nq,nq,1,1)
       real(kind=Rk), allocatable    :: d0bgw(:, :)       ! transpose of basis functions d0gb(nb,nq)
@@ -68,7 +68,7 @@ CONTAINS
 
    RECURSIVE FUNCTION Basis_IS_allocatedtot(Basis) RESULT(alloc)
 
-      TYPE(Basis_t), intent(in)  :: Basis
+      TYPE(Basis_t), intent(in)    :: Basis
       logical                      :: alloc
       integer                      :: i
 
@@ -93,7 +93,7 @@ CONTAINS
    RECURSIVE SUBROUTINE Write_Basis(Basis)
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(in)  :: Basis
+      TYPE(Basis_t), intent(in)        :: Basis
       integer                          :: i
 
       !write(out_unitp,*) '---------------------------------------------------------------------'
@@ -197,6 +197,7 @@ CONTAINS
          Basis2%A = Basis1%A
          Basis2%B = Basis1%B
          Basis2%S = Basis1%S
+         Basis2%Imp_k = Basis1%Imp_k
       END IF
 
    END SUBROUTINE init_Basis1_TO_Basis2
@@ -272,15 +273,15 @@ CONTAINS
 
    RECURSIVE SUBROUTINE Read_Basis(Basis, nio)
       USE UtilLib_m
-      logical, parameter      :: debug = .true.
+      logical, parameter                  :: debug = .true.
       !logical,             parameter     ::debug = .false.
-      TYPE(Basis_t), intent(inout)  :: Basis
-      integer, intent(in)     :: nio
+      TYPE(Basis_t), intent(inout)        :: Basis
+      integer, intent(in)                 :: nio
       integer                             :: err_io, nb, nq, i, j, nb_basis, ib
-      character(len=Name_len)            :: name
-      real(kind=Rk)                       :: A, B, scaleQ, Q0, d0, d2, X1, W1
+      character(len=Name_len)             :: name
+      real(kind=Rk)                       :: A, B, scaleQ, Q0, d0, d2, X1, W1, Imp_k
 
-      NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0
+      NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0, Imp_k
       nb_basis = 0
       nb = 0
       nq = 0
@@ -288,6 +289,7 @@ CONTAINS
       B = ZERO
       Q0 = ZERO
       scaleQ = ONE
+      Imp_k = ZERO
       name = '0'
 
       read (nio, nml=basis_nD, IOSTAT=err_io)
@@ -330,6 +332,7 @@ CONTAINS
          Basis%nb = nb
          Basis%nq = nq
          Basis%Q0 = Q0
+         Basis%Imp_k = Imp_k
          Basis%SCALEQ = SCALEQ
          Basis%A = A
          Basis%B = B

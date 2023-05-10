@@ -5,7 +5,7 @@ module Ana_psi_m
    implicit none
    private
    public:: Population, Qpop
-   public:: Calc_AVQ_nD0, Calc_AVQ_nD
+   public:: Calc_AVQ_nD0, Calc_AVQ_nD, Calc_Av_imp_k_nD
 
 contains
 
@@ -242,5 +242,104 @@ contains
          flush (out_unitp)
       END IF
    END SUBROUTINE Qpop
+
+   SUBROUTINE Calc_Av_imp_k_1D(psi0, K, nio)
+      USE UtilLib_m
+      type(psi_t), intent(in), target                         :: psi0
+      real(kind=Rk), intent(inout)                            :: K
+      integer, intent(in)                                     :: nio
+
+      !locals variables---------------------------------------------------
+      type(psi_t), target                                     :: psi, ikpsi
+      type(psi_t), target                                     :: psi_b, ikpsi_b
+      logical, parameter                                      :: debug = .true.
+      integer                                                 :: Inbe, Ndim
+      complex(kind=Rk), pointer                               :: GB(:, :)
+      complex(kind=Rk), pointer                               :: ikpsiel(:, :)
+
+      !debuging----------------------------------------------------------------
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+
+      Ndim = size(psi0%Basis%tab_basis)
+
+      call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
+      call init_psi(ikpsi, psi0%Basis, cplx=.TRUE., grid=.true.)
+      call init_psi(psi_b, psi0%Basis, cplx=.TRUE., grid=.false.)
+      call init_psi(ikpsi_b, psi0%Basis, cplx=.TRUE., grid=.false.)
+
+      psi%CVec = CZERO
+      ikpsi%CVec = CZERO
+      ikpsi_b%CVec = CZERO
+      psi_b%CVec = CZERO
+
+      IF (psi0%Grid) then
+         psi%CVec(:) = psi0%CVec(:)
+      ELSE
+         call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
+      END IF
+
+      GB(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
+      ikpsiel(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb) => ikpsi%CVec
+
+      Do Inbe = 1, psi%Basis%tab_basis(Ndim)%nb
+         ikpsiel(:, inbe) = -EYE*matmul(psi%Basis%tab_basis(nio)%d1gg(:, :, 1), GB(:, inbe))
+      End do
+
+      call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
+      call GridTOBasis_nD_cplx(ikpsi_b%CVec, ikpsi%CVec, psi0%Basis)
+
+      K = dot_product(psi_b%CVec, ikpsi_b%CVec)
+      ! write (out_unitp, *) '<psi/-id_x/psi> =', K
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+      CALL dealloc_psi(psi)
+      CALL dealloc_psi(ikpsi)
+      CALL dealloc_psi(ikpsi_b)
+      CALL dealloc_psi(psi_b)
+
+   END SUBROUTINE
+
+   SUBROUTINE Calc_Av_imp_k_nD(psi0, K)
+      USE UtilLib_m
+      type(psi_t), intent(in)                                 :: psi0
+      real(kind=Rk), intent(inout)                            :: K(:)
+      !locals variables---------------------------------------------------
+      type(psi_t), target                                     :: psi
+      logical, parameter                                      :: debug = .true.
+      integer                                                 :: Ndim, Inb
+
+      !debuging----------------------------------------------------------------
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+      Ndim = size(psi0%Basis%tab_basis) - 1
+      call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
+
+      psi%CVec(:) = CZERO
+      K(:) = ZERO
+
+      IF (psi0%Grid) then
+         psi%CVec(:) = psi0%CVec(:)
+      ELSE
+         call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
+      END IF
+
+      Do Inb = 1, Ndim
+         call Calc_Av_imp_k_1D(psi, K(inb), inb)
+      End do
+
+      write (out_unitp, *) '<psi/-id_xi/psi> =', K
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+      CALL dealloc_psi(psi)
+
+   END SUBROUTINE
 
 end module
