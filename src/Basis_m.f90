@@ -31,7 +31,7 @@ MODULE Basis_m
       real(kind=Rk), allocatable    :: d2gb(:, :, :, :)  ! basis functions d2gb(nq,nb,1,1)
       real(kind=Rk), allocatable    :: d2gg(:, :, :, :)  ! basis functions d2gg(nq,nq,1,1)
       real(kind=Rk), allocatable    :: d0bgw(:, :)       ! transpose of basis functions d0gb(nb,nq)
-      real(kind=Rk), allocatable    :: S(:, :)           ! for Hagedorn transformation
+      complex(kind=Rk), allocatable :: S(:, :)           ! for Hagedorn transformation
       TYPE(NDindex_t)               :: NDindexq
       TYPE(NDindex_t)               :: NDindexb
       TYPE(Basis_t), allocatable    :: tab_basis(:)      !  for more than one Basis.
@@ -632,9 +632,9 @@ CONTAINS
    SUBROUTINE Construct_Basis_Ho_HG1(Basis, x0, sx) ! HO HAGEDORN:
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(inout)                  :: Basis
-      integer                                             :: iq, ib
-      real(kind=Rk), intent(in)                           :: x0, sx
+      TYPE(Basis_t), intent(inout)                         :: Basis
+      integer                                              :: iq, ib
+      real(kind=Rk), intent(in)                            :: x0, sx
       real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
       real(kind=Rk), allocatable                           :: x(:), w(:)
 
@@ -957,7 +957,7 @@ CONTAINS
 
       integer                           :: ib, jb, iq, nq
       integer, INTENT(IN)               :: nb
-      real(kind=Rk), INTENT(INOUT)      :: S(:, :)
+      complex(kind=Rk), INTENT(INOUT)   :: S(:, :)
       real(kind=Rk), INTENT(IN)         :: d0gb1(:, :), d0gb2(:, :), w1(:)
       real(kind=Rk), ALLOCATABLE        :: d0bgw(:, :)
       real(kind=Rk)                     :: det
@@ -979,7 +979,7 @@ CONTAINS
 
       S = matmul(d0bgw, d0gb2)
 
-      CALL Write_RMat(S, out_unitp, 5, name_info='S')
+      !CALL Write_RMat(S, out_unitp, 5)
 
       write (out_unitp, *) 'End Buld_s'
 
@@ -1048,7 +1048,7 @@ CONTAINS
       USE NumParameters_m
       USE UtilLib_m
       TYPE(Basis_t), intent(in)       :: Basis
-      logical, parameter        :: debug = .true.
+      logical, parameter              :: debug = .true.
       COMPLEX(kind=Rk), allocatable   :: G1(:), B1(:)!,G(:), Hpsi(:)
       COMPLEX(kind=Rk), allocatable   :: G2(:), B2(:)
       COMPLEX(kind=Rk), allocatable   :: B(:)
@@ -1432,11 +1432,11 @@ CONTAINS
 
    SUBROUTINE Construct_poly_Hermite(poly_Hermite, x, l)
       Implicit none
-      real(kind=Rk), intent(inout)        :: poly_Hermite
-      real(kind=Rk)                      :: pl0, pl1, pl2, norme
-      real(kind=Rk), intent(in)           :: x
+      real(kind=Rk), intent(inout)          :: poly_Hermite
+      real(kind=Rk)                         :: pl0, pl1, pl2, norme
+      real(kind=Rk), intent(in)             :: x
       integer, intent(in)                   :: l
-      integer                              :: i
+      integer                               :: i
 
       IF (l < 0) THEN
          Write (out_unitp, *) 'Bad arguments in poly_hermite :'
@@ -1471,7 +1471,7 @@ CONTAINS
 
    END SUBROUTINE Construct_poly_Hermite
 
-   SUBROUTINE Hermite_double_product_func(Hf, x, i, j, q0i, q0j, sci, scj)
+   SUBROUTINE Hermite_double_product_func(Hf, x, i, j, q0i, q0j, sci, scj, p1, p2)
       !    Hf(i,x) is the normalized probabilist's Hermite polynomial of degree I.
       !    Hj(j,x) is the normalized probabilist's Hermite polynomial of degree J.
       !    Hf(X) = Hen(I,X) * Hen(J,X)*exp ( -x^2-X*(q0i+q0j)-0.5*(q0i^2+q0j^2) )
@@ -1479,11 +1479,11 @@ CONTAINS
       !    Hen(J,X)  = Hfj
 
       USE UtilLib_m
-      real(kind=Rk), intent(in)     :: x, q0i, q0j, sci, scj
-      real(kind=Rk), intent(inout)     :: Hf !f(q)
-      real(kind=Rk)                       :: qi, qj
-      integer, intent(in)                  :: i, j
-      real(kind=Rk)                       ::  Hfi, Hfj
+      real(kind=Rk), intent(in)                  :: x, q0i, q0j, sci, scj, p1, p2
+      complex(kind=Rk), intent(inout)            :: Hf !f(q)
+      real(kind=Rk)                              :: qi, qj
+      integer, intent(in)                        :: i, j
+      real(kind=Rk)                              ::  Hfi, Hfj
 
       ! Hfi = He(I,qi) = HermiteH[I,qi/Sqrt[2]] / Sqrt [ 2^I ]
       qi = (x - q0i)*sci
@@ -1495,27 +1495,27 @@ CONTAINS
 
       !  Hf = Hfi *Hfj = He(J,x)*He(J,x)
 
-      Hf = sqrt(sci)*sqrt(scj)*Hfi*Hfj
+      Hf = sqrt(sci)*sqrt(scj)*Hfi*Hfj*exp(-EYE*p1*(x - q0i))*exp(EYE*p2*(x - q0j))
 
    END SUBROUTINE Hermite_double_product_func
 
-   SUBROUTINE Hermite_product_integral(intfq, x_table, w_table, i, j, q0i, q0j, sci, scj)
+   SUBROUTINE Hermite_product_integral(intfq, x_table, w_table, i, j, q0i, q0j, sci, scj, p1, p2)
       !    VALUE = integral ( -oo < x < +oo ) f(x)dx
       !    Parameters:
       !    Input, integer ( kind = Rk ) I, J, the polynomial indices.
       !    Output, real ( kind = Rk ) HERMITE_PRODUCT_INTEGRAL, the value of
       !    the integral.
       USE UtilLib_m
-      real(kind=Rk), intent(in)     :: q0i, q0j, sci, scj
-      real(kind=Rk), intent(inout)  :: intfq !f(q)
-      integer, intent(in)                  :: i, j
-      real(kind=Rk), intent(in)      :: x_table(:), w_table(:)
-      real(kind=Rk), allocatable     :: Hermite_func_table(:)
-      integer                             :: iq
+      real(kind=Rk), intent(in)     :: q0i, q0j, sci, scj, p1, p2
+      complex(kind=Rk), intent(inout)  :: intfq !f(q)
+      integer, intent(in)           :: i, j
+      real(kind=Rk), intent(in)     :: x_table(:), w_table(:)
+      complex(kind=Rk), allocatable :: Hermite_func_table(:)
+      integer                       :: iq
 
       allocate (Hermite_func_table(size(x_table)))
       Do iq = 1, size(x_table)
-         CALL Hermite_double_product_func(Hermite_func_table(iq), x_table(iq), i, j, q0i, q0j, sci, scj)
+         CALL Hermite_double_product_func(Hermite_func_table(iq), x_table(iq), i, j, q0i, q0j, sci, scj, p1, p2)
       End Do
 
       intfq = dot_product(Hermite_func_table, w_table)

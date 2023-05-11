@@ -5,7 +5,7 @@ module Auto_corr_m
    USE Basis_m
 
    implicit none
-   public :: Calc_Auto_corr, Calc_fft_Auto_corr
+   public :: Calc_Auto_corr, Calc_fft_Auto_corr, Test_calc_S, Calc_Num_S
 
 contains
 
@@ -82,7 +82,8 @@ contains
       !logical, parameter                              :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim, iq, jq
       Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
-      real(Kind=Rk), allocatable                       :: S(:, :)
+      complex(Kind=Rk), allocatable                    :: S(:, :)
+      real(Kind=Rk)                                    :: p1, p2, s1, s2, x1, x2
 
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
@@ -95,14 +96,18 @@ contains
          !constuction of ovelap  S(:,:)
          !----------------------------------------------------------------------------
          allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
+         s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
+         s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
+         p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
+         p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
+         x1 = psi_dt_1%Basis%tab_basis(1)%Q0
+         x2 = psi_dt_2%Basis%tab_basis(1)%Q0
 
          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
             Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
 
-               CALL Hermite_product_integral(S(iq, jq), psi_dt_1%Basis%tab_basis(1)%X,&
-               & psi_dt_1%Basis%tab_basis(1)%W, iq, jq, psi_dt_1%Basis%tab_basis(1)%Q0,&
-               & psi_dt_2%Basis%tab_basis(1)%Q0, psi_dt_1%Basis%tab_basis(1)%scaleQ, &
-               & psi_dt_2%Basis%tab_basis(1)%scaleQ)
+               CALL Hermite_product_integral(S(iq, jq), psi_dt_1%Basis%tab_basis(1)%X, psi_dt_1%Basis%tab_basis(1)%W, iq, jq, x1,&
+               & x2, s1, s2, p1, p2)
 
             End Do
          End Do
@@ -126,14 +131,17 @@ contains
          !constuction of ovelap  S(:,:)
          !----------------------------------------------------------------------------
          allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
+         s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
+         s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
+         p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
+         p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
+         x1 = psi_dt_1%Basis%tab_basis(1)%Q0
+         x2 = psi_dt_2%Basis%tab_basis(1)%Q0
 
          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
             Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-
-               CALL Hermite_product_integral(S(iq, jq), psi_dt_1%Basis%tab_basis(1)%X,&
-               & psi_dt_1%Basis%tab_basis(1)%W, iq, jq, psi_dt_1%Basis%tab_basis(1)%Q0,&
-               & psi_dt_2%Basis%tab_basis(1)%Q0, psi_dt_1%Basis%tab_basis(1)%scaleQ, &
-               & psi_dt_2%Basis%tab_basis(1)%scaleQ)
+               CALL Hermite_product_integral(S(iq, jq), psi_dt_1%Basis%tab_basis(1)%X, psi_dt_1%Basis%tab_basis(1)%W, iq, jq, x1,&
+               & x2, s1, s2, p1, p2)
 
             End Do
 
@@ -157,12 +165,17 @@ contains
             !constuction of ovelap  S(:,:)
             !----------------------------------------------------------------------------
             allocate (S(psi_dt_1%Basis%tab_basis(Inb)%nb, psi_dt_1%Basis%tab_basis(Inb)%nb))
+            s1 = psi_dt_1%Basis%tab_basis(Inb)%scaleQ
+            s2 = psi_dt_2%Basis%tab_basis(Inb)%scaleQ
+            p1 = psi_dt_1%Basis%tab_basis(Inb)%Imp_k
+            p2 = psi_dt_2%Basis%tab_basis(Inb)%Imp_k
+            x1 = psi_dt_1%Basis%tab_basis(Inb)%Q0
+            x2 = psi_dt_2%Basis%tab_basis(Inb)%Q0
+
             Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
                Do jq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-                  CALL Hermite_product_integral(S(iq, jq), psi_dt_1%Basis%tab_basis(Inb)%X,&
-                  & psi_dt_1%Basis%tab_basis(Inb)%W, iq, jq, psi_dt_1%Basis%tab_basis(Inb)%Q0,&
-                  & psi_dt_2%Basis%tab_basis(Inb)%Q0, psi_dt_1%Basis%tab_basis(Inb)%scaleQ, &
-                  & psi_dt_2%Basis%tab_basis(Inb)%scaleQ)
+             CALL Hermite_product_integral(S(iq, jq), psi_dt_1%Basis%tab_basis(Inb)%X, psi_dt_1%Basis%tab_basis(Inb)%W, iq, jq, x1,&
+                                                                                                               & x2, s1, s2, p1, p2)
                End Do
             End Do
             !----------------------------------------------------------------------------------
@@ -190,12 +203,15 @@ contains
       complex(kind=Rk), allocatable, target            :: B1(:), B2(:)
       !logical, parameter                              :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim, iq, jq
-      Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
-      real(Kind=Rk), allocatable                       :: S(:, :), x(:), w(:)
-      real(Kind=Rk)                                    :: s1, s2, s3, x1, x2, x3
+      Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:), nb, nq
+      real(Kind=Rk), allocatable                       :: x(:), w(:)
+      complex(Kind=Rk), allocatable                    :: S(:, :)
+      real(Kind=Rk)                                    :: s1, s2, s3, x1, x2, x3, p1, p2
+
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
       write (out_unitp, *) 'Begin Hagedorn projection'
+
       If (Ndim == 1) then
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
@@ -209,24 +225,15 @@ contains
          x2 = psi_dt_2%Basis%tab_basis(1)%Q0
          s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
          s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
+         p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
+         p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
+         nb = psi_dt_1%Basis%tab_basis(1)%nb
+         nq = psi_dt_1%Basis%tab_basis(1)%nq
 
-         s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
-         x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-         w(:) = w(:)/s3
-         x(:) = x3 + x(:)/s3
-
-         Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-            Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-               CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
-            End Do
-         End Do
+         call Calc_Num_S(S=S, nb=nb, nq=nq, x1=x1, x2=x2, s1=s1, s2=s1, p1=p1, p2=p2)
          !----------------------------------------------------------------------------------
          psi_dt_2%CVec(:) = CZERO
-         DO i3 = 1, ubound(BBB1, dim=3)
-         DO i1 = 1, ubound(BBB1, dim=1)
-            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
-         END DO
-         END DO
+         call project_1D(BBB2, BBB1, S)
          deallocate (S, x, w)
       else
          psi_dt_2%CVec = CZERO
@@ -243,18 +250,13 @@ contains
          x2 = psi_dt_2%Basis%tab_basis(1)%Q0
          s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
          s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
-
-         s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
-         x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-         w(:) = w(:)/s3
-         x(:) = x3 + x(:)/s3
+         p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
+         p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
 
          if (psi_dt_1%Basis%tab_basis(1)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(1)%Basis_name == 'ho') then
-            Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-               Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-                  CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
-               End Do
-            End Do
+
+            call Calc_Num_S(S=S, nb=nb, nq=nq, x1=x1, x2=x2, s1=s1, s2=s1, p1=p1, p2=p2)
+
          else
             S(:, :) = ZERO
             Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
@@ -262,11 +264,7 @@ contains
             End Do
          end if
          !----------------------------------------------------------------------------------
-         DO i3 = 1, ubound(BBB1, dim=3)
-         DO i1 = 1, ubound(BBB1, dim=1)
-            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
-         END DO
-         END DO
+         call project_1D(BBB2, BBB1, S)
          deallocate (S, x, w)
          Do inb = 2, Ndim
             allocate (B2(Ib1(inb)*Ib2(inb)*Ib3(inb)))
@@ -282,17 +280,13 @@ contains
             x2 = psi_dt_2%Basis%tab_basis(Inb)%Q0
             s1 = psi_dt_1%Basis%tab_basis(Inb)%scaleQ
             s2 = psi_dt_2%Basis%tab_basis(Inb)%scaleQ
+            p1 = psi_dt_1%Basis%tab_basis(Inb)%Imp_k
+            p2 = psi_dt_2%Basis%tab_basis(Inb)%Imp_k
 
-            s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
-            x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-            w(:) = w(:)/s3
-            x(:) = x3 + x(:)/s3
             if (psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'ho') then
 
                Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-                  Do jq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-                     CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2)
-                  End Do
+                  call Calc_Num_S(S=S, nb=nb, nq=nq, x1=x1, x2=x2, s1=s1, s2=s1, p1=p1, p2=p2)
                End Do
 
             else
@@ -302,11 +296,7 @@ contains
                End Do
             end if
             ! ---------------------------------------------------------------------------------
-            DO i3 = 1, ubound(BBB1, dim=3)
-            DO i1 = 1, ubound(BBB1, dim=1)
-               BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
-            END DO
-            END DO
+            call project_1D(BBB2, BBB1, S)
             B1 = B2
             B2 = CZERO
             deallocate (B2)
@@ -317,6 +307,77 @@ contains
 
       END IF
       write (out_unitp, *) 'END Hagedorn projection'
+   END SUBROUTINE
+
+   SUBROUTINE project_1D(BBB2, BBB1, S)
+      complex(kind=Rk), intent(in)         :: BBB1(:, :, :)
+      complex(kind=Rk), intent(inout)      ::  BBB2(:, :, :)
+      integer                              ::  i1, i3
+      complex(Kind=Rk), intent(in)         :: S(:, :)
+
+      DO i3 = 1, ubound(BBB1, dim=3)
+         DO i1 = 1, ubound(BBB1, dim=1)
+            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
+         END DO
+      END DO
+
+   END SUBROUTINE
+
+   SUBROUTINE Calc_Num_S(S, nb, nq, x1, x2, s1, s2, p1, p2)
+      real(Kind=Rk)                    :: s1, s2, x1, x2, p1, p2
+      integer, intent(in)              :: nb, nq
+      complex(Kind=Rk), intent(inout)  :: S(:, :)
+      real(Kind=Rk), allocatable       :: x(:), w(:)
+      real(Kind=Rk)                    ::  s3, x3
+      integer                          :: iq, jq
+      allocate (x(nq))
+      allocate (w(nq))
+      call hercom(nq, x(:), w(:))
+      s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+      x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+      w(:) = w(:)/s3
+      x(:) = x3 + x(:)/s3
+      s(:, :) = ZERO
+
+      Do iq = 1, nb
+         Do jq = 1, nb
+            CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2, p1, p2)
+         End Do
+      End Do
+      print *, ' Beging print Overlap matrix'
+      Do jq = 1, nb
+         write (*, *) S(jq, :)
+      End Do
+      print *, ' End print Overlap matrix'
+   END SUBROUTINE
+
+   SUBROUTINE Test_calc_S(S, nb, nq, x1, x2, s1, s2, p1, p2)
+      real(Kind=Rk)            :: s1, s2, x1, x2, p1, p2
+      integer, intent(in)      :: nb, nq
+      complex(Kind=Rk), intent(inout) :: S(:, :)
+      real(Kind=Rk), allocatable     :: x(:), w(:)
+      real(Kind=Rk)                  ::  s3, x3
+      integer                        :: iq, jq
+
+      allocate (x(nq))
+      allocate (w(nq))
+      call hercom(nq, x(:), w(:))
+      s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+      x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+      w(:) = w(:)/s3
+      x(:) = x3 + x(:)/s3
+      s(:, :) = ZERO
+
+      Do iq = 1, nb
+         Do jq = 1, nb
+            CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2, p1, p2)
+         End Do
+      End Do
+      print *, ' Beging print Overlap matrix'
+      Do jq = 1, nb
+         write (*, *) S(jq, :)
+      End Do
+      print *, ' End print Overlap matrix'
    END SUBROUTINE
 
 end module Auto_corr_m
