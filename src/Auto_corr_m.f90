@@ -344,11 +344,11 @@ contains
             CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2, p1, p2)
          End Do
       End Do
-      print *, ' Beging print Overlap matrix'
-      Do jq = 1, nb
-         write (*, *) S(jq, :)
-      End Do
-      print *, ' End print Overlap matrix'
+      !print *, ' Beging print Overlap matrix'
+      !Do jq = 1, nb
+      !   write (*, *) S(jq, :)
+      !End Do
+      !print *, ' End print Overlap matrix'
    END SUBROUTINE
 
    SUBROUTINE Test_calc_S(S, nb, nq, x1, x2, s1, s2, p1, p2)

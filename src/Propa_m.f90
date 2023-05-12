@@ -146,13 +146,13 @@ contains
             call Hagedorn0(psi00, psi)
             call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
                            , print_basis=.false., t=t, int_print=16, real_part=.true.)
-            write (16, *), ''
+            write (16, *) ''
          else
             call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
             write (15, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, abs(x), y
             call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
                            , print_basis=.false., t=t, int_print=17, real_part=.true.)
-            write (17, *), ''
+            write (17, *) ''
          end if
 
       END DO
@@ -181,27 +181,28 @@ contains
       USE psi_m
       USE Basis_m
 
-      TYPE(psi_t), intent(inout)             :: psi, psi_dt
+      TYPE(psi_t), intent(inout)                  :: psi, psi_dt
       logical, parameter                          :: debug = .true.
 
       ! variables locales
-      REAL(kind=Rk), allocatable                 :: Qt(:), SQt(:)
-      REAL(kind=Rk)                              :: Norm, E
-      integer                                    :: Ndim
+      REAL(kind=Rk), allocatable                  :: Qt(:), SQt(:), Pt(:)
+      REAL(kind=Rk)                               :: Norm, E
+      integer                                     :: Ndim
       write (out_unitp, *) 'Beging Hagedorn'
 
       !call Calc_Norm_OF_Psi(psi_dt,Norm)
       ! write(out_unitp,*) '<psi|psi> =',Norm
 
       Ndim = size(psi_dt%Basis%tab_basis) - 1
-      allocate (Qt(Ndim), SQt(Ndim))
-      Qt(:) = ZERO; SQt(:) = ONE
+      allocate (Qt(Ndim), SQt(Ndim), Pt(Ndim))
+      Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO
 
       call Calc_AVQ_nD0(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
-      call construct_primitive_basis(psi_dt%Basis, Qt, SQt)
+      call Calc_Av_imp_k_nD(psi_dt, Pt)
+      call construct_primitive_basis(psi_dt%Basis, Qt, SQt, Pt)
       call projection(psi, psi_dt)
       !call Hagedorn0(psi_dt_2=psi, psi_dt_1=psi_dt)
-      call construct_primitive_basis(psi%Basis, Qt, SQt)
+      call construct_primitive_basis(psi%Basis, Qt, SQt, Pt)
 
       write (out_unitp, *) 'End Hagedorn'
 
@@ -436,6 +437,7 @@ contains
       else
          !Print*,"psi is on basis"
          CALL init_psi(Hpsi, Psi%Basis, cplx=.TRUE., grid=.false.)
+
          call calc_OpPsi(H, Psi, Hpsi)
          E = real(dot_product(Hpsi%CVec, Psi%CVec), kind=Rk)
 
@@ -443,7 +445,7 @@ contains
       call Calc_Norm_OF_Psi(Psi, Norm)
       E = E/Norm**2
       print *, "<Psi|H|Psi> = ", E, "Norm=", Norm
-
+      !stop 'cc energie'
       CALL dealloc_psi(HPsi)
       CALL dealloc_psi(Psi_b)
    End SUBROUTINE Calc_average_energy

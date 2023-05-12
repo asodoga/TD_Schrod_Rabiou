@@ -256,6 +256,7 @@ contains
       integer                                                 :: Inbe, Ndim
       complex(kind=Rk), pointer                               :: GB(:, :)
       complex(kind=Rk), pointer                               :: ikpsiel(:, :)
+      real(kind=Rk)                                           :: p
 
       !debuging----------------------------------------------------------------
 
@@ -290,8 +291,9 @@ contains
 
       call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
       call GridTOBasis_nD_cplx(ikpsi_b%CVec, ikpsi%CVec, psi0%Basis)
+      p = psi%Basis%tab_basis(nio)%Imp_k
 
-      K = dot_product(psi_b%CVec, ikpsi_b%CVec)
+      K = dot_product(psi_b%CVec, ikpsi_b%CVec) + p
       ! write (out_unitp, *) '<psi/-id_x/psi> =', K
       IF (debug) THEN
          flush (out_unitp)
@@ -311,6 +313,7 @@ contains
       type(psi_t), target                                     :: psi
       logical, parameter                                      :: debug = .true.
       integer                                                 :: Ndim, Inb
+      real(kind=Rk)                                           :: p
 
       !debuging----------------------------------------------------------------
 

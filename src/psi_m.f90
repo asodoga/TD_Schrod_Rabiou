@@ -554,7 +554,6 @@ contains
          ! write(25,*)  Q(iq,:),   abs( gb(iq,Tab_GWP(1)%Elecindex))**2
          !if(mod(iq,10)==0) write(25,*)
       END DO
-      !stop 'cc'
       !------------------transformation Grid to Basis-------------------------
       call Calc_Norm_OF_Psi(psi_g, NormG)
       psi_g%CVec(:) = psi_g%CVec(:)/NormG

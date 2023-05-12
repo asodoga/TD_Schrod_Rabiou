@@ -14,7 +14,7 @@ PROGRAM TD_SCHROD
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
    real(Kind=Rk)                  :: E, Norm, K(1)
-   complex(kind=Rk)               :: S(3, 3)
+   real(kind=Rk)                  :: x(1), sx(1), Pt(1)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
@@ -31,9 +31,10 @@ PROGRAM TD_SCHROD
    !====================================================================
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
+   x(1) = ZERO; Pt(1) = HALF; sx(1) = ONE
    call Read_Basis(Basis, nio=in_unitp)
-   !call init_Basis1_TO_Basis2(Basis0, Basis)
-   !call construct_primitive_basis(Basis0, x=x, sx=sx)
+   call init_Basis1_TO_Basis2(Basis0, Basis)
+   call construct_primitive_basis(Basis0, x, sx, Pt)
    call construct_primitive_basis(Basis)
    !Call Write_Basis(Basis)
 !====================================================================
@@ -42,14 +43,21 @@ PROGRAM TD_SCHROD
 
    call init_psi(psi0, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
-   call init_psi(psi, Basis, cplx=.TRUE., grid=.false.)
+   call init_psi(psi, Basis0, cplx=.TRUE., grid=.false.)
 
    call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
    !call test_basitogridgridtobasis(Basis)
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    !call psi0_init(psi0)
+   psi%CVec = CZERO
    call Calc_average_energy(psi0, E)
-   call Test_calc_S(S=S, nb=3, nq=15, x1=ZERO, x2=ONE, s1=ONE, s2=ONE, p1=ZERO, p2=ONE)
+   print *, 'psi0', psi0%CVec(:)
+   call Hagedorn0(psi, psi0)
+   print *, 'psi', psi%CVec(:)
+   call Calc_average_energy(psi, E)
+   stop 'cc'
+
+   ! call Test_calc_S(S=S, nb=3, nq=15, x1=ZERO, x2=ONE, s1=ONE, s2=ONE, p1=ZERO, p2=ONE)
    !call Calc_Av_imp_k_nD(psi0, K)
    !call Calc_AVQ_nD0(psi0=psi0, SQ=X)
    !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
