@@ -243,69 +243,69 @@ contains
       END IF
    END SUBROUTINE Qpop
 
+
+
    SUBROUTINE Calc_Av_imp_k_1D(psi0, K, nio)
       USE UtilLib_m
       type(psi_t), intent(in), target                         :: psi0
       real(kind=Rk), intent(inout)                            :: K
       integer, intent(in)                                     :: nio
-
-      !locals variables---------------------------------------------------
+      !locals variables---------------------------------------------------------
       type(psi_t), target                                     :: psi, ikpsi
       type(psi_t), target                                     :: psi_b, ikpsi_b
       logical, parameter                                      :: debug = .true.
-      integer                                                 :: Inbe, Ndim
-      complex(kind=Rk), pointer                               :: GB(:, :)
-      complex(kind=Rk), pointer                               :: ikpsiel(:, :)
+      complex(kind=Rk), pointer                               :: GB(:,:,:)
+      real(kind=Rk), pointer                                  ::d1gg(:,:,:)
+      complex(kind=Rk), pointer                               :: ikpsi0(:,:,:)
       real(kind=Rk)                                           :: p
-
+      Integer, allocatable         :: Ib1(:), Ib2(:), Ib3(:),Iq1(:), Iq2(:), Iq3(:)
+      integer                                                 :: nq,inb,Ndim,Inbe,i1,i3
       !debuging----------------------------------------------------------------
-
+      
       IF (debug) THEN
          flush (out_unitp)
       END IF
-
+      
       Ndim = size(psi0%Basis%tab_basis)
-
       call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
       call init_psi(ikpsi, psi0%Basis, cplx=.TRUE., grid=.true.)
       call init_psi(psi_b, psi0%Basis, cplx=.TRUE., grid=.false.)
       call init_psi(ikpsi_b, psi0%Basis, cplx=.TRUE., grid=.false.)
-
+      Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3,Iq1=Iq1, Iq2=Iq2,&
+       & Iq3=Iq3, Basis=psi0%Basis)
       psi%CVec = CZERO
       ikpsi%CVec = CZERO
       ikpsi_b%CVec = CZERO
       psi_b%CVec = CZERO
-
       IF (psi0%Grid) then
          psi%CVec(:) = psi0%CVec(:)
       ELSE
          call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
       END IF
-
-      GB(1:psi%Basis%tab_basis(nio)%nq,&
-      & 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
-      ikpsiel(1:psi%Basis%tab_basis(nio)%nq, &
-      &1:psi%Basis%tab_basis(Ndim)%nb) => ikpsi%CVec
-
-      Do Inbe = 1, psi%Basis%tab_basis(Ndim)%nb
-         ikpsiel(:, inbe) = -EYE*matmul(psi%Basis%tab_basis(nio)%d1gg(:, :, 1),&
-         & GB(:, inbe))
-      End do
-
+       
+        GB(1:Iq1(nio),1:Iq2(nio),1:Iq3(nio))    => psi%CVec
+        ikpsi0(1:Iq1(nio),1:Iq2(nio),1:Iq3(nio))=> ikpsi%CVec
+        d1gg(1:Iq2(nio),1:Iq2(nio),1:1)=> psi%Basis%tab_basis(nio)%d1gg(:, :, 1)
+        
+        DO i3 = 1, ubound(GB, dim=3)
+          DO i1 = 1, ubound(GB, dim=1)
+            ikpsi0(i1, :, i3) = ikpsi0(i1, :, i3)-EYE*matmul(d1gg(:,:,1),GB(i1,:,i3))
+          END DO
+       END DO
       call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
       call GridTOBasis_nD_cplx(ikpsi_b%CVec, ikpsi%CVec, psi0%Basis)
       p = psi%Basis%tab_basis(nio)%Imp_k
-
       K = dot_product(psi_b%CVec, ikpsi_b%CVec) !+ p
       ! write (out_unitp, *) '<psi/-id_x/psi> =', K
       IF (debug) THEN
          flush (out_unitp)
       END IF
+      
       CALL dealloc_psi(psi)
       CALL dealloc_psi(ikpsi)
       CALL dealloc_psi(ikpsi_b)
       CALL dealloc_psi(psi_b)
-
+      Deallocate(Ib1, Ib2, Ib3,Iq1, Iq2, Iq3)
    END SUBROUTINE
 
    SUBROUTINE Calc_Av_imp_k_nD(psi0, K)

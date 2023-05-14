@@ -221,10 +221,10 @@ contains
            
            psi_g1%CVec(:) = psi_g2%CVec(:)
            deallocate(w,x)
-
+           psi_2%Basis%tab_basis(inb)%imp_k = Pt(inb)
+           !print*,'pt',psi_2%Basis%tab_basis(1)%imp_k 
            If(inb == Ndim) then
             call GridTOBasis_nD_cplx(psi_2%CVec,psi_g2%CVec,psi_1%Basis)
-            psi_2%Basis%tab_basis(inb)%imp_k = Pt(inb)
            End if
          
          END DO
