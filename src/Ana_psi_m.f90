@@ -282,18 +282,21 @@ contains
          call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
       END IF
 
-      GB(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
-      ikpsiel(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb) => ikpsi%CVec
+      GB(1:psi%Basis%tab_basis(nio)%nq,&
+      & 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
+      ikpsiel(1:psi%Basis%tab_basis(nio)%nq, &
+      &1:psi%Basis%tab_basis(Ndim)%nb) => ikpsi%CVec
 
       Do Inbe = 1, psi%Basis%tab_basis(Ndim)%nb
-         ikpsiel(:, inbe) = -EYE*matmul(psi%Basis%tab_basis(nio)%d1gg(:, :, 1), GB(:, inbe))
+         ikpsiel(:, inbe) = -EYE*matmul(psi%Basis%tab_basis(nio)%d1gg(:, :, 1),&
+         & GB(:, inbe))
       End do
 
       call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
       call GridTOBasis_nD_cplx(ikpsi_b%CVec, ikpsi%CVec, psi0%Basis)
       p = psi%Basis%tab_basis(nio)%Imp_k
 
-      K = dot_product(psi_b%CVec, ikpsi_b%CVec) + p
+      K = dot_product(psi_b%CVec, ikpsi_b%CVec) !+ p
       ! write (out_unitp, *) '<psi/-id_x/psi> =', K
       IF (debug) THEN
          flush (out_unitp)

@@ -14,13 +14,13 @@ PROGRAM TD_SCHROD
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
    real(Kind=Rk)                  :: E, Norm, K(1)
-   real(kind=Rk)                  :: x(1), sx(1), Pt(1)
+   real(kind=Rk)                  :: x(2), sx(2), Pt(2)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
    logical :: adiabatic
    character(len=16)                  :: pot_name
-   ndim = 1
+   ndim = 2
    nsurf = 1
    pot_name = 'read_model'
    adiabatic = .false.
@@ -31,11 +31,10 @@ PROGRAM TD_SCHROD
    !====================================================================
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
-   x(1) = ZERO; Pt(1) = HALF; sx(1) = ONE
    call Read_Basis(Basis, nio=in_unitp)
    call init_Basis1_TO_Basis2(Basis0, Basis)
-   call construct_primitive_basis(Basis0, x, sx, Pt)
    call construct_primitive_basis(Basis)
+   call construct_primitive_basis(Basis0)
    !Call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
@@ -48,19 +47,16 @@ PROGRAM TD_SCHROD
    call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
    !call test_basitogridgridtobasis(Basis)
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
+   psi%CVec= ZERO
+   !call Calc_psi_tild_coeff(psi,psi0)
+   !call Calc_average_energy(psi0, E)
+   !call TEST_D(psi2=psi,psi1=psi0)
    !call psi0_init(psi0)
-   psi%CVec = CZERO
-   call Calc_average_energy(psi0, E)
-   print *, 'psi0', psi0%CVec(:)
-   call Hagedorn0(psi, psi0)
-   print *, 'psi', psi%CVec(:)
-   call Calc_average_energy(psi, E)
-   stop 'cc'
-
-   ! call Test_calc_S(S=S, nb=3, nq=15, x1=ZERO, x2=ONE, s1=ONE, s2=ONE, p1=ZERO, p2=ONE)
-   !call Calc_Av_imp_k_nD(psi0, K)
+   !call Calc_average_energy(psi0, E)
+    !call Test_calc_S(S=S, nb=3, nq=15, x1=ZERO, x2=ONE, s1=ONE, s2=ONE, p1=ZERO, p2=ONE)
+   call Calc_Av_imp_k_nD(psi, Pt)
    !call Calc_AVQ_nD0(psi0=psi0, SQ=X)
-   !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
+   !call Calc_AVQ_nD0(psi0=psi0, AVQ=x, SQ=sx)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)

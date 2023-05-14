@@ -20,7 +20,7 @@ module Propa_m
    END TYPE propa_t
 
    public :: march_taylor, marh_RK4th, read_propa
-   public :: propagation, Hagedorn
+   public :: propagation, Hagedorn,TEST_D,Calc_psi_tild_coeff
    public :: mEyeHPsi, write_propa, Analyse, creat_file_unit
 
 contains
@@ -177,6 +177,103 @@ contains
 
    END SUBROUTINE
 
+
+   SUBROUTINE Calc_psi_tild_coeff(psi_2,psi_1)
+
+      TYPE(psi_t), intent(inout) ,target:: psi_2
+      TYPE(psi_t), intent(in)  ,target  :: psi_1
+      TYPE(psi_t),target                :: psi_g1,psi_g2
+      logical, parameter                :: debug = .true.
+      complex(kind=Rk),pointer          :: GB1(:,:,:),GB2(:,:,:) 
+      real(kind=Rk) ,allocatable        :: Pt(:) ,Qt(:),SQt(:),x(:)
+      complex(kind=Rk) ,allocatable     :: W(:)
+      Integer, allocatable              :: Ib1(:), Ib2(:), Ib3(:),Iq1(:), Iq2(:), Iq3(:)
+      integer                           :: nq,inb,Ndim,inbe,i1,i3
+      real(kind=Rk)                     :: E,Norm
+      
+        call Calc_average_energy(psi_1, E)
+        Ndim = size(psi_1%Basis%tab_basis)-1
+        call init_psi(psi_g1, psi_1%Basis, cplx=.TRUE., grid=.true.)
+        call init_psi(psi_g2, psi_1%Basis, cplx=.TRUE., grid=.true.)
+        Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3,Iq1=Iq1, Iq2=Iq2,&
+        & Iq3=Iq3, Basis=psi_1%Basis)
+        allocate(Pt(Ndim),Qt(Ndim),SQt(Ndim))
+        
+        CALL Calc_AVQ_nD0(Psi0=psi_1, AVQ=Qt, SQ=SQt)
+        call Calc_Av_imp_k_nD(psi_1, Pt)
+  
+        Call BasisTOGrid_nD_cplx(psi_g1%CVec,psi_1%CVec,psi_1%Basis)
+
+        
+        DO inb = 1,Ndim
+
+            allocate(x(psi_1%Basis%tab_basis(inb)%nq),W(psi_1%Basis%tab_basis(inb)%nq))
+            x(:) = psi_1%Basis%tab_basis(inb)%x(:)-Qt(inb)
+            w(:) = exp(-EYE*Pt(inb)*x(:))
+            GB1(1:Iq1(inb),1:Iq2(inb),1:Iq3(inb)) => psi_g1%CVec
+            GB2(1:Iq1(inb),1:Iq2(inb),1:Iq3(inb))=> psi_g2%CVec
+
+           DO i3 = 1, ubound(GB1, dim=3)
+              DO i1 = 1, ubound(GB1, dim=1)
+                 GB2(i1, :, i3) = GB1(i1, :, i3)*W(:)
+              END DO
+           END DO
+           
+           psi_g1%CVec(:) = psi_g2%CVec(:)
+           deallocate(w,x)
+
+           If(inb == Ndim) then
+            call GridTOBasis_nD_cplx(psi_2%CVec,psi_g2%CVec,psi_1%Basis)
+            psi_2%Basis%tab_basis(inb)%imp_k = Pt(inb)
+           End if
+         
+         END DO
+         call Calc_average_energy(psi_2, E)
+         call Calc_Av_imp_k_nD(psi_2, Pt)
+   END SUBROUTINE
+
+
+    SUBROUTINE TEST_D(psi2,psi1)
+      TYPE(psi_t), intent(inout)   :: psi2
+      TYPE(psi_t), intent(in)      :: psi1
+      TYPE(psi_t)                  :: psi_g1,psi_g2
+      real(kind=Rk) ,allocatable   :: Pt(:) ,Qt(:),SQt(:),x(:)
+      real(kind=Rk)                :: E,Norm
+      integer                      :: iq
+
+      print*,'Begin tes'
+      print*,'<psi|H|psi>'
+      call Calc_average_energy(psi1, E)
+      call Calc_Norm_OF_Psi(psi1,Norm)
+      print*,'<psi|psi>',Norm
+      call init_psi(psi_g1, psi1%Basis, cplx=.TRUE., grid=.true.)
+      call init_psi(psi_g2, psi1%Basis, cplx=.TRUE., grid=.true.)
+       
+      allocate(Pt(1),x(psi1%Basis%nq),Qt(1),SQt(1))
+      CALL Calc_AVQ_nD0(Psi0=psi1, AVQ=Qt, SQ=SQt)
+      Qt(:)=ZERO;SQt(:)=ONE;x(:)=ZERO
+      call Calc_Av_imp_k_nD(psi1, Pt)
+      call BasisTOGrid_nD_cplx(psi_g1%CVec,psi1%CVec,psi1%Basis)
+
+      x(:) =psi1%Basis%tab_basis(1)%x(:)-Qt(1)
+
+      psi_g2%CVec(:) = psi_g1%CVec(:)*exp(-EYE*Pt(1)*x(:))
+
+      call GridTOBasis_nD_cplx(psi2%CVec,psi_g2%CVec,psi1%Basis)
+
+      psi2%Basis%tab_basis(1)%imp_k = Pt(1)
+      print*,'pt',psi2%Basis%tab_basis(1)%imp_k 
+
+      print*,'<psi_tild|H|psi_tild>'
+
+      call Calc_average_energy(psi2, E)
+      call Calc_Norm_OF_Psi(psi2,Norm)
+      print*,'<psi_tild|psi_tild>',Norm
+      print*,'End tes'
+
+    END SUBROUTINE
+
+
    SUBROUTINE Hagedorn(psi, psi_dt)
       USE psi_m
       USE Basis_m
@@ -190,8 +287,8 @@ contains
       integer                                     :: Ndim
       write (out_unitp, *) 'Beging Hagedorn'
 
-      !call Calc_Norm_OF_Psi(psi_dt,Norm)
-      ! write(out_unitp,*) '<psi|psi> =',Norm
+      call Calc_Norm_OF_Psi(psi_dt,Norm)
+       write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
 
       Ndim = size(psi_dt%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim), Pt(Ndim))
@@ -201,13 +298,12 @@ contains
       call Calc_Av_imp_k_nD(psi_dt, Pt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt, Pt)
       call projection(psi, psi_dt)
-      !call Hagedorn0(psi_dt_2=psi, psi_dt_1=psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt, Pt)
-
+      call Calc_Av_imp_k_nD(psi, Pt)
       write (out_unitp, *) 'End Hagedorn'
 
-      !call Calc_Norm_OF_Psi(psi,Norm)
-      !write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
+      call Calc_Norm_OF_Psi(psi,Norm)
+      write(out_unitp,*) '<psi|psi> =',Norm
       IF (debug) THEN
          flush (out_unitp)
       END IF

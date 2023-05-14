@@ -565,11 +565,11 @@ CONTAINS
 
    END SUBROUTINE Construct_Basis_Ho
 
-   SUBROUTINE Construct_Basis_Ho_HG1(Basis, x0, sx) ! HO HAGEDORN:
+   SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx,p) ! HO HAGEDORN:
       USE UtilLib_m
       TYPE(Basis_t), intent(inout)                         :: Basis
       integer                                              :: iq, ib
-      real(kind=Rk), intent(in)                            :: x0, sx
+      real(kind=Rk), intent(in)                            :: x0, sx,p
       real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
       real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
       real(kind=Rk), allocatable                           :: x(:), w(:)
@@ -617,7 +617,8 @@ CONTAINS
       END DO
       d0gb0 = sqrt(Basis%scaleQ)*d0gb0
       d0gbx = sqrt(sx)*d0gbx
-      call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
+      !call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
+      call Buld_Num_S(S=Basis%S, nb=Basis%nb, nq=Basis%nq, x1=Basis%Q0, x2=x0, s1=Basis%SCALEQ, s2=sx, p1=Basis%Imp_k, p2=p)
       Basis%SCALEQ = sx
       Basis%Q0 = x0
       !----------------------------   deallocation of local variables ----------------------------------------------------
@@ -629,7 +630,7 @@ CONTAINS
       deallocate (d2gb)
    END SUBROUTINE
 
-   SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx, p) ! HO HAGEDORN:
+   SUBROUTINE Construct_Basis_Ho_HG1(Basis, x0, sx, p) ! HO HAGEDORN:
       USE UtilLib_m
 
       TYPE(Basis_t), intent(inout)                :: Basis
@@ -700,7 +701,7 @@ CONTAINS
       !   write (*, *) S(jq, :)
       !End Do
       !print *, ' End print Overlap matrix'
-
+!
    END SUBROUTINE
 
    FUNCTION poly_Hermite(x, l)
