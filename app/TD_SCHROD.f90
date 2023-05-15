@@ -48,7 +48,7 @@ PROGRAM TD_SCHROD
    !call test_basitogridgridtobasis(Basis)
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    psi%CVec= ZERO
-   call Calc_psi_tild_coeff(psi,psi0)
+   !call Calc_psi_tild_coeff(psi0,psi0)
    !call Calc_average_energy(psi0, E)
    !call TEST_D(psi2=psi,psi1=psi0)
    !call psi0_init(psi0)

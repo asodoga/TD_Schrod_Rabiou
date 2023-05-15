@@ -25,6 +25,8 @@ MODULE Basis_m
       character(len=:), allocatable :: Basis_name
       real(kind=Rk), allocatable    :: x(:)
       real(kind=Rk), allocatable    :: w(:)
+      complex(kind=Rk), allocatable :: phase_vec(:)
+      complex(kind=Rk), allocatable :: Conjug_phase_vec(:)
       real(kind=Rk), allocatable    :: d0gb(:, :)        ! basis functions d0gb(nq,nb)
       real(kind=Rk), allocatable    :: d1gb(:, :, :)     ! basis functions d2gb(nq,nb,1)
       real(kind=Rk), allocatable    :: d1gg(:, :, :)     ! basis functions d1gg(nq,nq,1)
@@ -469,8 +471,13 @@ CONTAINS
       Basis%w = [(dx, iq=1, nq)]
 
       allocate (Basis%d0gb(nq, nb))
+      allocate (Basis%phase_vec(nq))
+      allocate (Basis%Conjug_phase_vec%phase_vec(nq))
       allocate (Basis%d1gb(nq, nb, 1))
       allocate (Basis%d2gb(nq, nb, 1, 1))
+
+      Basis%phase_vec(:) =CONE
+      Basis%Conjug_phase_vec(:) = CONJG(Basis%phase_vec(:))
 
       DO ib = 1, nb
          Basis%d0gb(:, ib) = sin(Basis%x(:)*ib)/sqrt(pi*HALF)
@@ -505,6 +512,10 @@ CONTAINS
       allocate (Basis%d0gb(nq, nb))
       allocate (Basis%d1gb(nq, nb, 1))
       allocate (Basis%d2gb(nq, nb, 1, 1))
+      allocate (Basis%phase_vec(nq))
+      allocate (Basis%Conjug_phase_vec%phase_vec(nq))
+      Basis%phase_vec(:) =CONE
+      Basis%Conjug_phase_vec(:) = CONJG(Basis%phase_vec(:))
       !>***************************************************************************
       DO ib = 1, nb
          k = int(ib/2)
@@ -545,19 +556,27 @@ CONTAINS
    SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(inout)         :: Basis
+      TYPE(Basis_t), intent(inout)               :: Basis
       integer                                    :: iq, ib
+       integer                                   :: nb, nq
+      nb = Basis%nb
+      nq = Basis%nq
 
-      allocate (Basis%x(Basis%nq))
-      allocate (Basis%w(Basis%nq))
-      call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+      allocate (Basis%x(nq))
+      allocate (Basis%w(nq))
+      call hercom(nq, Basis%x(:), Basis%w(:))
 
-      allocate (Basis%d0gb(Basis%nq, Basis%nb))
-      allocate (Basis%d1gb(Basis%nq, Basis%nb, 1))
-      allocate (Basis%d2gb(Basis%nq, Basis%nb, 1, 1))
+      allocate (Basis%d0gb(nq, nb))
+      allocate (Basis%d1gb(nq, nb, 1))
+      allocate (Basis%d2gb(nq, nb, 1, 1))
+      allocate (Basis%phase_vec(nq))
+      allocate (Basis%Conjug_phase_vec%phase_vec(nq))
 
-      DO iq = 1, Basis%nq
-         DO ib = 1, Basis%nb
+      Basis%phase_vec(:) = exp( EYE*Basis%Imp_k*(Basis%x(:)-Basis%Q0) )
+      Basis%Conjug_phase_vec(:) = CONJG(Basis%phase_vec(:))
+
+      DO iq = 1, nq
+         DO ib = 1, nb
             CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq), Basis%d0gb(iq, ib), &
                                                   Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)
          END DO
@@ -573,6 +592,11 @@ CONTAINS
       real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
       real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
       real(kind=Rk), allocatable                           :: x(:), w(:)
+       integer                                             :: nb, nq 
+
+      nb = Basis%nb
+      nq = Basis%nq  
+
       !----------------------------   deallocation----------------------------------------------------
       if (allocated(Basis%x)) deallocate (Basis%x)
       if (allocated(Basis%w)) deallocate (Basis%w)
@@ -580,10 +604,16 @@ CONTAINS
       if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
       if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
       !----------------------------allocation of x and w for new  construction-------------------------------------------
-      allocate (Basis%x(Basis%nq))
-      allocate (Basis%w(Basis%nq))
-      allocate (x(Basis%nq))
-      allocate (w(Basis%nq))
+      allocate (Basis%x(nq))
+      allocate (Basis%w(nq))
+      allocate (x(nq))
+      allocate (w(nq))
+      allocate (Basis%phase_vec(nq))
+      allocate (Basis%Conjug_phase_vec%phase_vec(nq))
+
+      Basis%phase_vec(:) = exp( EYE*p*(Basis%x(:)-x0) )
+      Basis%Conjug_phase_vec(:) = CONJG(Basis%phase_vec(:))
+
       !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
       call hercom(Basis%nq, Basis%x(:), Basis%w(:))
       call hercom(Basis%nq, x(:), w(:))
@@ -617,10 +647,11 @@ CONTAINS
       END DO
       d0gb0 = sqrt(Basis%scaleQ)*d0gb0
       d0gbx = sqrt(sx)*d0gbx
-      !call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
-      call Buld_Num_S(S=Basis%S, nb=Basis%nb, nq=Basis%nq, x1=Basis%Q0, x2=x0, s1=Basis%SCALEQ, s2=sx, p1=Basis%Imp_k, p2=p)
+      call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
+      !call Buld_Num_S(S=Basis%S, nb=Basis%nb, nq=Basis%nq, x1=Basis%Q0, x2=x0, s1=Basis%SCALEQ, s2=sx, p1=Basis%Imp_k, p2=p)
       Basis%SCALEQ = sx
       Basis%Q0 = x0
+      Basis%Imp_k = p
       !----------------------------   deallocation of local variables ----------------------------------------------------
       deallocate (x)
       deallocate (w)
@@ -1112,13 +1143,14 @@ CONTAINS
 
    END SUBROUTINE test_basitogridgridtobasis
 
-   SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis)
+   SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis,w)
       USE UtilLib_m
       TYPE(Basis_t), intent(in), target           :: Basis
       complex(kind=Rk), intent(inout)             :: BB(:, :, :)
-      complex(kind=Rk), intent(in)                :: GG(:, :, :)
+      complex(kind=Rk), intent(in)                :: GG(:, :, :), W(:)
       logical, parameter                          :: debug = .true.
       Integer                                     :: i1, i3
+
 
       IF (debug) THEN
          flush (out_unitp)
@@ -1128,7 +1160,7 @@ CONTAINS
       DO i3 = 1, ubound(GG, dim=3)
       DO i1 = 1, ubound(GG, dim=1)
 
-         BB(i1, :, i3) = matmul(Basis%d0bgw, GG(i1, :, i3))
+         BB(i1, :, i3) = matmul(Basis%d0bgw,W(:)*GG(i1, :, i3))
 
       END DO
       END DO
@@ -1318,10 +1350,13 @@ CONTAINS
       Logical, parameter                               :: debug = .false.
       TYPE(Basis_t), intent(in), target                :: Basis
       complex(kind=Rk), intent(in), target             :: G(:)
+      complex(kind=Rk), allocatable                    :: w(:)
+      real(kind=Rk), allocatable                       :: x(:)
       complex(kind=Rk), intent(inout), target          :: B(:)
       complex(kind=Rk), pointer                        :: BBB(:, :, :), GGB(:, :, :)
       complex(kind=Rk), allocatable, target            :: BGG1(:), BGG2(:)
       complex(kind=Rk), pointer                        :: GGG(:, :, :)
+      real(kind=Rk)                                    :: pt
       Integer                                          :: ib, i1, i3, inb, Ndim, iq
       Integer, allocatable                             :: Ib1(:), Ib2(:), Iq3(:), Iq1(:), Iq2(:), Ib3(:)
 
@@ -1356,19 +1391,28 @@ CONTAINS
 
       Call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
       If (Ndim == 1) then
+          allocate(x(Basis%tab_basis(1)%nq),w(Basis%tab_basis(1)%nq))
+          x(:) = Basis%tab_basis(1)%x(:)-Basis%tab_basis(1)%Q0
+          pt=Basis%tab_basis(1)%Imp_k
+          w(:) = exp(-EYE*pt*x(:))
          B = CZERO
          GGB(1:Iq1(1), 1:Iq2(1), 1:Iq3(1)) => G
          BBB(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B
-         Call GridTOBasis_1D_cplx(BBB, GGB, Basis%tab_basis(1))
+         Call GridTOBasis_1D_cplx(BBB, GGB, Basis%tab_basis(1),w)
+         deallocate(x,w)
       else
 
          Allocate (BGG1(Ib1(1)*Ib2(1)*Iq3(1)))
          BGG1 = CZERO
+         allocate(x(Basis%tab_basis(1)%nq),w(Basis%tab_basis(1)%nq))
+         x(:) = Basis%tab_basis(1)%x(:)-Basis%tab_basis(1)%Q0
+         pt=Basis%tab_basis(1)%Imp_k
+         w(:) = exp(-EYE*pt*x(:))
          GGG(1:Ib1(1), 1:Iq2(1), 1:Iq3(1)) => G
          GGB(1:Ib1(1), 1:Ib2(1), 1:Iq3(1)) => BGG1
 
-         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(1))
-
+         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(1),w)
+          deallocate(x,w)
          DO inb = 2, Ndim - 1
 
             Allocate (BGG2(Ib1(inb)*Ib2(inb)*Iq3(inb)))
@@ -1377,22 +1421,32 @@ CONTAINS
 
             GGG(1:Ib1(inb), 1:Iq2(inb), 1:Iq3(inb)) => BGG1
             GGB(1:Ib1(inb), 1:Ib2(inb), 1:Iq3(inb)) => BGG2
+            allocate(x(Basis%tab_basis(inb)%nq),w(Basis%tab_basis(inb)%nq))
+            x(:) = Basis%tab_basis(inb)%x(:)-Basis%tab_basis(inb)%Q0
+            pt=Basis%tab_basis(inb)%Imp_k
+            w(:) = exp(-EYE*pt*x(:))
 
-            Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(inb))
+            Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(inb),w)
 
             BGG1 = BGG2
 
             deallocate (BGG2)
+            deallocate(x,w)
          END DO
 
          B(:) = CZERO
 
          GGG(1:Ib1(Ndim), 1:Iq2(Ndim), 1:Iq3(Ndim)) => BGG1
          GGB(1:Ib1(Ndim), 1:Ib2(Ndim), 1:Iq3(Ndim)) => B
+         allocate(x(Basis%tab_basis(Ndim)%nq),w(Basis%tab_basis(Ndim)%nq))
+          x(:) = Basis%tab_basis(Ndim)%x(:)-Basis%tab_basis(Ndim)%Q0
+         pt=Basis%tab_basis(Ndim)%Imp_k
+         w(:) = exp(-EYE*pt*x(:))
 
-         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(Ndim))
+         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(Ndim),w)
 
          Deallocate (Iq1, Iq2, Iq3, Ib1, Ib2, Ib3)
+          deallocate(x,w)
       END IF
       IF (debug) THEN
          write (out_unitp, *) 'END GridTOBasis_nD_cplx'

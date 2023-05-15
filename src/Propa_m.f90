@@ -120,6 +120,7 @@ contains
          call Calc_Norm_OF_Psi(psi, Norm)
          call Population(psi, populat)
          call Calc_Av_imp_k_nD(psi, K)
+         if(propa%propa_name == 'hagedorn') call Calc_psi_tild_coeff(psi,psi)
          write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
          write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
          write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
@@ -222,7 +223,7 @@ contains
            psi_g1%CVec(:) = psi_g2%CVec(:)
            deallocate(w,x)
            psi_2%Basis%tab_basis(inb)%imp_k = Pt(inb)
-           !print*,'pt',psi_2%Basis%tab_basis(1)%imp_k 
+           print*,'pt',psi_2%Basis%tab_basis(Inb)%imp_k 
            If(inb == Ndim) then
             call GridTOBasis_nD_cplx(psi_2%CVec,psi_g2%CVec,psi_1%Basis)
            End if
@@ -230,6 +231,10 @@ contains
          END DO
          call Calc_average_energy(psi_2, E)
          call Calc_Av_imp_k_nD(psi_2, Pt)
+          deallocate(Ib1, Ib2, Ib3,Iq1, Iq2, Iq3)
+           call dealloc_psi(psi_g1)
+            call dealloc_psi(psi_g2)
+
    END SUBROUTINE
 
 
@@ -299,7 +304,6 @@ contains
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt, Pt)
       call projection(psi, psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt, Pt)
-      call Calc_Av_imp_k_nD(psi, Pt)
       write (out_unitp, *) 'End Hagedorn'
 
       call Calc_Norm_OF_Psi(psi,Norm)

@@ -242,16 +242,18 @@ contains
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B1
          !constuction of ovelap  S(:,:)
          !----------------------------------------------------------------------------
-         allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
-         allocate (x(psi_dt_1%Basis%tab_basis(1)%nq))
-         allocate (w(psi_dt_1%Basis%tab_basis(1)%nq))
-         call hercom(psi_dt_1%Basis%tab_basis(1)%nq, x(:), w(:))
-         x1 = psi_dt_1%Basis%tab_basis(1)%Q0
-         x2 = psi_dt_2%Basis%tab_basis(1)%Q0
-         s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
-         s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
-         p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
-         p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
+          nb = psi_dt_1%Basis%tab_basis(1)%nb
+          nq = psi_dt_1%Basis%tab_basis(1)%nq
+          x1 = psi_dt_1%Basis%tab_basis(1)%Q0
+          x2 = psi_dt_2%Basis%tab_basis(1)%Q0
+          s1 = psi_dt_1%Basis%tab_basis(1)%scaleQ
+          s2 = psi_dt_2%Basis%tab_basis(1)%scaleQ
+          p1 = 0.0
+          p2 = 0.0
+         allocate (S(nb, nb))
+         allocate (x(nq))
+         allocate (w(nq))
+         call hercom(nq, x(:), w(:))
 
          if (psi_dt_1%Basis%tab_basis(1)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(1)%Basis_name == 'ho') then
 
@@ -259,7 +261,7 @@ contains
 
          else
             S(:, :) = ZERO
-            Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
+            Do iq = 1, nb
                S(iq, iq) = ONE
             End Do
          end if
@@ -272,16 +274,19 @@ contains
             BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
             !constuction of ovelap  S(:,:)
             !----------------------------------------------------------------------------
-            allocate (S(psi_dt_1%Basis%tab_basis(Inb)%nb, psi_dt_1%Basis%tab_basis(Inb)%nb))
-            allocate (x(psi_dt_1%Basis%tab_basis(Inb)%nq))
-            allocate (w(psi_dt_1%Basis%tab_basis(Inb)%nq))
-            call hercom(psi_dt_1%Basis%tab_basis(Inb)%nq, x(:), w(:))
+            nb = psi_dt_1%Basis%tab_basis(Inb)%nb
+            nq = psi_dt_1%Basis%tab_basis(Inb)%nq
             x1 = psi_dt_1%Basis%tab_basis(Inb)%Q0
             x2 = psi_dt_2%Basis%tab_basis(Inb)%Q0
             s1 = psi_dt_1%Basis%tab_basis(Inb)%scaleQ
             s2 = psi_dt_2%Basis%tab_basis(Inb)%scaleQ
-            p1 = psi_dt_1%Basis%tab_basis(Inb)%Imp_k
-            p2 = psi_dt_2%Basis%tab_basis(Inb)%Imp_k
+            p1 =0.0
+            p2 =0.0
+
+            allocate (S(nb, nb))
+            allocate (x(nq))
+            allocate (w(nq))
+            call hercom(nq, x(:), w(:))
 
             if (psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'ho') then
 
@@ -291,7 +296,7 @@ contains
 
             else
                S(:, :) = ZERO
-               Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
+               Do iq = 1, nb
                   S(iq, iq) = ONE
                End Do
             end if
