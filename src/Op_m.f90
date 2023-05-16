@@ -220,7 +220,7 @@ contains
       ! action potential K|Psi_g>
       call Ppsi_nD(Ppsi_g, Psi_g, Basis)
       call Kpsi_nD(KPsi_g, Psi_g, Basis)
-      HPsi_g(:) = VPsi_g(:) + KPsi_g(:) + Ppsi_g(:)
+      HPsi_g(:) = VPsi_g(:) + KPsi_g(:) !+ Ppsi_g(:)
 
       DEALLOCATE (VPsi_g)
       DEALLOCATE (KPsi_g)

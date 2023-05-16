@@ -120,7 +120,6 @@ contains
          call Calc_Norm_OF_Psi(psi, Norm)
          call Population(psi, populat)
          call Calc_Av_imp_k_nD(psi, K)
-         if(propa%propa_name == 'hagedorn') call Calc_psi_tild_coeff(psi,psi)
          write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
          write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
          write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
@@ -520,11 +519,13 @@ contains
       USE psi_m
       USE Basis_m
 
-      TYPE(psi_t), intent(in)                    :: Psi
-      TYPE(psi_t)                                 :: HPsi, Psi_b
-      REAL(KIND=Rk), intent(inout)                :: E
+      TYPE(psi_t), intent(in)                      :: Psi
+      TYPE(psi_t)                                  :: HPsi, Psi_b
+      REAL(KIND=Rk), intent(inout)                 :: E
       TYPE(Op_t)                                   :: H
-      REAL(KIND=Rk)                               :: Norm
+      REAL(KIND=Rk)                                :: Norm
+
+      
       if (Psi%Grid) then
 
          !Print*,"psi  is on Grid"
