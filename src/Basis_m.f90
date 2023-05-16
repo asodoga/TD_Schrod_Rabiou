@@ -21,22 +21,22 @@ MODULE Basis_m
       real(kind=Rk)                 :: scaleQ = 0_Rk
       real(kind=Rk)                 :: A = 0_Rk
       real(kind=Rk)                 :: B = 0_Rk
-      real(kind=Rk)                 :: Imp_k = 0_Rk      !For hagedorn Hamiltonian
+      real(kind=Rk)                 :: imp_k = 0_Rk !for Hagedorn transformation
       character(len=:), allocatable :: Basis_name
       real(kind=Rk), allocatable    :: x(:)
       real(kind=Rk), allocatable    :: w(:)
-      complex(kind=Rk), allocatable :: phase_vec(:)
-      complex(kind=Rk), allocatable :: Conjg_phase_vec(:)
-      real(kind=Rk), allocatable    :: d0gb(:, :)        ! basis functions d0gb(nq,nb)
-      real(kind=Rk), allocatable    :: d1gb(:, :, :)     ! basis functions d2gb(nq,nb,1)
-      real(kind=Rk), allocatable    :: d1gg(:, :, :)     ! basis functions d1gg(nq,nq,1)
+      complex(kind=Rk), allocatable :: phase_Vec(:)
+      complex(kind=Rk), allocatable :: conjg_phase_Vec(:)
+      real(kind=Rk), allocatable    :: d0gb(:, :)      ! basis functions d0gb(nq,nb)
+      real(kind=Rk), allocatable    :: d1gb(:, :, :)    ! basis functions d2gb(nq,nb,1)
+      real(kind=Rk), allocatable    :: d1gg(:, :, :)    ! basis functions d2gg(nq,nq,1)
       real(kind=Rk), allocatable    :: d2gb(:, :, :, :)  ! basis functions d2gb(nq,nb,1,1)
       real(kind=Rk), allocatable    :: d2gg(:, :, :, :)  ! basis functions d2gg(nq,nq,1,1)
-      real(kind=Rk), allocatable    :: d0bgw(:, :)       ! transpose of basis functions d0gb(nb,nq)
-      complex(kind=Rk), allocatable :: S(:, :)           ! for Hagedorn transformation
+      real(kind=Rk), allocatable    :: d0bgw(:, :)     ! transpose of basis functions d0gb(nb,nq)
+      complex(kind=Rk), allocatable :: S(:, :)         ! for Hagedorn transformation
       TYPE(NDindex_t)               :: NDindexq
       TYPE(NDindex_t)               :: NDindexb
-      TYPE(Basis_t), allocatable    :: tab_basis(:)      !  for more than one Basis.
+      TYPE(Basis_t), allocatable    :: tab_basis(:)   !  for more than one Basis.
 
    END TYPE Basis_t
 
@@ -44,7 +44,7 @@ CONTAINS
 
    RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
-      TYPE(Basis_t), intent(in)    :: Basis
+      TYPE(Basis_t), intent(in)  :: Basis
       logical                      :: alloc
       integer                      :: i
 
@@ -95,7 +95,7 @@ CONTAINS
    RECURSIVE SUBROUTINE Write_Basis(Basis)
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(in)        :: Basis
+      TYPE(Basis_t), intent(in)  :: Basis
       integer                          :: i
 
       !write(out_unitp,*) '---------------------------------------------------------------------'
@@ -199,7 +199,6 @@ CONTAINS
          Basis2%A = Basis1%A
          Basis2%B = Basis1%B
          Basis2%S = Basis1%S
-         Basis2%Imp_k = Basis1%Imp_k
       END IF
 
    END SUBROUTINE init_Basis1_TO_Basis2
@@ -275,15 +274,15 @@ CONTAINS
 
    RECURSIVE SUBROUTINE Read_Basis(Basis, nio)
       USE UtilLib_m
-      logical, parameter                  :: debug = .true.
-      !logical,             parameter     ::debug = .false.
-      TYPE(Basis_t), intent(inout)        :: Basis
-      integer, intent(in)                 :: nio
-      integer                             :: err_io, nb, nq, i, j, nb_basis, ib
-      character(len=Name_len)             :: name
-      real(kind=Rk)                       :: A, B, scaleQ, Q0, d0, d2, X1, W1, Imp_k
+      logical, parameter                       :: debug = .true.
+      !logical,             parameter          ::debug = .false.
+      TYPE(Basis_t), intent(inout)             :: Basis
+      integer, intent(in)                      :: nio
+      integer                                  :: err_io, nb, nq, i, j, nb_basis, ib
+      character(len=Name_len)                  :: name
+      real(kind=Rk)                            :: A, B, scaleQ, Q0, d0, d2, X1, W1,Imp_k
 
-      NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0, Imp_k
+      NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0,Imp_k
       nb_basis = 0
       nb = 0
       nq = 0
@@ -291,8 +290,8 @@ CONTAINS
       B = ZERO
       Q0 = ZERO
       scaleQ = ONE
-      Imp_k = ZERO
       name = '0'
+      Imp_k= ZERO
 
       read (nio, nml=basis_nD, IOSTAT=err_io)
       write (out_unitp, nml=basis_nD)
@@ -334,10 +333,10 @@ CONTAINS
          Basis%nb = nb
          Basis%nq = nq
          Basis%Q0 = Q0
-         Basis%Imp_k = Imp_k
          Basis%SCALEQ = SCALEQ
          Basis%A = A
          Basis%B = B
+         Basis%Imp_k = Imp_k
          Basis%Basis_name = trim(adjustl(name))
          allocate (Basis%S(nb, nb))
          Basis%S(:, :) = ZERO
@@ -398,11 +397,11 @@ CONTAINS
       ! write(out_unitp,*) ' End  construct  primitive Basis '
    END SUBROUTINE construct_primitive_basis0
 
-   SUBROUTINE construct_primitive_basis1(Basis, x, sx, p)
+   SUBROUTINE construct_primitive_basis1(Basis, x, sx,p)
       USE UtilLib_m
       logical, parameter                  :: debug = .true.
-      real(kind=Rk), intent(in)           :: x(:), sx(:), p(:)
-      real(kind=Rk)                       :: x0, sx0, p0
+      real(kind=Rk), intent(in)           :: x(:), sx(:),p(:)
+      real(kind=Rk)                       :: x0, sx0,p0
       !logical,             parameter     ::debug = .false.
       TYPE(Basis_t), intent(inout)        :: Basis
       integer, allocatable                :: NDend_q(:)
@@ -413,13 +412,13 @@ CONTAINS
       ! write(out_unitp,*) ' Begin  construct primitive  Basis '
 
       IF (allocated(Basis%tab_basis)) THEN
-         if (size(x) == 1 .And. size(sx) == 1 .and. size(p) == 1) then
-            x0 = x(1); sx0 = sx(1); p0 = p(1)
+         if (size(x) == 1 .And. size(sx) == 1) then
+            x0 = x(1); sx0 = sx(1);p0= p(1)
          end if
 
          DO i = 1, size(Basis%tab_basis)
             if (Basis%tab_basis(i)%Basis_name == 'herm' .or. Basis%tab_basis(i)%Basis_name == 'ho') then
-               call Construct_Basis_Ho_HG(Basis%tab_basis(i), x(i), sx(i), p(i))
+               call Construct_Basis_Ho_HG(Basis%tab_basis(i), x(i), sx(i),p(i))
                call Scale_Basis(Basis%tab_basis(i), Basis%tab_basis(i)%Q0, Basis%tab_basis(i)%scaleQ)
                call Calc_tranpose_d0gb(Basis%tab_basis(i))
                call Calc_dngg_grid(Basis%tab_basis(i))
@@ -429,7 +428,7 @@ CONTAINS
          END DO
       ELSE
          if (Basis%Basis_name == 'herm' .or. Basis%Basis_name == 'ho') then
-            call Construct_Basis_Ho_HG(Basis, x0, sx0, p0)
+            call Construct_Basis_Ho_HG(Basis, x0, sx0,p0)
             call Scale_Basis(Basis, Basis%Q0, Basis%scaleQ)
             call Calc_tranpose_d0gb(Basis)
             call Calc_dngg_grid(Basis)
@@ -439,23 +438,23 @@ CONTAINS
       ! write(out_unitp,*) ' End  construct  primitive Basis '
    END SUBROUTINE construct_primitive_basis1
 
-   RECURSIVE SUBROUTINE construct_primitive_basis(Basis, x, sx, p)
+   RECURSIVE SUBROUTINE construct_primitive_basis(Basis, x, sx,p)
       USE UtilLib_m
       logical, parameter      :: debug = .true.
       !logical,             parameter     ::debug = .false.
       TYPE(Basis_t), intent(inout)  :: Basis
-      real(kind=Rk), intent(in), optional  :: x(:), sx(:), p(:)
+      real(kind=Rk), intent(in), optional  :: x(:), sx(:),p(:)
 
       if (present(x) .and. present(sx) .and. present(p)) then
          !write(out_unitp,*) ' S will be constructed for Ho Basis'
-         call construct_primitive_basis1(Basis, x, sx, p)
+         call construct_primitive_basis1(Basis, x, sx,p)
       else
          call construct_primitive_basis0(Basis)
       end if
 
    END SUBROUTINE construct_primitive_basis
 
-   SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
+    SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
       USE UtilLib_m
 
       TYPE(Basis_t), intent(inout)        :: Basis
@@ -477,7 +476,7 @@ CONTAINS
       allocate (Basis%d2gb(nq, nb, 1, 1))
 
       Basis%phase_vec(:) =CONE
-      Basis%Conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
+      Basis%conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
 
       DO ib = 1, nb
          Basis%d0gb(:, ib) = sin(Basis%x(:)*ib)/sqrt(pi*HALF)
@@ -515,7 +514,7 @@ CONTAINS
       allocate (Basis%phase_vec(nq))
       allocate (Basis%Conjg_phase_vec(nq))
       Basis%phase_vec(:) =CONE
-      Basis%Conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
+      Basis%conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
       !>***************************************************************************
       DO ib = 1, nb
          k = int(ib/2)
@@ -552,8 +551,7 @@ CONTAINS
       RETURN
 
    END SUBROUTINE Construct_Basis_el
-
-   SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
+  SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
       USE UtilLib_m
 
       TYPE(Basis_t), intent(inout)               :: Basis
@@ -584,132 +582,61 @@ CONTAINS
 
    END SUBROUTINE Construct_Basis_Ho
 
-   SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx,p) ! HO HAGEDORN:
+
+
+ SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx,p) ! HO HAGEDORN:
       USE UtilLib_m
       TYPE(Basis_t), intent(inout)                         :: Basis
       integer                                              :: iq, ib
       real(kind=Rk), intent(in)                            :: x0, sx,p
-      real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
-      real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
-      real(kind=Rk), allocatable                           :: x(:), w(:)
+      real(kind=Rk)                                        ::  s1, s2, x1, x2,p1,p2
        integer                                             :: nb, nq 
 
-      nb = Basis%nb
-      nq = Basis%nq  
+      nb = Basis%nb; nq = Basis%nq  
+      p1=Basis%Imp_k; p2= p
+      x1 = Basis%Q0;  x2  = x0
+      s1= Basis%scaleQ;s2 = sx
 
       !----------------------------   deallocation----------------------------------------------------
       if (allocated(Basis%x)) deallocate (Basis%x)
       if (allocated(Basis%w)) deallocate (Basis%w)
       if (allocated(Basis%phase_vec)) deallocate (Basis%phase_vec)
-      if (allocated(Basis%Conjg_phase_vec)) deallocate (Basis%Conjg_phase_vec)
+      if (allocated(Basis%conjg_phase_vec)) deallocate (Basis%Conjg_phase_vec)
       if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
       if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
       if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
       !----------------------------allocation of x and w for new  construction-------------------------------------------
       allocate (Basis%x(nq))
       allocate (Basis%w(nq))
-      allocate (x(nq))
-      allocate (w(nq))
-      allocate (Basis%phase_vec(nq))
-      allocate (Basis%Conjg_phase_vec(nq))
 
-      Basis%phase_vec(:) = exp( EYE*p*(Basis%x(:)-x0) )
-      Basis%Conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
+       allocate (Basis%d0gb(nq, nb))
+      allocate (Basis%d1gb(nq, nb, 1))
+      allocate (Basis%d2gb(nq, nb, 1, 1))
+
+      allocate (Basis%phase_vec(nq))
+      allocate (Basis%conjg_phase_vec(nq))
+
+      Basis%phase_vec(:) = exp( EYE*p2*(Basis%x(:)-x2) )
+      Basis%conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
 
       !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
       call hercom(Basis%nq, Basis%x(:), Basis%w(:))
-      call hercom(Basis%nq, x(:), w(:))
-      ! test------------------------------------------------------------------------------------------------------
-      s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
-      s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
-      x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-      w(:) = w(:)/s3
-      x(:) = x3 + Basis%x(:)/s3
-      !------------------------------------------------------------------------------------------------------------
-      !----------------------------allocation of d0gb,d1gb, d2gb  for new  construction-----------------------------------
-      allocate (Basis%d0gb(nq, nb))
-      allocate (Basis%d1gb(nq, nb, 1))
-      allocate (Basis%d2gb(nq, nb, 1, 1))
-      !----------------------------this allocation is for construction of S(:,:)------------------------------------------
-      allocate (d0gb0(nq, nb))
-      allocate (d0gbx(nq, nb))
-      allocate (d1gb(nq, nb, 1))
-      allocate (d2gb(nq, nb, 1, 1))
-      !----------------------------calculation of d0gb,d1gb, d2gb  for new  Basis-------------------------------------------
+         
       DO iq = 1, nq
          DO ib = 1, nb
             CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq), Basis%d0gb(iq, ib), &
-                                                  Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)  !construction of the new Basis
-            !------------------------for s(:,:) -------------------------------------------------------
-            CALL Construct_Basis_poly_Hermite_exp(Basis%scaleQ*(x(iq) - Basis%Q0), d0gb0(iq, ib), &
-                                                  d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
-            CALL Construct_Basis_poly_Hermite_exp(sx*(x(iq) - x0), d0gbx(iq, ib), &
-                                                  d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+                                                  Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)  
          END DO
       END DO
-      d0gb0 = sqrt(Basis%scaleQ)*d0gb0
-      d0gbx = sqrt(sx)*d0gbx
-      !call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
-      call Buld_Num_S(S=Basis%S, nb=nb, nq=nq, x1=Basis%Q0, x2=x0, s1=Basis%SCALEQ, s2=sx, p1=Basis%Imp_k, p2=p)
-      Basis%SCALEQ = sx
-      Basis%Q0 = x0
-      Basis%Imp_k = p
-      !----------------------------   deallocation of local variables ----------------------------------------------------
-      deallocate (x)
-      deallocate (w)
-      deallocate (d0gb0)
-      deallocate (d0gbx)
-      deallocate (d1gb)
-      deallocate (d2gb)
-   END SUBROUTINE
-
-   SUBROUTINE Construct_Basis_Ho_HG1(Basis, x0, sx, p) ! HO HAGEDORN:
-      USE UtilLib_m
-
-      TYPE(Basis_t), intent(inout)                :: Basis
-      integer                                     :: iq, ib, nb, nq
-      real(kind=Rk), intent(in)                   :: x0, sx, p
-      real(kind=Rk)                               :: x1, x2, p1, p2, s1, s2
-
-      x1 = Basis%Q0
-      x2 = x0
-      s1 = Basis%scaleQ
-      s2 = sx
-      p1 = Basis%Imp_k
-      p2 = p
-      nb = Basis%nb
-      nq = Basis%nq
-
-      !----------------------------   deallocation----------------------------------------------------
-      if (allocated(Basis%x)) deallocate (Basis%x)
-      if (allocated(Basis%w)) deallocate (Basis%w)
-      if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
-      if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
-      if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
-
-      !----------------------------allocation of x and w for new  construction-------------------------------------------
-      allocate (Basis%x(nq))
-      allocate (Basis%w(nq))
-      allocate (Basis%d0gb(nq, nb))
-      allocate (Basis%d1gb(nq, nb, 1))
-      allocate (Basis%d2gb(nq, nb, 1, 1))
-
-      !----------------------------calculation of d0gb,d1gb, d2gb  for new  Basis-------------------------------------------
-      DO iq = 1, nq
-         DO ib = 1, nb
-            CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq), Basis%d0gb(iq, ib), &
-                                                  Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)
-         END DO
-      END DO
-
-      call Buld_Num_S(S=Basis%S, nb=nb, nq=nq, x1=x1, x2=x2, s1=s1, s2=s1, p1=p1, p2=p2)
+      call Buld_Num_S(S=Basis%S, nb=nb, nq=nq, x1=x1, x2=x2, s1=s2, s2=s2, p1=p1, p2=p2)
       Basis%SCALEQ = sx
       Basis%Q0 = x0
       Basis%Imp_k = p
 
    END SUBROUTINE
 
-   SUBROUTINE Buld_Num_S(S, nb, nq, x1, x2, s1, s2, p1, p2)
+
+     SUBROUTINE Buld_Num_S(S, nb, nq, x1, x2, s1, s2, p1, p2)
       real(Kind=Rk)                    :: s1, s2, x1, x2, p1, p2
       integer, intent(in)              :: nb, nq
       complex(Kind=Rk), intent(inout)  :: S(:, :)
@@ -735,6 +662,72 @@ CONTAINS
       !End Do
       !print *, ' End print Overlap matrix'
 !
+   END SUBROUTINE
+
+
+
+   SUBROUTINE Construct_Basis_Ho_HG1(Basis, x0, sx) ! HO HAGEDORN:
+      USE UtilLib_m
+      TYPE(Basis_t), intent(inout)                         :: Basis
+      integer                                              :: iq, ib
+      real(kind=Rk), intent(in)                            :: x0, sx
+      real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
+      real(kind=Rk), allocatable                           :: d0gbx(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb0(:, :)
+      real(kind=Rk), allocatable                           :: x(:), w(:)
+      !----------------------------   deallocation----------------------------------------------------
+      if (allocated(Basis%x)) deallocate (Basis%x)
+      if (allocated(Basis%w)) deallocate (Basis%w)
+      if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
+      if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
+      if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
+      !----------------------------allocation of x and w for new  construction-------------------------------------------
+      allocate (Basis%x(Basis%nq))
+      allocate (Basis%w(Basis%nq))
+      allocate (x(Basis%nq))
+      allocate (w(Basis%nq))
+      !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
+      call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+      call hercom(Basis%nq, x(:), w(:))
+      ! test------------------------------------------------------------------------------------------------------
+      s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
+      s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+      x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+      w(:) = w(:)/s3
+      x(:) = x3 + Basis%x(:)/s3
+      !------------------------------------------------------------------------------------------------------------
+      !----------------------------allocation of d0gb,d1gb, d2gb  for new  construction-----------------------------------
+      allocate (Basis%d0gb(Basis%nq, Basis%nb))
+      allocate (Basis%d1gb(Basis%nq, Basis%nb, 1))
+      allocate (Basis%d2gb(Basis%nq, Basis%nb, 1, 1))
+      !----------------------------this allocation is for construction of S(:,:)------------------------------------------
+      allocate (d0gb0(Basis%nq, Basis%nb))
+      allocate (d0gbx(Basis%nq, Basis%nb))
+      allocate (d1gb(Basis%nq, Basis%nb, 1))
+      allocate (d2gb(Basis%nq, Basis%nb, 1, 1))
+      !----------------------------calculation of d0gb,d1gb, d2gb  for new  Basis-------------------------------------------
+      DO iq = 1, Basis%nq
+         DO ib = 1, Basis%nb
+            CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq), Basis%d0gb(iq, ib), &
+                                                  Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)  !construction of the new Basis
+            !------------------------for s(:,:) -------------------------------------------------------
+            CALL Construct_Basis_poly_Hermite_exp(Basis%scaleQ*(x(iq) - Basis%Q0), d0gb0(iq, ib), &
+                                                  d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+            CALL Construct_Basis_poly_Hermite_exp(sx*(x(iq) - x0), d0gbx(iq, ib), &
+                                                  d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+         END DO
+      END DO
+      d0gb0 = sqrt(Basis%scaleQ)*d0gb0
+      d0gbx = sqrt(sx)*d0gbx
+      call Buld_S(S=Basis%S, d0gb1=d0gb0, d0gb2=d0gbx, nb=Basis%nb, w1=w)
+      Basis%SCALEQ = sx
+      Basis%Q0 = x0
+      !----------------------------   deallocation of local variables ----------------------------------------------------
+      deallocate (x)
+      deallocate (w)
+      deallocate (d0gb0)
+      deallocate (d0gbx)
+      deallocate (d1gb)
+      deallocate (d2gb)
    END SUBROUTINE
 
    FUNCTION poly_Hermite(x, l)
@@ -995,7 +988,7 @@ CONTAINS
 
       integer                           :: ib, jb, iq, nq
       integer, INTENT(IN)               :: nb
-      complex(kind=Rk), INTENT(INOUT)   :: S(:, :)
+      complex(kind=Rk), INTENT(INOUT)      :: S(:, :)
       real(kind=Rk), INTENT(IN)         :: d0gb1(:, :), d0gb2(:, :), w1(:)
       real(kind=Rk), ALLOCATABLE        :: d0bgw(:, :)
       real(kind=Rk)                     :: det
@@ -1017,7 +1010,7 @@ CONTAINS
 
       S = matmul(d0bgw, d0gb2)
 
-      !CALL Write_RMat(S, out_unitp, 5)
+      !CALL Write_RMat(S, out_unitp, 5, name_info='S')
 
       write (out_unitp, *) 'End Buld_s'
 
@@ -1086,7 +1079,7 @@ CONTAINS
       USE NumParameters_m
       USE UtilLib_m
       TYPE(Basis_t), intent(in)       :: Basis
-      logical, parameter              :: debug = .true.
+      logical, parameter        :: debug = .true.
       COMPLEX(kind=Rk), allocatable   :: G1(:), B1(:)!,G(:), Hpsi(:)
       COMPLEX(kind=Rk), allocatable   :: G2(:), B2(:)
       COMPLEX(kind=Rk), allocatable   :: B(:)
@@ -1144,8 +1137,7 @@ CONTAINS
       END IF
 
    END SUBROUTINE test_basitogridgridtobasis
-
-   SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis)
+     SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis)
       USE UtilLib_m
       TYPE(Basis_t), intent(in), target           :: Basis
       complex(kind=Rk), intent(inout)             :: BB(:, :, :)
@@ -1190,6 +1182,58 @@ CONTAINS
 
          GB(i1, :, i3) = matmul(Basis%d0gb(:,:),BB(i1, :, i3))
          GB(i1, :, i3) = GB(i1, :, i3)*Basis%phase_vec(:)
+
+      END DO
+      END DO
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+   END SUBROUTINE
+
+   SUBROUTINE GridTOBasis_1D0_cplx(BB, GG, Basis)
+      USE UtilLib_m
+      TYPE(Basis_t), intent(in), target           :: Basis
+      complex(kind=Rk), intent(inout)             :: BB(:, :, :)
+      complex(kind=Rk), intent(in)                :: GG(:, :, :)
+      logical, parameter                          :: debug = .true.
+      Integer                                     :: i1, i3
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+
+      BB = CZERO
+      DO i3 = 1, ubound(GG, dim=3)
+      DO i1 = 1, ubound(GG, dim=1)
+
+         BB(i1, :, i3) = matmul(Basis%d0bgw, GG(i1, :, i3))
+
+      END DO
+      END DO
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+   END SUBROUTINE
+
+   SUBROUTINE BasisTOGrid_1D0_cplx(GB, BB, Basis)
+      USE UtilLib_m
+      TYPE(Basis_t), intent(in), target        :: Basis
+      complex(kind=Rk), intent(inout)            :: GB(:, :, :)
+      complex(kind=Rk), intent(in)               :: BB(:, :, :)
+      logical, parameter                :: debug = .true.
+      integer                                     :: i1, i3, iq, ib
+
+      IF (debug) THEN
+         flush (out_unitp)
+      END IF
+
+      GB = CZERO
+      DO i3 = 1, ubound(BB, dim=3)
+      DO i1 = 1, ubound(BB, dim=1)
+
+         GB(i1, :, i3) = matmul(Basis%d0gb, BB(i1, :, i3))
 
       END DO
       END DO
@@ -1403,6 +1447,7 @@ CONTAINS
          GGB(1:Ib1(1), 1:Ib2(1), 1:Iq3(1)) => BGG1
 
          Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(1))
+
          DO inb = 2, Ndim - 1
 
             Allocate (BGG2(Ib1(inb)*Ib2(inb)*Iq3(inb)))
@@ -1471,11 +1516,11 @@ CONTAINS
 
    SUBROUTINE Construct_poly_Hermite(poly_Hermite, x, l)
       Implicit none
-      real(kind=Rk), intent(inout)          :: poly_Hermite
-      real(kind=Rk)                         :: pl0, pl1, pl2, norme
-      real(kind=Rk), intent(in)             :: x
+      real(kind=Rk), intent(inout)        :: poly_Hermite
+      real(kind=Rk)                      :: pl0, pl1, pl2, norme
+      real(kind=Rk), intent(in)           :: x
       integer, intent(in)                   :: l
-      integer                               :: i
+      integer                              :: i
 
       IF (l < 0) THEN
          Write (out_unitp, *) 'Bad arguments in poly_hermite :'
@@ -1510,7 +1555,7 @@ CONTAINS
 
    END SUBROUTINE Construct_poly_Hermite
 
-   SUBROUTINE Hermite_double_product_func(Hf, x, i, j, q0i, q0j, sci, scj, p1, p2)
+    SUBROUTINE Hermite_double_product_func(Hf, x, i, j, q0i, q0j, sci, scj, p1, p2)
       !    Hf(i,x) is the normalized probabilist's Hermite polynomial of degree I.
       !    Hj(j,x) is the normalized probabilist's Hermite polynomial of degree J.
       !    Hf(X) = Hen(I,X) * Hen(J,X)*exp ( -x^2-X*(q0i+q0j)-0.5*(q0i^2+q0j^2) )
