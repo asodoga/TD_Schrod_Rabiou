@@ -200,10 +200,9 @@ contains
       call Calc_AVQ_nD0(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
       call Calc_Av_imp_k_nD(psi_dt,Pt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt,Pt)
-     ! write(25,*)psi_dt%Basis%tab_basis(1)%Imp_k,psi_dt%Basis%tab_basis(2)%Imp_k
       call projection(psi, psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt,Pt)
-      ! write(26,*)psi%Basis%tab_basis(1)%Imp_k,psi%Basis%tab_basis(2)%Imp_k
+   
 
       write (out_unitp, *) 'End Hagedorn'
 

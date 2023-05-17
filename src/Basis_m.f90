@@ -648,6 +648,7 @@ CONTAINS
       call hercom(nq, x(:), w(:))
       s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
       x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+      !x3 = abs((EYE*(p2-p1)+s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2))
       w(:) = w(:)/s3
       x(:) = x3 + x(:)/s3
       s(:, :) = ZERO
@@ -1219,10 +1220,10 @@ CONTAINS
 
    SUBROUTINE BasisTOGrid_1D0_cplx(GB, BB, Basis)
       USE UtilLib_m
-      TYPE(Basis_t), intent(in), target        :: Basis
+      TYPE(Basis_t), intent(in), target          :: Basis
       complex(kind=Rk), intent(inout)            :: GB(:, :, :)
       complex(kind=Rk), intent(in)               :: BB(:, :, :)
-      logical, parameter                :: debug = .true.
+      logical, parameter                         :: debug = .true.
       integer                                     :: i1, i3, iq, ib
 
       IF (debug) THEN
