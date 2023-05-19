@@ -139,21 +139,21 @@ contains
             psi%CVec(:) = psi_dt%CVec(:)
          end if
 
-         if (propa%propa_name == 'hagedorn') Then
-            call Calc_Auto_corr(psi0, psi, x, y, propa%propa_name)
-            write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
-            psi00%CVec = CZERO
-            call Hagedorn0(psi00, psi)
-            call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
-                           , print_basis=.false., t=t, int_print=16, real_part=.true.)
-            write (16, *), ''
-         else
-            call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
-            write (15, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, abs(x), y
-            call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
-                           , print_basis=.false., t=t, int_print=17, real_part=.true.)
-            write (17, *), ''
-         end if
+       ! if (propa%propa_name == 'hagedorn') Then
+       !    call Calc_Auto_corr(psi0, psi, x, y, propa%propa_name)
+       !    write (15, '(F10.6,2X,F10.6,F10.6,2X,F10.6)') t, abs(x), y
+       !    psi00%CVec = CZERO
+       !    call Hagedorn0(psi00, psi)
+       !    call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
+       !                   , print_basis=.false., t=t, int_print=16, real_part=.true.)
+       !    write (16, *), ''
+       ! else
+       !    call Calc_Auto_corr(psi0, psi_dt, x, y, propa%propa_name)
+       !    write (15, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, abs(x), y
+       !    call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
+       !                   , print_basis=.false., t=t, int_print=17, real_part=.true.)
+       !    write (17, *), ''
+       ! end if
 
       END DO
       psif = psi_dt

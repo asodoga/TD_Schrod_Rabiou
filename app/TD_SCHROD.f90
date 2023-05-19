@@ -20,7 +20,7 @@ PROGRAM TD_SCHROD
    logical :: adiabatic
    character(len=16)                  :: pot_name
 
-   ndim = 2
+   ndim = 1
    nsurf = 1
    pot_name = 'read_model'
    adiabatic = .false.
@@ -48,13 +48,13 @@ PROGRAM TD_SCHROD
    !call test_basitogridgridtobasis(Basis)
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    !call psi0_init(psi0)
-   !call Calc_average_energy(psi0, E)
+   call Calc_average_energy(psi0, E)
    !call Calc_AVQ_nD0(psi0=psi0,AVQ=y1, SQ=y2)
    !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   !STOP 'calcul de H|psi> est fait'
+   STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)
