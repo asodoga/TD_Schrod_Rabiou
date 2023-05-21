@@ -108,7 +108,9 @@ contains
       psi%CVec(:) = psi0%CVec(:)
       !call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
       !               , print_basis=.false., t=ZERO, int_print=20, real_part=.false.)
-
+      print*,'cc'
+      call Calc_average_energy(Psi0, E)
+       call Calc_average_energy(psi, E)
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
       DO i = 0, nt
          t = i*propa%delta_t
@@ -127,9 +129,9 @@ contains
          write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Pt(:)
 
          if (mod(i, 1) == 0) then
-            call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
+            call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
                            , print_basis=.false., t=t, int_print=10, real_part=.false.)
-            ! write(10,*)
+             write(10,*)
          end if
 
          CALL march(psi, psi_dt, t, propa)

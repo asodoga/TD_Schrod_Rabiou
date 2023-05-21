@@ -47,6 +47,7 @@ PROGRAM TD_SCHROD
    call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unitp)
    !call test_basitogridgridtobasis(Basis)
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
+   !call TEST_S_cplx(nb=3,nq=3)
    !call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
    !call Calc_AVQ_nD0(psi0=psi0,AVQ=y1, SQ=y2)
@@ -54,7 +55,7 @@ PROGRAM TD_SCHROD
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   STOP 'calcul de H|psi> est fait'
+   !STOP 'calcu de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

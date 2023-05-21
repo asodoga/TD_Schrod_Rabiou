@@ -8,7 +8,7 @@ MODULE Basis_m
    PUBLIC :: Basis_t, Read_Basis, Write_Basis, Basis_IS_allocated, Deallocate_Basis, Basis_IS_allocatedtot
    PUBLIC :: Calc_dngg_grid, Calc_tranpose_d0gb, test_basitogridgridtobasis
    PUBLIC :: GridTOBasis_nD_cplx, BasisTOGrid_nD_cplx
-   PUBLIC :: Calc_Q_grid, Calc_index, hercom
+   PUBLIC :: Calc_Q_grid, Calc_index, hercom,Buld_Num_S_cplx,hercom_cplx,Buld_Num_S,TEST_S_cplx
    PUBLIC :: Scale_Basis, Buld_S, init_Basis1_TO_Basis2
    PUBLIC :: construct_primitive_basis, construct_primitive_basis0, construct_primitive_basis1
    PUBLIC :: Hermite_double_product_func, Construct_poly_Hermite, Hermite_product_integral
@@ -191,14 +191,15 @@ CONTAINS
          END DO
       ELSE
          Basis2%Basis_name = Basis1%Basis_name
-         Basis2%nb_basis = Basis1%nb_basis
-         Basis2%nb = Basis1%nb
-         Basis2%nq = Basis1%nq
-         Basis2%Q0 = Basis1%Q0
-         Basis2%SCALEQ = Basis1%SCALEQ
-         Basis2%A = Basis1%A
-         Basis2%B = Basis1%B
-         Basis2%S = Basis1%S
+         Basis2%nb_basis   = Basis1%nb_basis
+         Basis2%nb         = Basis1%nb
+         Basis2%nq         = Basis1%nq
+         Basis2%Q0         = Basis1%Q0
+         Basis2%SCALEQ     = Basis1%SCALEQ
+         Basis2%Imp_k      = Basis1%Imp_k
+         Basis2%A          = Basis1%A
+         Basis2%B          = Basis1%B
+         Basis2%S          = Basis1%S
       END IF
 
    END SUBROUTINE init_Basis1_TO_Basis2
@@ -636,6 +637,43 @@ CONTAINS
    END SUBROUTINE
 
 
+
+     SUBROUTINE Buld_Num_S_cplx(S, nb, nq, x1, x2, s1, s2, p1, p2)
+     
+      real(Kind=Rk)                    ::  s1, s2, p1, p2
+      complex(Kind=Rk)                 ::  x1, x2
+      integer, intent(in)              ::  nb, nq
+      complex(Kind=Rk), intent(inout)  ::  S(:, :)
+      real(Kind=Rk), allocatable       ::  w(:)
+      complex(Kind=Rk), allocatable    ::  z(:)
+      real(Kind=Rk)                    ::  s3
+      complex(Kind=Rk)                 ::  z3
+      integer                          :: iq, jq
+      
+      allocate (z(nq))
+      allocate (w(nq))
+      call hercom_cplx(nq, z, w)
+      
+      s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+      z3 = abs((EYE*(p2-p1)+s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2))
+      w(:) = w(:)/s3
+      z(:) = z3 + z(:)/s3
+      s(:, :) = CZERO
+      Do iq = 1, nb
+         Do jq = 1, nb
+            CALL Hermite_product_integral_cplx(S(iq, jq), z, w, iq, jq, x1, x2, s1, s2, p1, p2)
+         End Do
+      End Do
+      print *, ' Beging print Overlap matrix'
+      Do jq = 1, nb
+         write (*, *) S(jq, :)
+      End Do
+      print *, ' End print Overlap matrix'
+!
+   END SUBROUTINE
+
+
+
      SUBROUTINE Buld_Num_S(S, nb, nq, x1, x2, s1, s2, p1, p2)
       real(Kind=Rk)                    :: s1, s2, x1, x2, p1, p2
       integer, intent(in)              :: nb, nq
@@ -648,7 +686,6 @@ CONTAINS
       call hercom(nq, x(:), w(:))
       s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
       x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-      !x3 = abs((EYE*(p2-p1)+s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2))
       w(:) = w(:)/s3
       x(:) = x3 + x(:)/s3
       s(:, :) = ZERO
@@ -829,6 +866,19 @@ CONTAINS
 
    END SUBROUTINE herroot
 
+     SUBROUTINE hercom_cplx(nq, z, w)
+     Implicit none
+     integer            :: i, nq
+     complex(kind=Rk)   :: z(nq)
+     real(kind=Rk)      :: w(nq), xp(nq)
+     
+    !construction of real grid-----------------------------
+    call hercom(nq, xp, w)
+    !construction of cplx grid-----------------------------
+    z(:) = cmplx(xp(:),kind=Rk)
+      
+  END SUBROUTINE 
+  
    SUBROUTINE hercom(nq, xp, w)
       Implicit none
       integer         :: i, nq
@@ -1515,12 +1565,56 @@ CONTAINS
       END DO
    END SUBROUTINE Calc_Q_grid
 
+   SUBROUTINE Construct_poly_Hermite_cplx(poly_Hermite, z, l)
+      Implicit none
+      complex(kind=Rk), intent(inout)        :: poly_Hermite
+      complex(kind=Rk)                       :: pl0, pl1, pl2
+      real(kind=Rk)                          :: norme
+      complex(kind=Rk), intent(in)           :: z
+      integer, intent(in)                    :: l
+      integer                                :: i
+
+      IF (l < 0) THEN
+         Write (out_unitp, *) 'Bad arguments in poly_hermite :'
+         Write (out_unitp, *) ' l < 0 : ', l
+         STOP
+      END IF
+      norme = sqrt(PI)
+
+      IF (l == 0) THEN
+         poly_Hermite = CONE*exp(-HALF*z*z)
+         poly_Hermite = poly_Hermite/sqrt(norme)
+      ELSE IF (l == 1) THEN
+         norme = norme*TWO
+         poly_Hermite = TWO*z*exp(-HALF*z*z)
+         poly_Hermite = poly_Hermite/sqrt(norme)
+      ELSE
+
+         pl2 = ONE
+         pl1 = TWO*z
+         norme = norme*TWO
+
+         DO i = 2, l
+            norme = norme*TWO*i
+            pl0 = TWO*(z*pl1 - (i - 1)*pl2)
+            pl2 = pl1
+            pl1 = pl0
+         END DO
+         pl0 = pl0*exp(-HALF*z*z)
+         poly_Hermite = pl0/sqrt(norme)
+
+      END IF
+
+   END SUBROUTINE 
+
+ 
+
    SUBROUTINE Construct_poly_Hermite(poly_Hermite, x, l)
       Implicit none
-      real(kind=Rk), intent(inout)        :: poly_Hermite
-      real(kind=Rk)                      :: pl0, pl1, pl2, norme
-      real(kind=Rk), intent(in)           :: x
-      integer, intent(in)                   :: l
+      real(kind=Rk), intent(inout)         :: poly_Hermite
+      real(kind=Rk)                        :: pl0, pl1, pl2, norme
+      real(kind=Rk), intent(in)            :: x
+      integer, intent(in)                  :: l
       integer                              :: i
 
       IF (l < 0) THEN
@@ -1608,5 +1702,63 @@ CONTAINS
       deallocate (Hermite_func_table)
 
    END SUBROUTINE Hermite_product_integral
+   
+
+SUBROUTINE Hermite_double_product_func_cplx(Hf, z, i, j, q0i, q0j, sci, scj, p1, p2)
+  
+  USE UtilLib_m
+  complex(kind=Rk), intent(in)                  :: z, q0i, q0j
+  real(kind=Rk), intent(in)                     :: sci, scj, p1, p2
+  complex(kind=Rk), intent(inout)               :: Hf !f(q)
+  complex(kind=Rk)                              :: zi, zj
+  integer, intent(in)                           :: i, j
+  complex(kind=Rk)                              ::  Hfi, Hfj
+   
+   
+  zi = (z - q0i)*sci
+  CALL Construct_poly_Hermite_cplx(Hfi, zi, I - 1)
+  
+  zj = (z - q0j)*scj
+  CALL Construct_poly_Hermite_cplx(Hfj, zj, J - 1)
+  
+  Hf = conjg(sqrt(sci)*Hfi*exp(EYE*p1*(z - q0i)))*sqrt(scj)*Hfj*exp(EYE*p2*(z - q0j))
+END SUBROUTINE 
+
+SUBROUTINE Hermite_product_integral_cplx(intfq, z_table, w_table, i, j, q0i, q0j, sci, scj, p1, p2)
+  
+  USE UtilLib_m
+  real(kind=Rk), intent(in)           :: sci, scj, p1, p2
+  complex(kind=Rk), intent(in)        :: q0i, q0j
+  complex(kind=Rk), intent(inout)     :: intfq !f(q)
+  integer, intent(in)                 :: i, j
+  real(kind=Rk), intent(in)           :: w_table(:)
+  complex(kind=Rk), intent(in)        :: z_table(:)
+  complex(kind=Rk), allocatable       :: Hermite_func_table_cplx(:)
+  integer                             :: iq
+  allocate (Hermite_func_table_cplx(size(z_table)))
+  Do iq = 1, size(z_table)
+     CALL Hermite_double_product_func_cplx(Hermite_func_table_cplx(iq), z_table(iq), i, j, q0i, q0j, sci, scj, p1, p2)
+  End Do
+  intfq = dot_product(Hermite_func_table_cplx, w_table)
+  !print*,'<b1|b2> =' ,i,j,intfq
+  deallocate (Hermite_func_table_cplx)
+END SUBROUTINE 
+
+
+SUBROUTINE TEST_S_cplx(nb,nq)
+implicit none
+ complex(Kind=Rk)                 ::  z1, z2
+ integer, intent(in)              ::  nb, nq
+ complex(Kind=Rk), allocatable    ::  S(:, :)
+ real(Kind=Rk)                    ::  s1,s2,p1,p2,x1,x2
+ 
+ x1=ZERO; x2=ONE; s1=ONE; s2=ONE; p1=ZERO; p2=ONE; z1=ZERO; z2= ONE
+allocate(S(nb,nb))
+ call Buld_Num_S_cplx(S, nb, nq, z1, z2, s1, s2, p1, p2) 
+ print*,'=====================Old S======================='
+ call Buld_Num_S(S, nb, nq+12, x1, x2, s1, s2, p1, p2)
+
+END SUBROUTINE
+
 
 END MODULE Basis_m
