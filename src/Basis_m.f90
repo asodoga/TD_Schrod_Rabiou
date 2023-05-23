@@ -207,7 +207,7 @@ CONTAINS
    RECURSIVE SUBROUTINE Deallocate_Basis(Basis)
       USE UtilLib_m
 
-      TYPE(Basis_t), intent(inout)  :: Basis
+      TYPE(Basis_t), intent(inout)     :: Basis
       integer                          :: i
 
       ! write(out_unitp,*) '********************************************************************'

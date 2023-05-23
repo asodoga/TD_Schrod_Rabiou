@@ -183,13 +183,13 @@ contains
       USE psi_m
       USE Basis_m
 
-      TYPE(psi_t), intent(inout)                 :: psi, psi_dt
-      logical, parameter                          :: debug = .true.
+      TYPE(psi_t), intent(inout)                   :: psi, psi_dt
+      logical, parameter                           :: debug = .true.
 
       ! variables locales
-      REAL(kind=Rk), allocatable                 :: Qt(:), SQt(:),Pt(:)
-      REAL(kind=Rk)                              :: Norm, E
-      integer                                    :: Ndim
+      REAL(kind=Rk), allocatable                   :: Qt(:), SQt(:),Pt(:)
+      REAL(kind=Rk)                                :: Norm, E
+      integer                                      :: Ndim
       write (out_unitp, *) 'Beging Hagedorn'
 
       !call Calc_Norm_OF_Psi(psi_dt,Norm)
@@ -200,7 +200,7 @@ contains
       Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO
 
       call Calc_AVQ_nD0(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
-      call Calc_Av_imp_k_nD(psi_dt,Pt)
+      !call Calc_Av_imp_k_nD(psi_dt,Pt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt,Pt)
       call projection(psi, psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt,Pt)
