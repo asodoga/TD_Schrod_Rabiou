@@ -441,10 +441,10 @@ CONTAINS
 
    RECURSIVE SUBROUTINE construct_primitive_basis(Basis, x, sx,p)
       USE UtilLib_m
-      logical, parameter      :: debug = .true.
-      !logical,             parameter     ::debug = .false.
-      TYPE(Basis_t), intent(inout)  :: Basis
-      real(kind=Rk), intent(in), optional  :: x(:), sx(:),p(:)
+      logical, parameter                   :: debug = .true.
+      !logical,             parameter      ::debug = .false.
+      TYPE(Basis_t), intent(inout)         :: Basis
+      real(kind=Rk), intent(in), optional  :: x(:), sx(:) ,p(:)
 
       if (present(x) .and. present(sx) .and. present(p)) then
          !write(out_unitp,*) ' S will be constructed for Ho Basis'
@@ -552,6 +552,7 @@ CONTAINS
       RETURN
 
    END SUBROUTINE Construct_Basis_el
+
   SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
       USE UtilLib_m
 
@@ -621,7 +622,8 @@ CONTAINS
       Basis%conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
 
       !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
-      call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+
+      call hercom(nq, Basis%x(:), Basis%w(:))
          
       DO iq = 1, nq
          DO ib = 1, nb
@@ -630,9 +632,12 @@ CONTAINS
          END DO
       END DO
       call Buld_Num_S(S=Basis%S, nb=nb, nq=nq, x1=x1, x2=x2, s1=s2, s2=s2, p1=p1, p2=p2)
-      Basis%SCALEQ = sx
-      Basis%Q0 = x0
-      Basis%Imp_k = p
+
+      !nouvelles affectations------------------------------------------------------------------------------
+      
+        Basis%SCALEQ = sx
+        Basis%Q0 = x0
+        Basis%Imp_k = p
 
    END SUBROUTINE
 
