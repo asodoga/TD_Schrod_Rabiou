@@ -128,11 +128,11 @@ contains
          write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
          write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Pt(:)
 
-         if (mod(i, 1) == 0) then
-            call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
-                           , print_basis=.false., t=t, int_print=10, real_part=.false.)
-             write(10,*)
-         end if
+         !if (mod(i, 1) == 0) then
+         !   call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
+         !                  , print_basis=.false., t=t, int_print=10, real_part=.false.)
+         !    write(10,*)
+         !end if
 
          CALL march(psi, psi_dt, t, propa)
          if (propa%propa_name == 'hagedorn') Then
@@ -192,15 +192,15 @@ contains
       integer                                      :: Ndim
       write (out_unitp, *) 'Beging Hagedorn'
 
-      !call Calc_Norm_OF_Psi(psi_dt,Norm)
-      ! write(out_unitp,*) '<psi|psi> =',Norm
+      call Calc_Norm_OF_Psi(psi_dt,Norm)
+       write(out_unitp,*) '<psi|psi> =',Norm
 
       Ndim = size(psi_dt%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim))
       Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO
 
       call Calc_AVQ_nD0(Psi0=psi_dt, AVQ=Qt, SQ=SQt)
-      !call Calc_Av_imp_k_nD(psi_dt,Pt)
+      call Calc_Av_imp_k_nD(psi_dt,Pt)
       call construct_primitive_basis(psi_dt%Basis, Qt, SQt,Pt)
       call projection(psi, psi_dt)
       call construct_primitive_basis(psi%Basis, Qt, SQt,Pt)
@@ -208,8 +208,8 @@ contains
 
       write (out_unitp, *) 'End Hagedorn'
 
-      !call Calc_Norm_OF_Psi(psi,Norm)
-      !write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
+      call Calc_Norm_OF_Psi(psi,Norm)
+      write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
       IF (debug) THEN
          flush (out_unitp)
       END IF

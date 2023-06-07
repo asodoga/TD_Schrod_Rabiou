@@ -187,6 +187,7 @@ contains
       TYPE(psi_t), intent(inout), target               :: psi_dt_2
       complex(kind=Rk), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
       complex(kind=Rk), allocatable, target            :: B1(:), B2(:)
+      real(kind=Rk)                                    :: Norm0
 
       logical, parameter                               :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim
@@ -194,7 +195,8 @@ contains
 
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
-      write (out_unitp, *) 'Begin Hagedorn projection'
+      Call Calc_Norm_OF_psi(psi_dt_1,Norm0)
+      write (out_unitp, *) 'Begin Hagedorn projection',Norm0
 
       If (Ndim == 1) then
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
@@ -203,7 +205,7 @@ contains
          psi_dt_2%CVec(:) = CZERO
          DO i3 = 1, ubound(BBB1, dim=3)
          DO i1 = 1, ubound(BBB1, dim=1)
-            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), psi_dt_1%Basis%tab_basis(1)%S)
+            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), transpose(psi_dt_1%Basis%tab_basis(1)%S))
          END DO
          END DO
       else
@@ -213,7 +215,7 @@ contains
 
          DO i3 = 1, ubound(BBB1, dim=3)
          DO i1 = 1, ubound(BBB1, dim=1)
-            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), psi_dt_1%Basis%tab_basis(1)%S)
+            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), transpose(psi_dt_1%Basis%tab_basis(1)%S))
          END DO
          END DO
 
@@ -223,7 +225,7 @@ contains
             BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
             DO i3 = 1, ubound(BBB1, dim=3)
             DO i1 = 1, ubound(BBB1, dim=1)
-               BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), psi_dt_1%Basis%tab_basis(inb)%S)
+               BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), transpose(psi_dt_1%Basis%tab_basis(inb)%S))
             END DO
             END DO
             B1 = B2
@@ -233,8 +235,8 @@ contains
          END DO
 
       END IF
-
-      write (out_unitp, *) 'END Hagedorn projection'
+        Call Calc_Norm_OF_psi(psi_dt_2,Norm0)
+      write (out_unitp, *) 'END Hagedorn projection',Norm0
 
    END SUBROUTINE Projection
 
