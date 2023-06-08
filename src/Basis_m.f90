@@ -1753,12 +1753,18 @@ END SUBROUTINE
 SUBROUTINE TEST_S_cplx(nb,nq)
 implicit none
  integer, intent(in)              ::  nb, nq
- complex(Kind=Rk), allocatable    ::  S(:, :)
+ complex(Kind=Rk), allocatable    ::  S(:, :),S0(:, :)
  real(Kind=Rk)                    ::  s1,s2,p1,p2,x1,x2
  
- x1=ZERO; x2=ONE; s1=ONE; s2=ONE; p1=ZERO; p2=ZERO
+ x1=ZERO; x2=ONE; s1=ONE; s2=ONE; p1=HALF; p2=ONE
 allocate(S(nb,nb))
+allocate(S0(nb,nb))
+
  call Construct_overlap_matrix_cplx(S,x1,x2,p1,p2,s1,s2,nb,nq)
+
+print*,'=============================================================================================================='
+ call Construct_overlap_matrix_cplx1(S0,x1,x2,p1,p2,s1,s2,nb,nq)
+
 END SUBROUTINE
 
 
@@ -1769,8 +1775,8 @@ SUBROUTINE Construct_overlap_function_cplx(x,overlap,q1,q2,p1,p2,s1,s2,m,n)
     complex(kind=RK)                ::  overlap1,overlap2
    
       
-      overlap1 = sqrt(s1)*poly_Hermite(x, m)*cmplx(cos(p1*(x-q1)), sin(p1*(x-q1)),kind=RK)*exp(-HALF*(s1*(x-q1))**2)
-      overlap2 = sqrt(s2)*poly_Hermite(x, n)*cmplx(cos(p2*(x-q2)), sin(p2*(x-q2)),kind=RK)*exp(-HALF*(s2*(x-q2))**2)
+      overlap1 = sqrt(s1)*poly_Hermite(s1*(x-q1), m)*cmplx(cos(p1*(x-q1)), sin(p1*(x-q1)),kind=RK)*exp(-HALF*(s1*(x-q1))**2)
+      overlap2 = sqrt(s2)*poly_Hermite(s2*(x-q2), n)*cmplx(cos(p2*(x-q2)), sin(p2*(x-q2)),kind=RK)*exp(-HALF*(s2*(x-q2))**2)
      
      overlap = CONJG(overlap1)*overlap2
  
@@ -1789,12 +1795,12 @@ SUBROUTINE Construct_overlap_matrix_elmt_cplx(overlap,q1,q2,p1,p2,s1,s2,m,n,nq)
       allocate (w(nq))
       allocate (f(nq))
       call hercom(nq, x(:), w(:))
-      
+
        overlap = ZERO
       do i = 1, nq
        call Construct_overlap_function_cplx(x(i),f(i),q1,q2,p1,p2,s1,s2,m,n) 
-       overlap =  overlap +f(i)*w(i) 
       end do
+      overlap = sum(f(:)*w(:))
       
   deallocate(x,f,w)   
       
@@ -1816,12 +1822,89 @@ SUBROUTINE Construct_overlap_matrix_cplx(Mat,q1,q2,p1,p2,s1,s2,nb,nq)
        end do
      end do 
      
-    do i = 1, nb
-      write(*,*) ( Mat(i,j),j=1,nb )
+    do j = 1, nb
+      write(*,*) ( Mat(i,j),i=1,nb )
     end do
 END SUBROUTINE 
 
 
+SUBROUTINE Construct_overlap_function_re(Reoverlap,Imoverlap,x,q1,q2,p1,p2,s1,s2,m,n)
+   integer,intent(in)               ::  m,n
+   real(kind=RK),intent(in)         ::  x,q1,q2,p1,p2,s1,s2
+   real(kind=RK),intent(inout)      ::  Reoverlap,Imoverlap
+   real(kind=RK)                    ::  Reoverlap1,Imoverlap1
+   
+   
+      
+      reoverlap1 = sqrt(s1)*poly_Hermite(s1*(x-q1), m)*exp(-HALF*(s1*(x-q1))**2)
+      reoverlap1 = reoverlap1*sqrt(s2)*poly_Hermite(s2*(x-q2), n)*exp(-HALF*(s2*(x-q2))**2)
+      reoverlap1 =reoverlap1*cos(p2*(x-q2)-p1*(x-q1))
+      
+      reoverlap = reoverlap1
+
+     Imoverlap1 = sqrt(s1)*poly_Hermite(s1*(x-q1), m)*exp(-HALF*(s1*(x-q1))**2)
+     Imoverlap1 = Imoverlap1*sqrt(s2)*poly_Hermite(s2*(x-q2), n)*exp(-HALF*(s2*(x-q2))**2)
+     Imoverlap1 =Imoverlap1*sin( p2*(x-q2)-p1*(x-q1))
+      
+      Imoverlap = Imoverlap1
+      
+END SUBROUTINE 
+
+
+SUBROUTINE Construct_overlap_matrix_elmt_cplx1(overlap,q1,q2,p1,p2,s1,s2,m,n,nq)
+   integer,intent(in)            ::  m,n,nq
+   real(kind=RK),intent(in)      ::  q1,q2,p1,p2,s1,s2
+   complex(kind=RK),intent(inout)::  overlap
+   real(kind=RK),allocatable     ::  x(:),w(:)
+   real(kind=RK),allocatable     :: Ref(:),Imf(:)
+   real(kind=RK)                 ::  Reoverlap1,Imoverlap1
+    real(kind=RK)                ::  q3,s3
+   integer                       ::  i
+       
+      allocate (x(nq))
+      allocate (w(nq))
+      allocate ( Ref(nq),Imf(nq) )
+      call hercom(nq, x(:), w(:))
+
+       s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+       q3 = (s1*s1*q1 + s2*s2*q2)/(s1*s1 + s2*s2)
+       w(:) = w(:)/s3
+       x(:) = q3 + x(:)/s3
+      
+      overlap = ZERO
+      do i = 1, nq
+       call Construct_overlap_function_re(Ref(i),Imf(i),x(i),q1,q2,p1,p2,s1,s2,m,n) 
+      end do
+      
+      Reoverlap1 = sum(Ref(:)*w(:))
+      Imoverlap1 = sum(Imf(:)*w(:))
+      
+      overlap = Reoverlap1 + EYE*Imoverlap1
+      
+  deallocate(x,Ref,Imf,w)   
+      
+END SUBROUTINE 
+
+
+
+SUBROUTINE Construct_overlap_matrix_cplx1(Mat,q1,q2,p1,p2,s1,s2,nb,nq)
+   integer,intent(in)               ::  nb,nq
+   real(kind=RK),intent(in)         ::  q1,q2,p1,p2,s1,s2
+   complex(kind=RK),intent(inout)   ::  Mat(:,:)
+   integer                          ::  i,j
+   
+     
+     Mat(:,:) = CZERO 
+     do i = 1, nb
+       do j = 1, nb
+        call Construct_overlap_matrix_elmt_cplx1(Mat(i,j),q1,q2,p1,p2,s1,s2,i-1,j-1,nq)
+       end do
+     end do 
+     
+    do j = 1, nb
+      write(*,*) ( Mat(i,j),i=1,nb )
+    end do
+END SUBROUTINE 
 
 
 END MODULE Basis_m
