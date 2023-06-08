@@ -734,9 +734,9 @@ CONTAINS
       ! test------------------------------------------------------------------------------------------------------
       s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
       s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
-      x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-      w(:) = w(:)/s3
-      x(:) = x3 + Basis%x(:)/s3
+     !x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+     !w(:) = w(:)/s3
+     !x(:) = x3 + Basis%x(:)/s3
       !------------------------------------------------------------------------------------------------------------
       !----------------------------allocation of d0gb,d1gb, d2gb  for new  construction-----------------------------------
       allocate (Basis%d0gb(Basis%nq, Basis%nb))
@@ -772,6 +772,33 @@ CONTAINS
       deallocate (d1gb)
       deallocate (d2gb)
    END SUBROUTINE
+
+
+   SUBROUTINE Construct_Overlap_Matrix_cplx(Mat, d0gb1, d0gb2,phase1,phase2 w)
+    USE UtilLib_m
+    integer                           :: ib, jb, iq, nq
+    complex(kind=Rk),intent(inout)    :: Mat(:, :)
+    real(kind=Rk), intent(in)         :: d0gb1(:, :), d0gb2(:, :),phase1(:),phase2(:), w(:)
+    
+    !local variables-----------------------------------------------------------
+    complex(kind=Rk), allocatable     :: d0bgw(:, :), w_p(:)
+    
+    write (out_unitp, *) 'Construct_Overlap_Matrix_cplx'
+    
+    d0bgw = transpose(d0gb2)
+      w_p(:)= w1(:)*phase2(:)*phase1(:)
+      
+    DO ib = 1, ubound(Mat, dim=1)
+       d0bgw(ib, :) = d0bgw(ib, :)*w_p(:)
+    END DO
+    
+    Mat = matmul(d0bgw, d0gb2)
+    
+    write (out_unitp, *) 'Construct_Overlap_Matrix_cplx'
+ END SUBROUTINE 
+ 
+ 
+ 
 
    FUNCTION poly_Hermite(x, l)
       Implicit none
@@ -1750,20 +1777,35 @@ SUBROUTINE Hermite_product_integral_cplx(intfq, z_table, w_table, i, j, q0i, q0j
 END SUBROUTINE 
 
 
-SUBROUTINE TEST_S_cplx(nb,nq)
+SUBROUTINE TEST_S_cplx(Basis)
 implicit none
- integer, intent(in)              ::  nb, nq
- complex(Kind=Rk), allocatable    ::  S(:, :),S0(:, :)
- real(Kind=Rk)                    ::  s1,s2,p1,p2,x1,x2
+ TYPE(Basis_t), intent(in)              :: Basis
+ complex(Kind=Rk), allocatable          ::  S(:, :),S0(:, :),B1(:),B2(:)
+ real(Kind=Rk)                          ::  s1,s2,p1,p2,x1,x2
+ integer                                :: nb,nq
  
- x1=ZERO; x2=ONE; s1=ONE; s2=ONE; p1=HALF; p2=ONE
+ x1=ZERO; x2=ONETENTH; s1=ONE; s2=ONE; p1=ZERO; p2=ONE
+ nb = Basis%nb
+ nq= Basis%nq
 allocate(S(nb,nb))
 allocate(S0(nb,nb))
-
+allocate(B1(nb),B2(nb))
+B1(:) = ZERO
+B2(:) = ZERO
+B1(1) = CONE
  call Construct_overlap_matrix_cplx(S,x1,x2,p1,p2,s1,s2,nb,nq)
+ print*,'b1 is in',B1
+ print*,' Norm b1',sum(abs(B1)**2)
+ 
+  B2 = MATMUL(S,B1)
+  print*,'b2 is out',B2
+  print*,' Norm b2',sum(abs(B2)**2)
 
 print*,'=============================================================================================================='
  call Construct_overlap_matrix_cplx1(S0,x1,x2,p1,p2,s1,s2,nb,nq)
+ !B2 = MATMUL(B1,S0)
+ !print*,'b2 is out',B2
+ !print*,' Norm b2',sum(abs(B2)**2)
 
 END SUBROUTINE
 
@@ -1778,7 +1820,7 @@ SUBROUTINE Construct_overlap_function_cplx(x,overlap,q1,q2,p1,p2,s1,s2,m,n)
       overlap1 = sqrt(s1)*poly_Hermite(s1*(x-q1), m)*cmplx(cos(p1*(x-q1)), sin(p1*(x-q1)),kind=RK)*exp(-HALF*(s1*(x-q1))**2)
       overlap2 = sqrt(s2)*poly_Hermite(s2*(x-q2), n)*cmplx(cos(p2*(x-q2)), sin(p2*(x-q2)),kind=RK)*exp(-HALF*(s2*(x-q2))**2)
      
-     overlap = CONJG(overlap1)*overlap2
+     overlap = CONJG(overlap2)*overlap1
  
 END SUBROUTINE 
 
@@ -1796,7 +1838,7 @@ SUBROUTINE Construct_overlap_matrix_elmt_cplx(overlap,q1,q2,p1,p2,s1,s2,m,n,nq)
       allocate (f(nq))
       call hercom(nq, x(:), w(:))
 
-       overlap = ZERO
+      overlap = ZERO
       do i = 1, nq
        call Construct_overlap_function_cplx(x(i),f(i),q1,q2,p1,p2,s1,s2,m,n) 
       end do
@@ -1838,15 +1880,11 @@ SUBROUTINE Construct_overlap_function_re(Reoverlap,Imoverlap,x,q1,q2,p1,p2,s1,s2
       
       reoverlap1 = sqrt(s1)*poly_Hermite(s1*(x-q1), m)*exp(-HALF*(s1*(x-q1))**2)
       reoverlap1 = reoverlap1*sqrt(s2)*poly_Hermite(s2*(x-q2), n)*exp(-HALF*(s2*(x-q2))**2)
-      reoverlap1 =reoverlap1*cos(p2*(x-q2)-p1*(x-q1))
-      
-      reoverlap = reoverlap1
+      reoverlap  = reoverlap1*cos( p1*(x-q1)-p2*(x-q2) )
 
      Imoverlap1 = sqrt(s1)*poly_Hermite(s1*(x-q1), m)*exp(-HALF*(s1*(x-q1))**2)
-     Imoverlap1 = Imoverlap1*sqrt(s2)*poly_Hermite(s2*(x-q2), n)*exp(-HALF*(s2*(x-q2))**2)
-     Imoverlap1 =Imoverlap1*sin( p2*(x-q2)-p1*(x-q1))
-      
-      Imoverlap = Imoverlap1
+     Imoverlap1 = Imoverlap1*sqrt(s2)*poly_Hermite(s2*(x-q2), n)*exp(-HALF*(s2*(x-q2))**2)      
+     Imoverlap  = Imoverlap1*sin( p1*(x-q1)-p2*(x-q2))
       
 END SUBROUTINE 
 
