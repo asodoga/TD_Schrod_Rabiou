@@ -190,16 +190,18 @@ CONTAINS
             Basis2%nq = Basis2%nq*Basis2%tab_basis(ib)%nq
          END DO
       ELSE
-         Basis2%Basis_name = Basis1%Basis_name
-         Basis2%nb_basis   = Basis1%nb_basis
-         Basis2%nb         = Basis1%nb
-         Basis2%nq         = Basis1%nq
-         Basis2%Q0         = Basis1%Q0
-         Basis2%SCALEQ     = Basis1%SCALEQ
-         Basis2%Imp_k      = Basis1%Imp_k
-         Basis2%A          = Basis1%A
-         Basis2%B          = Basis1%B
-         Basis2%S          = Basis1%S
+         Basis2%Basis_name       = Basis1%Basis_name
+         Basis2%nb_basis         = Basis1%nb_basis
+         Basis2%nb               = Basis1%nb
+         Basis2%nq               = Basis1%nq
+         Basis2%Q0               = Basis1%Q0
+         Basis2%SCALEQ           = Basis1%SCALEQ
+         Basis2%Imp_k            = Basis1%Imp_k
+         Basis2%A                = Basis1%A
+         Basis2%B                = Basis1%B
+         Basis2%S                = Basis1%S
+         Basis2%phase_Vec        = Basis1%phase_vec
+         Basis2%conjg_phase_Vec  = Basis1%conjg_phase_Vec
       END IF
 
    END SUBROUTINE init_Basis1_TO_Basis2
@@ -586,7 +588,7 @@ CONTAINS
 
 
 
- SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx,p) ! HO HAGEDORN:
+ SUBROUTINE Construct_Basis_Ho_HG2(Basis, x0, sx,p) ! HO HAGEDORN:
       USE UtilLib_m
       TYPE(Basis_t), intent(inout)                         :: Basis
       integer                                              :: iq, ib
@@ -774,27 +776,115 @@ CONTAINS
    END SUBROUTINE
 
 
-   SUBROUTINE Construct_Overlap_Matrix_cplx(Mat, d0gb1, d0gb2,phase1,phase2 w)
+
+ SUBROUTINE Construct_Basis_Ho_HG(Basis, x0, sx,p) ! Time dependent Basis 
+    USE UtilLib_m
+    TYPE(Basis_t), intent(inout)                         :: Basis
+    integer                                              :: iq, ib
+    real(kind=Rk), intent(in)                            :: x0, sx,p
+    real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
+    real(kind=Rk), allocatable                           :: d0gb2(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb1(:, :)
+    real(kind=Rk), allocatable                           :: x(:), w(:)
+    complex(kind=Rk), allocatable                        :: w_p(:)
+    !----------------------------   deallocation----------------------------------------------------
+      allocate (w_p(Basis%nq))  
+    if (allocated(Basis%x)) deallocate (Basis%x)
+    if (allocated(Basis%w)) deallocate (Basis%w)
+    if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
+    if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
+    if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
+    w_p = Basis%phase_Vec
+    if (allocated(Basis%phase_Vec)) deallocate (Basis%phase_Vec)
+    if (allocated(Basis%conjg_phase_Vec)) deallocate (Basis%conjg_phase_Vec)
+    !----------------------------allocation of x and w for new  construction-------------------------------------------
+    allocate (Basis%x(Basis%nq))
+    allocate (Basis%w(Basis%nq))
+    allocate (Basis%phase_Vec(Basis%nq))
+    allocate (Basis%conjg_phase_Vec(Basis%nq))
+    allocate (x(Basis%nq))
+    allocate (w(Basis%nq))    
+    !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
+    call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+    call hercom(Basis%nq, x(:), w(:))
+    Basis%phase_vec(:) = exp( EYE*p*(Basis%x(:)-x0) )
+    Basis%conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
+    ! test------------------------------------------------------------------------------------------------------
+    !s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
+    !s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+    !x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+    !w(:) = w(:)/s3
+    !x(:) = x3 + Basis%x(:)/s3
+    !------------------------------------------------------------------------------------------------------------
+    !----------------------------allocation of d0gb,d1gb, d2gb  for new  construction-----------------------------------
+    allocate (Basis%d0gb(Basis%nq, Basis%nb))
+    allocate (Basis%d1gb(Basis%nq, Basis%nb, 1))
+    allocate (Basis%d2gb(Basis%nq, Basis%nb, 1, 1))
+    !----------------------------this allocation is for construction of S(:,:)------------------------------------------
+    allocate (d0gb1(Basis%nq, Basis%nb))
+    allocate (d0gb2(Basis%nq, Basis%nb))
+    allocate (d1gb(Basis%nq, Basis%nb, 1))
+    allocate (d2gb(Basis%nq, Basis%nb, 1, 1))
+    !----------------------------calculation of d0gb,d1gb, d2gb  for new  Basis-------------------------------------------
+    DO iq = 1, Basis%nq
+       DO ib = 1, Basis%nb
+          CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq), Basis%d0gb(iq, ib), &
+                                                Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), ib - 1, .TRUE.)  !construct
+          !------------------------for s(:,:) -------------------------------------------------------
+          CALL Construct_Basis_poly_Hermite_exp(Basis%scaleQ*(x(iq) - Basis%Q0), d0gb1(iq, ib), &
+                                                d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+          CALL Construct_Basis_poly_Hermite_exp(sx*(x(iq) - x0), d0gb2(iq, ib), &
+                                                d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
+       END DO
+    END DO
+    d0gb1 = sqrt(Basis%scaleQ)*d0gb1
+    d0gb2 = sqrt(sx)*d0gb2
+    call Construct_Overlap_Matrix(Mat=Basis%S, d0gb1=d0gb1, d0gb2=d0gb2,phase1=w_p,phase2=Basis%conjg_phase_Vec,w=Basis%w)
+    Basis%SCALEQ = sx
+    Basis%Q0 = x0
+    Basis%Imp_k=p
+    !----------------------------   deallocation of local variables ----------------------------------------------------
+    deallocate (x)
+    deallocate (w,w_p)
+    deallocate (d0gb1)
+    deallocate (d0gb2)
+    deallocate (d1gb)
+    deallocate (d2gb)
+ END SUBROUTINE
+
+
+
+
+
+   SUBROUTINE Construct_Overlap_Matrix(Mat, d0gb1, d0gb2,phase1,phase2 ,w)
     USE UtilLib_m
     integer                           :: ib, jb, iq, nq
     complex(kind=Rk),intent(inout)    :: Mat(:, :)
-    real(kind=Rk), intent(in)         :: d0gb1(:, :), d0gb2(:, :),phase1(:),phase2(:), w(:)
+    real(kind=Rk), intent(in)         :: d0gb1(:, :), d0gb2(:, :), w(:)
+    complex(kind=Rk), intent(in)      :: phase1(:),phase2(:)
     
     !local variables-----------------------------------------------------------
-    complex(kind=Rk), allocatable     :: d0bgw(:, :), w_p(:)
+    complex(kind=Rk), allocatable     :: d0bgw(:, :), w_p(:),d0gb0(:,:),d0gb(:,:)
     
     write (out_unitp, *) 'Construct_Overlap_Matrix_cplx'
-    
+     d0gb=d0gb2
+     d0gb0=d0gb1
     d0bgw = transpose(d0gb2)
-      w_p(:)= w1(:)*phase2(:)*phase1(:)
+    write(*,*) 'size phase1,phase2',size(phase1),size(phase2)
+    stop 'cc'
+    
+      w_p(:)= w(:)*phase2(:)*phase1(:)
       
     DO ib = 1, ubound(Mat, dim=1)
        d0bgw(ib, :) = d0bgw(ib, :)*w_p(:)
     END DO
     
-    Mat = matmul(d0bgw, d0gb2)
+    Mat = matmul(d0bgw, d0gb0)
     
-    write (out_unitp, *) 'Construct_Overlap_Matrix_cplx'
+    write (out_unitp, *) 'Construct_Overlap_Matrix'
+
+    do jb = 1, ubound(Mat, dim=1)
+  write(*,*) ( Mat(ib,jb),ib=1,ubound(Mat, dim=1) )
+end do
  END SUBROUTINE 
  
  

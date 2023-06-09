@@ -8,12 +8,12 @@ PROGRAM TD_SCHROD
    USE Ana_psi_m
    USE lanczos_m
    IMPLICIT NONE
-   TYPE(Basis_t), target          :: Basis
+   TYPE(Basis_t), target          :: Basis,Basis0
    !TYPE(Op_t)                    :: H
    TYPE(psi_t)                    :: psi0, psif, psi
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
-   real(Kind=Rk)                  :: E, Norm, x(2), y1(2), y2(2) 
+   real(Kind=Rk)                  :: E, Norm, x(2), y1(2), y2(2) ,p(1)=ONE,S(1)=ONE,x0(1)=ONETENTH
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
@@ -28,13 +28,15 @@ PROGRAM TD_SCHROD
    call sub_Init_Qmodel(ndim, nsurf, pot_name, adiabatic, option)
    write (out_unitp, *) 'ndim,nsurf', ndim, nsurf
    write (out_unitp, *) 'pot_name'
+   p=ONETENTH;S=ONE
    !====================================================================
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unitp)
-   !call init_Basis1_TO_Basis2(Basis0, Basis)
-   !call construct_primitive_basis(Basis0, x=x, sx=sx)
    call construct_primitive_basis(Basis)
+   call init_Basis1_TO_Basis2(Basis0, Basis)
+   call construct_primitive_basis(Basis0, x=x, sx=s,p=p)
+   
    !Call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
