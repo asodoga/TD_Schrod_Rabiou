@@ -108,7 +108,6 @@ contains
       psi%CVec(:) = psi0%CVec(:)
       !call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
       !               , print_basis=.false., t=ZERO, int_print=20, real_part=.false.)
-      print*,'cc'
       call Calc_average_energy(Psi0, E)
        call Calc_average_energy(psi, E)
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
@@ -116,10 +115,10 @@ contains
          t = i*propa%delta_t
          t_deltat = t + propa%delta_t
          write (out_unitp, *) propa%propa_name2, i, t, t_deltat
-         CALL Calc_AVQ_nD0(Psi0=psi, AVQ=Qt, SQ=SQt)
+         call Calc_AVQ_nD0(Psi0=psi, AVQ=Qt, SQ=SQt)
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
-           call Calc_Av_imp_k_nD(psi,Pt)
+         call Calc_Av_imp_k_nD(psi,Pt)
          !call Population(psi, populat)
          write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
          write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
@@ -188,12 +187,13 @@ contains
 
       ! variables locales
       REAL(kind=Rk), allocatable                   :: Qt(:), SQt(:),Pt(:)
-      REAL(kind=Rk)                                :: Norm, E
+      REAL(kind=Rk)                                :: Norm, E,E0
       integer                                      :: Ndim
       write (out_unitp, *) 'Beging Hagedorn'
 
       call Calc_Norm_OF_Psi(psi_dt,Norm)
-       write(out_unitp,*) '<psi|psi> =',Norm
+       call Calc_average_energy(psi_dt, E0)
+       write(out_unitp,*) 'HAgedorn in <psi|psi> =',Norm,E0
 
       Ndim = size(psi_dt%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim))
@@ -209,7 +209,8 @@ contains
       write (out_unitp, *) 'End Hagedorn'
 
       call Calc_Norm_OF_Psi(psi,Norm)
-      write(out_unitp,*) '<psi_dt|psi_dt> =',Norm
+       call Calc_average_energy(psi, E)
+      write(out_unitp,*) 'HAgedorn out <psi_dt|psi_dt> =',Norm,E
       IF (debug) THEN
          flush (out_unitp)
       END IF

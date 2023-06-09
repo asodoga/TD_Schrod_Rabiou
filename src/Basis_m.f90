@@ -200,8 +200,6 @@ CONTAINS
          Basis2%A                = Basis1%A
          Basis2%B                = Basis1%B
          Basis2%S                = Basis1%S
-         Basis2%phase_Vec        = Basis1%phase_vec
-         Basis2%conjg_phase_Vec  = Basis1%conjg_phase_Vec
       END IF
 
    END SUBROUTINE init_Basis1_TO_Basis2
@@ -427,7 +425,6 @@ CONTAINS
                call Calc_dngg_grid(Basis%tab_basis(i))
                call CheckOrtho_Basis(Basis%tab_basis(i), nderiv=2)
             end if
-
          END DO
       ELSE
          if (Basis%Basis_name == 'herm' .or. Basis%Basis_name == 'ho') then
@@ -785,15 +782,13 @@ CONTAINS
     real(kind=Rk)                                        :: x3, s3, s1, s2, x1, x2
     real(kind=Rk), allocatable                           :: d0gb2(:, :), d1gb(:, :, :), d2gb(:, :, :, :), d0gb1(:, :)
     real(kind=Rk), allocatable                           :: x(:), w(:)
-    complex(kind=Rk), allocatable                        :: w_p(:)
-    !----------------------------   deallocation----------------------------------------------------
-      allocate (w_p(Basis%nq))  
+    complex(kind=Rk), allocatable                        :: phase1(:)
+    !----------------------------   deallocation---------------------------------------------------- 
     if (allocated(Basis%x)) deallocate (Basis%x)
     if (allocated(Basis%w)) deallocate (Basis%w)
     if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
     if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
     if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
-    w_p = Basis%phase_Vec
     if (allocated(Basis%phase_Vec)) deallocate (Basis%phase_Vec)
     if (allocated(Basis%conjg_phase_Vec)) deallocate (Basis%conjg_phase_Vec)
     !----------------------------allocation of x and w for new  construction-------------------------------------------
@@ -801,19 +796,21 @@ CONTAINS
     allocate (Basis%w(Basis%nq))
     allocate (Basis%phase_Vec(Basis%nq))
     allocate (Basis%conjg_phase_Vec(Basis%nq))
+    allocate (phase1(Basis%nq))
     allocate (x(Basis%nq))
     allocate (w(Basis%nq))    
     !----------------------------calculation of x and w with  gauss hermite quadrature------------------------
     call hercom(Basis%nq, Basis%x(:), Basis%w(:))
     call hercom(Basis%nq, x(:), w(:))
-    Basis%phase_vec(:) = exp( EYE*p*(Basis%x(:)-x0) )
+    Basis%phase_vec(:) =  cmplx(cos(p*(Basis%x(:)-x0)), sin(p*(Basis%x(:)-x0)),kind=RK)  
     Basis%conjg_phase_vec(:) = CONJG(Basis%phase_vec(:))
+    phase1(:) =  cmplx(cos(basis%imp_k*(Basis%x(:)-Basis%Q0)), sin(basis%imp_k*(Basis%x(:)-Basis%Q0)),kind=RK)   !exp( EYE*basis%imp_k*(Basis%x(:)-x0) )
     ! test------------------------------------------------------------------------------------------------------
-    !s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
-    !s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
-    !x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
-    !w(:) = w(:)/s3
-    !x(:) = x3 + Basis%x(:)/s3
+    s1 = Basis%scaleQ; s2 = sx; x1 = Basis%Q0; x2 = x0
+    s3 = sqrt(s1*s1 + s2*s2)/sqrt(TWO)
+    x3 = (s1*s1*x1 + s2*s2*x2)/(s1*s1 + s2*s2)
+    w(:) = w(:)/s3
+    x(:) = x3 + Basis%x(:)/s3
     !------------------------------------------------------------------------------------------------------------
     !----------------------------allocation of d0gb,d1gb, d2gb  for new  construction-----------------------------------
     allocate (Basis%d0gb(Basis%nq, Basis%nb))
@@ -836,15 +833,17 @@ CONTAINS
                                                 d1gb(iq, ib, 1), d2gb(iq, ib, 1, 1), ib - 1, .FALSE.)
        END DO
     END DO
+      !write (out_unitp, *) 'p',p,'p0',Basis%Q0
     d0gb1 = sqrt(Basis%scaleQ)*d0gb1
     d0gb2 = sqrt(sx)*d0gb2
-    call Construct_Overlap_Matrix(Mat=Basis%S, d0gb1=d0gb1, d0gb2=d0gb2,phase1=w_p,phase2=Basis%conjg_phase_Vec,w=Basis%w)
+    ! write(*,*) ' Basis%w',Basis%w(:)
+    call Construct_Overlap_Matrix(Mat=Basis%S, d0gb1=d0gb1, d0gb2=d0gb2,phase1=phase1,phase2=Basis%conjg_phase_Vec,w=w)
     Basis%SCALEQ = sx
     Basis%Q0 = x0
     Basis%Imp_k=p
     !----------------------------   deallocation of local variables ----------------------------------------------------
     deallocate (x)
-    deallocate (w,w_p)
+    deallocate (w,phase1)
     deallocate (d0gb1)
     deallocate (d0gb2)
     deallocate (d1gb)
@@ -869,22 +868,17 @@ CONTAINS
      d0gb=d0gb2
      d0gb0=d0gb1
     d0bgw = transpose(d0gb2)
-    write(*,*) 'size phase1,phase2',size(phase1),size(phase2)
-    stop 'cc'
-    
+    Allocate(w_p(size(phase1)))
       w_p(:)= w(:)*phase2(:)*phase1(:)
-      
     DO ib = 1, ubound(Mat, dim=1)
        d0bgw(ib, :) = d0bgw(ib, :)*w_p(:)
-    END DO
-    
-    Mat = matmul(d0bgw, d0gb0)
-    
+    END DO 
+    Mat = matmul(d0bgw, d0gb0) 
     write (out_unitp, *) 'Construct_Overlap_Matrix'
 
-    do jb = 1, ubound(Mat, dim=1)
-  write(*,*) ( Mat(ib,jb),ib=1,ubound(Mat, dim=1) )
-end do
+   ! do jb = 1, ubound(Mat, dim=1)
+   !  write(*,*) ( Mat(ib,jb),ib=1,ubound(Mat, dim=1) )
+   ! end do
  END SUBROUTINE 
  
  
@@ -1874,7 +1868,7 @@ implicit none
  real(Kind=Rk)                          ::  s1,s2,p1,p2,x1,x2
  integer                                :: nb,nq
  
- x1=ZERO; x2=ONETENTH; s1=ONE; s2=ONE; p1=ZERO; p2=ONE
+ x1=ZERO; x2=ONETENTH; s1=ONE; s2=ONE; p1=ZERO; p2=ONETENTH
  nb = Basis%nb
  nq= Basis%nq
 allocate(S(nb,nb))
@@ -1887,12 +1881,12 @@ B1(1) = CONE
  print*,'b1 is in',B1
  print*,' Norm b1',sum(abs(B1)**2)
  
-  B2 = MATMUL(S,B1)
+  B2 = MATMUL(B1,S)
   print*,'b2 is out',B2
   print*,' Norm b2',sum(abs(B2)**2)
 
 print*,'=============================================================================================================='
- call Construct_overlap_matrix_cplx1(S0,x1,x2,p1,p2,s1,s2,nb,nq)
+ !call Construct_overlap_matrix_cplx1(S0,x1,x2,p1,p2,s1,s2,nb,nq)
  !B2 = MATMUL(B1,S0)
  !print*,'b2 is out',B2
  !print*,' Norm b2',sum(abs(B2)**2)
@@ -1954,9 +1948,9 @@ SUBROUTINE Construct_overlap_matrix_cplx(Mat,q1,q2,p1,p2,s1,s2,nb,nq)
        end do
      end do 
      
-    do j = 1, nb
-      write(*,*) ( Mat(i,j),i=1,nb )
-    end do
+    !do j = 1, nb
+    !  write(*,*) ( Mat(i,j),i=1,nb )
+    !end do
 END SUBROUTINE 
 
 
