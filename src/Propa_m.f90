@@ -15,6 +15,7 @@ module Propa_m
       real(kind=Rk)      :: delta_t
       real(kind=Rk)      :: eps
       integer             :: max_iter
+      integer             :: Kmax
       character(len=:), allocatable  :: propa_name
       character(len=:), allocatable  :: propa_name2
    END TYPE propa_t
@@ -39,12 +40,11 @@ contains
          CALL marh_RK4th(psi, psi_dt, t, propa)
       case ('taylor')
          CALL march_taylor(psi, psi_dt, t, propa)
+      case ('SIL')
+        CALL march_SIL(psi, psi_dt, t, propa)
       case default
          write (out_unitp, *) 'name is not in the list'
-      end select
-      CALL Calc_Norm_OF_Psi(psi, Norm0)
-      CALL Calc_Norm_OF_Psi(psi_dt, Norm)
-      ! write(out_unitp,*) '<psi_dt|psi_dt> = ',Norm , 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =',abs(Norm0-Norm)
+      end select      
 
    END SUBROUTINE
 
@@ -62,6 +62,7 @@ contains
       REAL(kind=Rk)                    :: t, t_deltat, Norm, E, y
       REAL(kind=Rk), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:),Pt(:)
       complex(kind=Rk)                 ::  x
+      complex(kind=Rk) ,allocatable    :: Alpha(:)
       integer                          :: Ndim
 
       INTEGER                          :: i, nt, Iq, nf
@@ -88,13 +89,14 @@ contains
       !call creat_file_unit(nio=17, name='psi_NHa', propa=propa)
       call creat_file_unit(nio=18, name='pop', propa=propa)
       call creat_file_unit(nio=19, name='Imp_k', propa=propa)
+      call creat_file_unit(nio=20, name='alpha', propa=propa)
 
       Ndim = size(psi0%Basis%tab_basis) - 1
-      allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim))
+      allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim),Alpha(Ndim))
       allocate (populat(psi0%Basis%tab_basis(Ndim + 1)%nb))
       Qt(:) = ZERO; SQt(:) = ONE
       nt = int((propa%tf - propa%t0)/propa%delta_t)
-      E = ZERO
+      E = ZERO;Alpha= CZERO
 
       CALL init_Basis1_TO_Basis2(Basis_1, psi0%Basis)
       CALL init_Basis1_TO_Basis2(Basis_2, psi0%Basis)
@@ -119,6 +121,7 @@ contains
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
          call Calc_Av_imp_k_nD(psi,Pt)
+         call Calc_Integral_cplx(psi, Alpha, 2)
          !call Population(psi, populat)
          write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
          write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
@@ -126,6 +129,7 @@ contains
          write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
          write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
          write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Pt(:)
+         write (20, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Alpha
 
          !if (mod(i, 1) == 0) then
          !   call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
@@ -312,6 +316,45 @@ contains
       !CALL dealloc_psi(Hpsi)
    END SUBROUTINE march_taylor
 
+
+ SUBROUTINE march_SIL(psi, psi_dt, t, propa)
+     USE lanczos_m
+     USE psi_m
+     USE Basis_m
+     TYPE(psi_t), INTENT(INOUT)   :: psi_dt
+     TYPE(psi_t), INTENT(IN)      :: psi
+     TYPE(propa_t), INTENT(IN)    :: propa
+     real(kind=Rk), INTENT(IN)    :: t
+
+       ! variables locales ============================================================================
+
+     real(kind=Rk)                :: Norm, Norm0
+     logical, parameter           :: debug=.false.
+
+         IF (debug) THEN
+            write(out_unitp,*) 'BEGINNIG march_SIL  '
+            write(out_unitp,*) 'psi_t',psi%CVec
+           flush(out_unitp)
+         END IF
+    
+          write (out_unitp, *) 'BEGINNIG march_SIL ', t, propa%delta_t
+          write(out_unitp,*) 'Krylov Basis size',propa%Kmax
+          
+            CALL Calc_psi_step_cplx(psi_dt,psi,propa%delta_t,propa%Kmax)
+    
+     CALL Calc_Norm_OF_Psi(psi, Norm0)
+     CALL Calc_Norm_OF_Psi(psi_dt, Norm)
+     write (out_unitp, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi|psi>)  =', abs(Norm0 - Norm)
+     write (out_unitp, *) 'END march_SIL'
+     
+     
+      IF (debug) THEN
+        write(out_unitp,*) 'END march_SIL'
+        flush(out_unitp)
+     END IF
+  END SUBROUTINE 
+
+
    SUBROUTINE marh_RK4th(psi, psi_dt, t, propa)
       USE op_m
       USE psi_m
@@ -363,17 +406,18 @@ contains
    SUBROUTINE read_propa(propa)
       USE psi_m
       implicit none
-      TYPE(propa_t), intent(inout) :: propa
-      real(kind=Rk)                 :: t0, tf, delta_t, eps
-      character(len=40)             :: propa_name, propa_name2
-      integer                        ::  max_iter
+      TYPE(propa_t), intent(inout)   :: propa
+      real(kind=Rk)                  :: t0, tf, delta_t, eps
+      character(len=40)              :: propa_name, propa_name2
+      integer                        ::  max_iter,kmax
 
-      namelist /prop/ t0, tf, delta_t, eps, max_iter, propa_name, propa_name2
+      namelist /prop/ t0, tf, delta_t, eps, max_iter,Kmax,propa_name, propa_name2
       t0 = ZERO
       tf = 10._Rk
       delta_t = 0.001
       eps = ONETENTH**10
       max_iter = 5000
+      Kmax     = 10
       propa_name = 'non_hagedorn'
       propa_name2 = 'rk4'
 
@@ -384,6 +428,7 @@ contains
       propa%delta_t = delta_t
       propa%eps = eps
       propa%max_iter = max_iter
+      propa%Kmax = Kmax
       propa%propa_name = propa_name
       propa%propa_name2 = propa_name2
 
@@ -410,6 +455,7 @@ contains
       write (out_unitp, *) 'deltat_t = ', propa%delta_t
       write (out_unitp, *) 'eps = ', propa%eps
       write (out_unitp, *) 'max_iter = ', propa%max_iter
+      write (out_unitp, *) 'Kmax= ', propa%Kmax
       write (out_unitp, *) 'propa_name = ', propa%propa_name
       write (out_unitp, *) 'propa_name2 = ', propa%propa_name2
 

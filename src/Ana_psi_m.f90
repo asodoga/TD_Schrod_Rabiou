@@ -4,28 +4,28 @@ module Ana_psi_m
    USE psi_m
    implicit none
    private
-   public:: Population, Qpop
+   public:: Population, Qpop,Calc_Integral_cplx
    public:: Calc_AVQ_nD0, Calc_AVQ_nD, Calc_Av_imp_k_nD
 
 contains
 
    SUBROUTINE Calc_AVQ_1D(psi_in, AVQ1, AVQel1, SQ1, SQel1, ib)
       USE UtilLib_m
-      logical, parameter               :: debug = .false.
-      TYPE(Psi_t), intent(in)                  :: psi_in
-      TYPE(Psi_t)                              :: psi
-      complex(kind=Rk), allocatable            :: psi_gb(:, :)
-      logical                                  :: Endloop_q
+      logical, parameter                         :: debug = .false.
+      TYPE(Psi_t), intent(in)                    :: psi_in
+      TYPE(Psi_t)                                :: psi
+      complex(kind=Rk), allocatable              :: psi_gb(:, :)
+      logical                                    :: Endloop_q
       real(kind=Rk), intent(inout), optional     :: AVQ1, SQ1
       real(kind=Rk), intent(inout), optional     :: AVQel1(:), SQel1(:)
 
-      real(kind=Rk), allocatable                :: AVQel(:), SQel(:)
-      real(kind=Rk)                            :: AVQ, SQ
-      integer, intent(in)                     :: ib
-      real(kind=Rk)                            :: WnD, X
-      real(kind=Rk), allocatable                :: N(:)
-      integer, allocatable              :: Tab_iq(:)
-      integer                                  :: iq, inbe, inb
+      real(kind=Rk), allocatable                 :: AVQel(:), SQel(:)
+      real(kind=Rk)                              :: AVQ, SQ
+      integer, intent(in)                        :: ib
+      real(kind=Rk)                              :: WnD, X
+      real(kind=Rk), allocatable                 :: N(:)
+      integer, allocatable                       :: Tab_iq(:)
+      integer                                    :: iq, inbe, inb
       IF (debug) THEN
          write (out_unitp, *) 'Beging AVQ'
          flush (out_unitp)
@@ -348,5 +348,152 @@ contains
 
    END SUBROUTINE
 
+
+
+    SUBROUTINE dnpsi_cplx(dnpsi_g, Psi_g, nio,Basis)
+    USE Basis_m
+    USE UtilLib_m
+    TYPE(Basis_t), intent(in), target            :: Basis
+    complex(kind=Rk), intent(in), target         :: psi_g(:)
+    complex(kind=Rk), intent(inout), target      :: dnpsi_g(:)
+    integer,intent(in)                           :: nio
+    
+    !locals variables=============================================================================
+    
+    complex(kind=Rk), pointer                    :: psi_ggb(:, :, :)
+    real(kind=Rk), pointer                       :: dngg(:, :)
+    complex(kind=Rk), pointer                    :: dnpsi_ggb(:, :, :)
+    logical, parameter                           :: debug = .true.
+    integer                                      :: iq, i1, i3, inb, Ndim
+    integer, allocatable                         :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
+    
+    IF (debug) THEN
+       write(out_unitp,*) 'BEGINNING d2psi'
+       flush (out_unitp)
+    END IF
+    
+    Ndim = size(Basis%tab_basis)
+    call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
+    
+    dnpsi_g(:) = CZERO
+    DO inb = 1, Ndim - 1
+    
+       dnpsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => dnpsi_g
+       psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb))   => psi_g
+       
+       if(nio==1) then
+           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d1gg
+       else
+           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
+       end if
+       
+       DO i3 = 1, ubound(psi_ggb, dim=3)
+          DO i1 = 1, ubound(psi_ggb, dim=1)
+             dnpsi_ggb(i1, :, i3) = dnpsi_ggb(i1, :, i3)+ matmul(dngg, psi_ggb(i1, :, i3))
+          END DO
+       END DO
+    END DO
+    Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
+    IF (debug) THEN
+       write(out_unitp,*) 'END d2psi'
+       flush (out_unitp)
+    END IF
+ END SUBROUTINE 
+
+
+
+  SUBROUTINE Calc_Integral_cplx(psi_in, Alpha, nio)
+    USE UtilLib_m
+    TYPE(Psi_t), intent(in)                    :: psi_in
+    integer, intent(in)                        :: nio
+    complex(kind=Rk)  ,intent(inout)           :: Alpha(:)
+    
+    !locals variables========================================================================================
+    
+    TYPE(Psi_t)                                :: psi,dnpsi
+    complex(kind=Rk), allocatable              :: psi_gb(:, :)
+    complex(kind=Rk), allocatable              :: dnpsi_gb(:, :)
+    logical                                    :: Endloop_q
+    logical, parameter                         :: debug = .false.
+    complex(kind=Rk), allocatable              :: Int1(:),Int2(:),Int1el(:),Int2el(:),Int0(:)
+  
+    real(kind=Rk)                              :: W
+    integer, allocatable                       :: Tab_iq(:)
+    integer                                    :: iq, inbe, inb,ndim
+    
+    !debunging & allocation=============================================================================================
+    
+    if (debug) then
+       write (out_unitp, *) 'Beging Calc_Integral_cplx'
+       flush (out_unitp)
+    end if
+    ndim = size(psi_in%Basis%tab_basis)-1
+    
+    allocate (Int1(ndim))
+    allocate (Int2(ndim))
+    allocate (Int0(ndim))
+    
+    allocate (Int1el(psi_in%Basis%tab_basis(ndim+1)%nb))
+    allocate (Int2el(psi_in%Basis%tab_basis(ndim+1)%nb))
+    allocate (psi_gb(psi_in%Basis%nq, psi_in%Basis%tab_basis(ndim+1)%nb))
+    !sprint*,'cc',size(psi_gb,dim=1),size(psi_gb,dim=2)
+    !STOP 'cc'
+    allocate (dnpsi_gb(psi_in%Basis%nq, psi_in%Basis%tab_basis(ndim+1)%nb))
+    allocate (Tab_iq(ndim))
+    
+    call init_psi(psi, psi_in%Basis, cplx=.true., grid=.true.)
+    call init_psi(dnpsi, psi_in%Basis, cplx=.true., grid=.true.)
+    
+    if (psi_in%Grid) then
+       psi%CVec(:) = psi_in%CVec(:)
+    else
+       call BasisTOGrid_nD_cplx(psi%CVec, psi_in%CVec, psi_in%Basis)
+    end if
+    
+    call dnpsi_cplx(dnpsi%CVec, psi%CVec, nio,psi%Basis)
+    psi_gb(:, :)    =  reshape(psi%CVec,shape=[psi%Basis%nq, psi%Basis%tab_basis(ndim+1)%nb])
+    dnpsi_gb(:, :) =   reshape(dnpsi%CVec,shape=[dnpsi%Basis%nq, dnpsi%Basis%tab_basis(ndim+1)%nb])
+    
+    !Evaluation of Alpha=================================================================================================    
+    
+    do inb= 1,ndim
+    
+    DO inbe = 1, psi%Basis%tab_basis(ndim+1)%nb !electronic state
+       Int1el(inbe) = CZERO
+       Int2el(inbe) = CZERO
+       Call Init_tab_ind(Tab_iq, psi%Basis%NDindexq)
+       
+       Iq = 0
+       DO
+          Iq = Iq + 1
+          call increase_NDindex(Tab_iq, psi%Basis%NDindexq, Endloop_q)
+          if (Endloop_q) exit
+         
+             W = psi%Basis%tab_basis(inb)%w(tab_iq(inb))
+             Int1el(inbe) = Int1el(inbe) + psi_gb(iq, inbe)*W*psi_gb(iq, inbe)
+             Int2el(inbe) = Int2el(inbe) + psi_gb(iq, inbe)*W*dnpsi_gb(iq, inbe)
+          
+       END DO
+    END DO
+    
+    Int1(inb) = sum(Int1el)
+    Int2(inb) = sum(Int2el)
+    Int0(inb)  = Int2(inb)/Int1(inb)
+    Alpha(inb) = EYE*Int0(inb)
+    
+  end do ! basis  
+   
+    print*,  'Alpha=', Alpha
+    
+    Deallocate (Tab_iq)
+    Deallocate (psi_gb,dnpsi_gb,Int0,Int1,Int2,Int1el,Int2el)
+    call dealloc_psi(psi)
+    call dealloc_psi(dnpsi)
+    
+    if (debug) then
+       write (out_unitp, *) 'END Calc_Integral_cplx'
+       flush (out_unitp)
+    end if
+ END SUBROUTINE
 
 end module

@@ -14,6 +14,8 @@ PROGRAM TD_SCHROD
    TYPE(propa_t)                  :: propa
    TYPE(GWP_t), allocatable       :: tab_GWP(:)
    real(Kind=Rk)                  :: E, Norm !, x(2), y1(2), y2(2) ,p(1), S(1),x0(1)
+   complex(kind=Rk)               :: Alpha(1)
+   real(kind=Rk),allocatable  :: K(:,:)
 !====================================================================
 ! for QML
    integer :: ndim, nsurf, option
@@ -35,7 +37,7 @@ PROGRAM TD_SCHROD
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unitp)
    call construct_primitive_basis(Basis)
-   call init_Basis1_TO_Basis2(Basis0, Basis)
+   !call init_Basis1_TO_Basis2(Basis0, Basis)
    !write (out_unitp, *) 'p',p,'*********************************'
    !call construct_primitive_basis(Basis0, x=x0, sx=s,p=p)
    
@@ -53,6 +55,9 @@ PROGRAM TD_SCHROD
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    !call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
+   !call Calc_Integral_cplx(psi0, Alpha, 2)
+   !call Construct_triband_matrix(Mat=K,psi=psi0,num_max=10)
+   !call TEST_Lonaczos_cplx(psi0,10)
    !psi%CVec = CZERO
    !psi0%CVec = CZERO
    !psi%CVec(1) = CONE
