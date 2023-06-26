@@ -123,19 +123,27 @@ contains
          call Calc_Av_imp_k_nD(psi,Pt)
          call Calc_Integral_cplx(psi, Alpha, 2)
          !call Population(psi, populat)
-         write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
-         write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
-         write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
-         write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
-         write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
-         write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Pt(:)
-         write (20, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Alpha
 
-         !if (mod(i, 1) == 0) then
-         !   call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
-         !                  , print_basis=.false., t=t, int_print=10, real_part=.false.)
-         !    write(10,*)
-         !end if
+          write (11,*) t, Qt
+          write (12,*) t, E
+          write (13,*) t, SQt
+          write (14,*) t, Norm
+          write (18,*) t, populat
+          write (19,*) t, Pt
+          write (20,*) t, Alpha
+        !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
+        !write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
+        !write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
+        !write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
+        !write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
+        !write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Pt(:)
+        !write (20, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Alpha
+
+         if (mod(i, 1) == 0) then
+            call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
+                           , print_basis=.false., t=t, int_print=10, real_part=.false.)
+             write(10,*)
+         end if
 
          CALL march(psi, psi_dt, t, propa)
          if (propa%propa_name == 'hagedorn') Then
@@ -328,19 +336,25 @@ contains
 
        ! variables locales ============================================================================
 
-     real(kind=Rk)                :: Norm, Norm0
-     logical, parameter           :: debug=.false.
+     real(kind=Rk)                    :: Norm, Norm0,E
+      complex (kind=Rk), allocatable  :: Vec_Basis(:,:)
+      real (kind=Rk), allocatable     :: EigenVal(:)
+       TYPE(psi_t)        :: Psi0
+     logical, parameter               :: debug=.false.
 
          IF (debug) THEN
-            write(out_unitp,*) 'BEGINNIG march_SIL  '
-            write(out_unitp,*) 'psi_t',psi%CVec
+            !write(out_unitp,*) 'psi_t',psi%CVec
            flush(out_unitp)
          END IF
     
           write (out_unitp, *) 'BEGINNIG march_SIL ', t, propa%delta_t
           write(out_unitp,*) 'Krylov Basis size',propa%Kmax
-          
-            CALL Calc_psi_step_cplx(psi_dt,psi,propa%delta_t,propa%Kmax)
+          call init_psi(psi0, psi%Basis, cplx=.TRUE., grid=.false.)
+          CALL Lanczos_eign_syst_solve( EigenVal,Vec_Basis,psi,propa%kmax)
+          psi0%CVec = Vec_Basis(:,1)
+           call Calc_average_energy(psi0, E)
+          print*,'==E1==',EigenVal(1:5),E,'=='
+          CALL Calc_psi_step_cplx(psi_dt,psi,propa%delta_t,propa%Kmax)
     
      CALL Calc_Norm_OF_Psi(psi, Norm0)
      CALL Calc_Norm_OF_Psi(psi_dt, Norm)
@@ -349,7 +363,6 @@ contains
      
      
       IF (debug) THEN
-        write(out_unitp,*) 'END march_SIL'
         flush(out_unitp)
      END IF
   END SUBROUTINE 

@@ -125,9 +125,9 @@ SUBROUTINE Construct_triband_matrix(Mat,K,psi,num_max)
 
    END do
  
-    do i = 1,num_max
-      write(out_unitp,*) (Mat(i,j),j=1,num_max)
-    end do
+   !do i = 1,num_max
+   !  write(out_unitp,*) (Mat(i,j),j=1,num_max)
+   !end do
 
 
 END SUBROUTINE
@@ -166,8 +166,9 @@ END SUBROUTINE
       CALL  Construct_triband_matrix(Matrix,K,psi,kmax)
       CALL  diagonalization(matrix,EigenVal,EigenVec,kmax )
       DO ib= 1,kmax
+         Vec_Basis(:,ib) =CZERO
         DO jb = 1,kmax
-         Vec_Basis(:,ib)= Vec_Basis(:,ib)+EigenVec(ib,jb)*K(:,jb)
+         Vec_Basis(:,ib)= Vec_Basis(:,ib)+EigenVec(jb,ib)*K(:,jb)
         END DO
       END DO
  
