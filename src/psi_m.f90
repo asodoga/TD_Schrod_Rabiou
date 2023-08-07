@@ -6,8 +6,8 @@ module psi_m
 
    TYPE :: psi_t
       type(Basis_t), pointer      :: Basis
-      real(kind=Rk), allocatable :: RVec(:)
-      complex(kind=Rk), allocatable :: CVec(:)
+      real(kind= Rkind), allocatable :: RVec(:)
+      complex(kind= Rkind), allocatable :: CVec(:)
       logical                        :: Grid = .true.
    CONTAINS
       PRIVATE
@@ -27,20 +27,20 @@ contains
       CLASS(psi_t), intent(inout)  :: psi_out
 
       IF (allocated(psi_in%RVec)) THEN
-         !write(out_unitp,*) 'Coping psi_in in psi_out (real):'
+         !write(out_unit,*) 'Coping psi_in in psi_out (real):'
          psi_out%RVec(:) = psi_in%RVec(:)
          !CALL init_Basis1_TO_Basis2 (psi_in%Basis,psi_out%Basis)
          !CALL  construct_primitive_basis(psi_out%Basis)
          psi_out%Basis => psi_in%Basis
-         !write(out_unitp,*) 'END Coping psi_in in psi_out'
+         !write(out_unit,*) 'END Coping psi_in in psi_out'
       END IF
       IF (allocated(psi_in%CVec)) THEN
-         !write(out_unitp,*) 'Coping psi_in in psi_out (complex):'
+         !write(out_unit,*) 'Coping psi_in in psi_out (complex):'
          psi_out%CVec(:) = psi_in%CVec(:)
          !CALL init_Basis1_TO_Basis2 (psi_in%Basis,psi_out%Basis)
          !CALL  construct_primitive_basis(psi_out%Basis)
          psi_out%Basis => psi_in%Basis
-         !write(out_unitp,*) 'END Coping psi_in in psi_out'
+         !write(out_unit,*) 'END Coping psi_in in psi_out'
       END IF
 
    END SUBROUTINE copy_psi
@@ -111,7 +111,7 @@ contains
       TYPE(psi_t), intent(in)                                 :: psi
       logical, intent(in)                                 :: print_psi_grid, print_basis, psi_cplx, real_part
       integer, intent(in), optional                       :: int_print
-      real(kind=Rk), intent(in), optional                       :: t
+      real(kind= Rkind), intent(in), optional                       :: t
       logical, parameter                                          :: debug = .true.
 
       !local variable
@@ -177,7 +177,7 @@ contains
          call Write_Basis(psi%Basis)
       end if
       if (debug) then
-         flush (out_unitp)
+         flush (out_unit)
       end if
 
    END SUBROUTINE write_psi
@@ -185,9 +185,9 @@ contains
    SUBROUTINE Projection(psi_dt_2, psi_dt_1)
       TYPE(psi_t), intent(in), target                  :: psi_dt_1
       TYPE(psi_t), intent(inout), target               :: psi_dt_2
-      complex(kind=Rk), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
-      complex(kind=Rk), allocatable, target            :: B1(:), B2(:)
-      real(kind=Rk)                                    :: Norm0,E0,E
+      complex(kind= Rkind), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
+      complex(kind= Rkind), allocatable, target            :: B1(:), B2(:)
+      real(kind= Rkind)                                    :: Norm0,E0,E
 
       logical, parameter                               :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim
@@ -196,8 +196,8 @@ contains
       call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
       call Calc_Norm_OF_psi(psi_dt_1,Norm0)
-      !write (out_unitp, *) 'Begin Hagedorn projection',Norm0,E0
-      !write (out_unitp, *) 'out',psi_dt_1%CVec
+      write (out_unit, *) 'Begin Hagedorn projection',Norm0
+      !write (out_unit, *) 'out',psi_dt_1%CVec
 
       If (Ndim == 1) then
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
@@ -206,7 +206,7 @@ contains
          psi_dt_2%CVec(:) = CZERO
          DO i3 = 1, ubound(BBB1, dim=3)
          DO i1 = 1, ubound(BBB1, dim=1)
-            BBB2(i1, :, i3) = matmul( psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
+            BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
          END DO
          END DO
       else
@@ -237,39 +237,39 @@ contains
 
       END IF
         call Calc_Norm_OF_psi(psi_dt_2,Norm0)
-      !write (out_unitp, *) 'END Hagedorn projection',Norm0
-      !write (out_unitp, *) 'out',psi_dt_2%CVec
+      write (out_unit, *) 'END Hagedorn projection',Norm0
+      !write (out_unit, *) 'out',psi_dt_2%CVec
 
    END SUBROUTINE Projection
 
    SUBROUTINE Calc_Norm_OF_Psi(psi, Norm)
       implicit none
       type(Psi_t), intent(in)      :: psi
-      real(kind=Rk), intent(inout)    :: Norm
+      real(kind= Rkind), intent(inout)    :: Norm
       IF (psi%Grid) THEN
          CALL Calc_Norm_OF_PsiGrid(Psi, Norm)
       ELSE
          CALL Calc_Norm_OF_PsiBasis(psi, Norm)
       END IF
-      !write(out_unitp,*) '<psi|psi> =',Norm
+      !write(out_unit,*) '<psi|psi> =',Norm
    END SUBROUTINE Calc_Norm_OF_Psi
 
    SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g, Norm)
 
-      USE UtilLib_m
+      USE QDUtil_m
       logical, parameter      :: debug = .false.
       TYPE(Psi_t), intent(in)         :: psi_g
-      complex(kind=Rk), allocatable   :: psi_gb(:, :)
+      complex(kind= Rkind), allocatable   :: psi_gb(:, :)
       logical                         :: Endloop_q
-      real(kind=Rk), intent(inout)     :: Norm
-      real(kind=Rk), allocatable       :: Norme(:)
-      real(kind=Rk)                   :: WnD
+      real(kind= Rkind), intent(inout)     :: Norm
+      real(kind= Rkind), allocatable       :: Norme(:)
+      real(kind= Rkind)                   :: WnD
       integer, allocatable     :: Tab_iq(:)
       integer                         :: iq, inb, inbe
 
       IF (debug) THEN
-         write (out_unitp, *) 'Beging NormGrid'
-         flush (out_unitp)
+         write (out_unit, *) 'Beging NormGrid'
+         flush (out_unit)
       END IF
 
       Allocate (Psi_gb(Psi_g%Basis%nq, Psi_g%Basis%tab_basis(size(Psi_g%Basis%tab_basis))%nb))
@@ -296,25 +296,25 @@ contains
       Deallocate (Tab_iq)
       Deallocate (Psi_gb)
       IF (debug) THEN
-         write (out_unitp, *) 'END NormGrid'
-         flush (out_unitp)
+         write (out_unit, *) 'END NormGrid'
+         flush (out_unit)
       END IF
 
    END SUBROUTINE Calc_Norm_OF_PsiGrid
 
    SUBROUTINE Calc_Norm_OF_PsiBasis(Psi, Norm)
       TYPE(psi_t), intent(in)     :: Psi
-      real(kind=Rk), intent(inout) :: Norm
-      Norm = sqrt(real(dot_product(Psi%CVec, Psi%CVec), kind=Rk))
-      ! write(out_unitp,*) 'norm,psi',Norm
+      real(kind= Rkind), intent(inout) :: Norm
+      Norm = sqrt(real(dot_product(Psi%CVec, Psi%CVec), kind= Rkind))
+      ! write(out_unit,*) 'norm,psi',Norm
    END SUBROUTINE Calc_Norm_OF_PsiBasis
 
    SUBROUTINE write_psi_basis(psi, print_cplx, t, nio, real_part)
       TYPE(psi_t), intent(in), target          :: psi
-      real(kind=Rk), intent(in), optional        :: t
+      real(kind= Rkind), intent(in), optional        :: t
       integer, intent(in), optional        :: nio
       logical, intent(in)                      :: print_cplx, real_part
-      complex(Kind=Rk), pointer                          ::psibe(:, :)
+      complex(Kind= Rkind), pointer                          ::psibe(:, :)
       integer                                                         :: ib, Ndim
 
       Ndim = size(psi%Basis%tab_basis)
@@ -326,22 +326,22 @@ contains
             if (present(nio) .and. present(t)) then
 
                do ib = 1, psi%Basis%nb
-                  write (nio, *) ib, real(psibe(ib, :), kind=Rk), aimag(psibe(ib, :)), t
+                  write (nio, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :)), t
                end do
             elseif (present(t)) then
 
                do ib = 1, psi%Basis%nb
-                  write (*, *) ib, real(psibe(ib, :), kind=Rk), aimag(psibe(ib, :)), t
+                  write (*, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :)), t
                end do
             elseif (present(nio)) then
 
                do ib = 1, psi%Basis%nb
-                  write (nio, *) ib, real(psibe(ib, :), kind=Rk), aimag(psibe(ib, :))
+                  write (nio, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :))
                end do
             elseif (.not. present(nio) .and. .not. present(t)) then
 
                do ib = 1, psi%Basis%nb
-                  write (out_unitp, *) ib, real(psibe(ib, :), kind=Rk), aimag(psibe(ib, :))
+                  write (out_unit, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :))
                end do
             else
                print *, 'no default case'
@@ -368,7 +368,7 @@ contains
             elseif (.not. present(nio) .and. .not. present(t)) then
 
                do ib = 1, psi%Basis%nb
-                  write (out_unitp, *) ib, psibe(ib, :)
+                  write (out_unit, *) ib, psibe(ib, :)
                end do
             else
                print *, 'no default case'
@@ -391,7 +391,7 @@ contains
             end do
          elseif (.not. present(nio) .and. .not. present(t)) then
             do ib = 1, psi%Basis%nb
-               write (out_unitp, *) ib, abs(psibe(ib, :))**2
+               write (out_unit, *) ib, abs(psibe(ib, :))**2
             end do
          else
             print *, 'no default case'
@@ -402,12 +402,12 @@ contains
 
    SUBROUTINE write_psi_grid(psi, print_cplx, t, nio, real_part)
       TYPE(psi_t), intent(in), target          :: psi
-      real(kind=Rk), intent(in), optional        :: t
+      real(kind= Rkind), intent(in), optional        :: t
       integer, intent(in), optional        :: nio
       logical, intent(in)                     :: print_cplx, real_part
-      complex(Kind=Rk), pointer                         :: psige(:, :)
+      complex(Kind= Rkind), pointer                         :: psige(:, :)
       integer                                                         :: iq, Ndim
-      real(Kind=Rk), allocatable                      :: Q(:, :)
+      real(Kind= Rkind), allocatable                      :: Q(:, :)
 
       Ndim = size(psi%Basis%tab_basis)
       psige(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
@@ -419,23 +419,23 @@ contains
             if (present(nio) .and. present(t)) then
 
                do iq = 1, psi%Basis%nq
-                  write (nio, *) Q(iq, :), real(psige(iq, :), kind=Rk), aimag(psige(iq, :)), t
+                  write (nio, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :)), t
                   if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (nio, *)
                end do
             elseif (present(t)) then
                do iq = 1, psi%Basis%nq
-                  write (*, *) Q(iq, :), real(psige(iq, :), kind=Rk), aimag(psige(iq, :)), t
+                  write (*, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :)), t
                   if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (*, *)
                end do
             elseif (present(nio)) then
                do iq = 1, psi%Basis%nq
-                  write (nio, *) Q(iq, :), real(psige(iq, :), kind=Rk), aimag(psige(iq, :))
+                  write (nio, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :))
                   if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (nio, *)
                end do
             elseif (.not. present(nio) .and. .not. present(t)) then
                do iq = 1, psi%Basis%nq
-                  write (out_unitp, *) Q(iq, :), real(psige(iq, :), kind=Rk), aimag(psige(iq, :))
-                  if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (out_unitp, *)
+                  write (out_unit, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :))
+                  if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (out_unit, *)
                end do
             else
                print *, 'no default case'
@@ -458,7 +458,7 @@ contains
                end do
             elseif (.not. present(nio) .and. .not. present(t)) then
                do iq = 1, psi%Basis%nq
-                  write (out_unitp, *) Q(iq, :), psige(iq, :)
+                  write (out_unit, *) Q(iq, :), psige(iq, :)
                end do
             else
                print *, 'no default case'
@@ -485,8 +485,8 @@ contains
             end do
          elseif (.not. present(nio) .and. .not. present(t)) then
             do iq = 1, psi%Basis%nq
-               write (out_unitp, *) Q(iq, :), abs(psige(iq, :))**2
-               if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (out_unitp, *)
+               write (out_unit, *) Q(iq, :), abs(psige(iq, :))**2
+               if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (out_unit, *)
             end do
          else
             print *, 'no default case'
@@ -496,15 +496,15 @@ contains
    END SUBROUTINE
 
    SUBROUTINE psi0_init(psi0)
-      type(psi_t), intent(inout)        ::psi0
-      type(psi_t), target               ::psi
-      complex(Kind=Rk), allocatable     ::g(:)
-      real(Kind=Rk), allocatable        ::Q(:, :)
-      complex(Kind=Rk), pointer         ::gb(:, :)
-      real(Kind=Rk)                     ::Dq, Dphi, NormG, NormB, Q0
-      integer                           ::iq
-      DQ = 1.474256632_Rk
-      Dphi = 0.181095798_Rk
+      type(psi_t), intent(inout)            ::psi0
+      type(psi_t), target                   ::psi
+      complex(Kind= Rkind), allocatable     ::g(:)
+      real(Kind= Rkind), allocatable        ::Q(:, :)
+      complex(Kind= Rkind), pointer         ::gb(:, :)
+      real(Kind= Rkind)                     ::Dq, Dphi, NormG, NormB, Q0
+      integer                               ::iq
+      DQ = 1.474256632_Rkind
+      Dphi = 0.181095798_Rkind
       Q0 = ZERO
       !open (unit = 19, file = "psi0_Retinal")
       call calc_Q_grid(Q, Psi0%Basis)
@@ -536,16 +536,16 @@ contains
    END SUBROUTINE psi0_init
 
    SUBROUTINE psi_init_GWP0(psi, Tab_GWP)
-      USE UtilLib_m
+      USE QDUtil_m
       TYPE(psi_t), intent(inout), target        :: psi
       TYPE(GWP_t)                             :: Tab_GWP(:)
 
       !------------------locale variables--------------------------------------------
       TYPE(psi_t), target                    :: psi_g
-      real(kind=Rk), allocatable             :: Q(:, :)
+      real(kind= Rkind), allocatable             :: Q(:, :)
       integer                                 :: iq, iGWO
-      complex(Kind=Rk), pointer              ::gb(:, :)
-      real(Kind=Rk)                          ::NormG, NormB
+      complex(Kind= Rkind), pointer              ::gb(:, :)
+      real(Kind= Rkind)                          ::NormG, NormB
 
       !initialisation-----------------------------------------------------------------
       CALL init_psi(psi_g, psi%Basis, cplx=.TRUE., grid=.true.)
@@ -586,7 +586,7 @@ contains
       implicit none
       TYPE(Basis_t), target, intent(in)     :: Basis
       TYPE(psi_t)                            :: psiB, psiG
-      real(kind=Rk)                           :: NormG, NormB
+      real(kind= Rkind)                           :: NormG, NormB
       CALL init_psi(psiB, Basis, cplx=.TRUE., grid=.false.)
       CALL init_psi(psiG, Basis, cplx=.TRUE., grid=.true.)
 
@@ -611,5 +611,39 @@ contains
       print *, 'NormG = ', NormG
       print *, 'NormB = ', NormB
    end subroutine test
+
+
+   SUBROUTINE CalcDapqpsi(dapsi,dq0psi,dp0psi,psi)
+      implicit none
+      type(psi_t), intent(in)           :: psi
+      type(psi_t), intent(inout)        :: dapsi,dq0psi,dp0psi
+      
+      !-------variables locales----------------------------------------
+      type(psi_t)                       :: G,dpg,dqg,dag
+      call init_psi(G, psi%Basis, cplx=.TRUE., grid=.true.)
+       call init_psi(dag, psi%Basis, cplx=.TRUE., grid=.true.)
+        call init_psi(dpg, psi%Basis, cplx=.TRUE., grid=.true.)
+         call init_psi(dqg, psi%Basis, cplx=.TRUE., grid=.true.)
+      
+      IF (psi%Grid) THEN
+         G%CVec(:) = psi%CVec(:)
+      ELSE
+         call BasisTOGrid_nD_cplx(G%CVec, psi%CVec, psi%Basis)
+      END IF
+      call Calc_dp0G(dpg%CVec, G%CVec, psi%Basis)
+      call Calc_dq0G(dqg%CVec, G%CVec, psi%Basis)
+      call Calc_daG(dag%CVec, G%CVec, psi%Basis)
+      
+      call GridTOBasis_nD_cplx(dapsi%CVec, dag%CVec, psi%Basis)
+      call GridTOBasis_nD_cplx(dq0psi%CVec, dqg%CVec, psi%Basis)
+      call GridTOBasis_nD_cplx(dp0psi%CVec, dpg%CVec, psi%Basis)
+      
+      
+       call dealloc_psi(dpg)
+        call dealloc_psi(dqg)
+         call dealloc_psi(dag)
+          call dealloc_psi(G)
+          
+   END SUBROUTINE
 
 end module psi_m

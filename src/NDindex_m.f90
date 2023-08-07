@@ -1,6 +1,5 @@
 MODULE NDindex_m
-  USE NumParameters_m
-  USE UtilLib_m
+  USE QDUtil_m, out_unit => out_unit
   IMPLICIT NONE
 
   TYPE :: NDindex_t
@@ -24,8 +23,8 @@ CONTAINS
     logical,     parameter        :: debug = .false.
 
     IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING Init_NDindex'
-      flush(out_unitp)
+      write(out_unit,*) 'BEGINNING Init_NDindex'
+      flush(out_unit)
     END IF
 
     NDindex%Ndim = Ndim
@@ -35,18 +34,18 @@ CONTAINS
     NDindex%Tab0(1)   = 0
 
     IF (debug) THEN
-      write(out_unitp,*) NDindex%Ndim
-      write(out_unitp,*)'NDindex%Ndend', NDindex%Ndend
-      write(out_unitp,*)'NDindex%Tab0', NDindex%Tab0(:)
-      write(out_unitp,*) 'END Init_NDindex'
+      write(out_unit,*) NDindex%Ndim
+      write(out_unit,*)'NDindex%Ndend', NDindex%Ndend
+      write(out_unit,*)'NDindex%Tab0', NDindex%Tab0(:)
+      write(out_unit,*) 'END Init_NDindex'
 
-      flush(out_unitp)
+      flush(out_unit)
     END IF
 
   END SUBROUTINE Init_NDindex
 
   SUBROUTINE Init_tab_ind(Tab_ind,NDindex)
-    USE UtilLib_m
+    USE QDUtil_m
     IMPLICIT NONE
     TYPE(NDindex_t),  intent(in) :: NDindex
     integer,     intent(inout)   :: Tab_ind(:)
@@ -55,21 +54,21 @@ CONTAINS
     logical,     parameter       :: debug = .false.
 
     IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING Init_tab_ind'
-      flush(out_unitp)
+      write(out_unit,*) 'BEGINNING Init_tab_ind'
+      flush(out_unit)
     END IF
 
      Tab_ind(:)= NDindex%Tab0(:)
 
     IF (debug) THEN
-      write(out_unitp,*) 'END Init_tab_ind'
-      flush(out_unitp)
+      write(out_unit,*) 'END Init_tab_ind'
+      flush(out_unit)
     END IF
 
   END SUBROUTINE Init_tab_ind
 
   SUBROUTINE increase_NDindex(Tab_ind,NDindex,Endloop)
-    USE UtilLib_m
+    USE QDUtil_m
     IMPLICIT NONE
 
     TYPE(NDindex_t),  intent(in) :: NDindex
@@ -82,14 +81,14 @@ CONTAINS
 
 
     IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING Tab_ind'
-      write(out_unitp,*)'NDindex%Ndend', NDindex%Ndend
-      write(out_unitp,*)'Tab_ind1', Tab_ind
-      flush(out_unitp)
+      write(out_unit,*) 'BEGINNING Tab_ind'
+      write(out_unit,*)'NDindex%Ndend', NDindex%Ndend
+      write(out_unit,*)'Tab_ind1', Tab_ind
+      flush(out_unit)
     END IF
 
     Tab_ind(1)=Tab_ind(1)+1
-    IF (debug)  write(out_unitp,*)'Tab_indd', Tab_ind
+    IF (debug)  write(out_unit,*)'Tab_indd', Tab_ind
     
     DO i=1,NDindex%Ndim-1
 
@@ -98,7 +97,7 @@ CONTAINS
          Tab_ind(i)=1
        END IF
     END DO
-    IF (debug) write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
+    IF (debug) write(out_unit,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
 
     Endloop =(Tab_ind(NDindex%Ndim)==NDindex%Ndend(NDindex%Ndim)+1)
 
@@ -106,14 +105,14 @@ CONTAINS
     
 
     IF (debug) THEN
-      write(out_unitp,*) 'END Tab_ind'
-      flush(out_unitp)
+      write(out_unit,*) 'END Tab_ind'
+      flush(out_unit)
     END IF
 
   END SUBROUTINE increase_NDindex
 
     SUBROUTINE Write_NDindex(NDindex)
-      USE UtilLib_m
+      USE QDUtil_m
       IMPLICIT NONE
 
       TYPE(NDindex_t),  intent(in) :: NDindex
@@ -121,25 +120,25 @@ CONTAINS
       logical,     parameter      :: debug = .false.
 
       IF (debug) THEN
-        write(out_unitp,*) 'BEGINNING Write_NDindex'
-        flush(out_unitp)
+        write(out_unit,*) 'BEGINNING Write_NDindex'
+        flush(out_unit)
       END IF
 
-      write(out_unitp,*)'NDindex%Ndend=', NDindex%Ndend
+      write(out_unit,*)'NDindex%Ndend=', NDindex%Ndend
 
-      write(out_unitp,*) 'NDindex%Ndim =',NDindex%Ndim
-      write(out_unitp,*)'NDindex%Ndend =', NDindex%Ndend
-      write(out_unitp,*)'NDindex%Tab0 =', NDindex%Tab0(:)
+      write(out_unit,*) 'NDindex%Ndim =',NDindex%Ndim
+      write(out_unit,*)'NDindex%Ndend =', NDindex%Ndend
+      write(out_unit,*)'NDindex%Tab0 =', NDindex%Tab0(:)
 
       IF (debug) THEN
-        write(out_unitp,*) ' END Write_NDindex'
-        flush(out_unitp)
+        write(out_unit,*) ' END Write_NDindex'
+        flush(out_unit)
       END IF
 
     END SUBROUTINE Write_NDindex
 
   SUBROUTINE Testindex(NDindex)
-    USE UtilLib_m
+    USE QDUtil_m
     IMPLICIT NONE
 
     TYPE(NDindex_t),  intent(in) :: NDindex
@@ -151,24 +150,24 @@ CONTAINS
     logical,     parameter      :: debug = .false.
 
     IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING Testindex'
-      flush(out_unitp)
+      write(out_unit,*) 'BEGINNING Testindex'
+      flush(out_unit)
     END IF
     Allocate(Tab_ind(NDindex%Ndim))
     Call Init_tab_ind(Tab_ind,NDindex)
 
     i=0
-    !write(out_unitp,*) i, tab_ind(:)
+    !write(out_unit,*) i, tab_ind(:)
     DO !i= 1,100
       i=i+1
       CALL increase_NDindex(Tab_ind,NDindex,Endloop)
         IF (Endloop) exit
-      write(out_unitp,*) i, tab_ind(:)
+      write(out_unit,*) i, tab_ind(:)
     END DO
 
     IF (debug) THEN
-      write(out_unitp,*) 'END Testindex'
-      flush(out_unitp)
+      write(out_unit,*) 'END Testindex'
+      flush(out_unit)
     END IF
 
   END SUBROUTINE Testindex

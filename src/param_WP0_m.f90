@@ -1,21 +1,21 @@
 
       MODULE param_WP0_m
-      USE UtilLib_m
+      USE QDUtil_m
       IMPLICIT NONE
 
         TYPE GWP1D_t
 
-        real (kind=Rk)                  :: sigma = ONETENTH  ! width of WP0
-        real (kind=Rk)                  :: Q0    = ZERO      ! position of WP0
-        real (kind=Rk)                  :: imp_k = ZERO      ! impultion for WP0
-        real (kind=Rk)                  :: phase = ZERO      ! phase for WP0
+        real (kind=Rkind)                  :: sigma = ONETENTH  ! width of WP0
+        real (kind=Rkind)                  :: Q0    = ZERO      ! position of WP0
+        real (kind=Rkind)                  :: imp_k = ZERO      ! impultion for WP0
+        real (kind=Rkind)                  :: phase = ZERO      ! phase for WP0
 
 
         END TYPE GWP1D_t
 
         TYPE GWP_t
           integer                     :: ndim           = 1
-          complex (kind=Rk)           :: Coef           = CZERO
+          complex (kind=Rkind)           :: Coef           = CZERO
           integer                     ::    Elecindex   = 1
 
           TYPE (GWP1D_t), allocatable :: tab_GWP1D(:)
@@ -29,7 +29,7 @@
 
     !------ initial WP definition -----------------------------
     !     GWP(Q)=exp[-((Q-Qeq)/sigma)2+i*imp_k*(Q-Qeq)+i*phase]
-    real (kind=Rk)                         :: sigma,imp_k,Qeq,phase
+    real (kind=Rkind)                         :: sigma,imp_k,Qeq,phase
     integer                                :: Rerr
 
     NAMELIST /defWP0/ sigma,Qeq,imp_k,phase
@@ -46,11 +46,11 @@
     imp_k    = ZERO
     phase    = ZERO
 
-    read(in_unitp,defWP0,iostat=Rerr)
+    read(in_unit,defWP0,iostat=Rerr)
     if (Rerr /= 0) THEN
-      write(out_unitp,*) ' ERROR in ',name_sub
-      write(out_unitp,*) ' problem while reading the namelist "defWP0"'
-      write(out_unitp,defWP0)
+      write(out_unit,*) ' ERROR in ',name_sub
+      write(out_unit,*) ' problem while reading the namelist "defWP0"'
+      write(out_unit,defWP0)
       STOP 'ERROR in Read_GWP1D: problem while reading the namelist "defWP0"'
     end if
           GWP1D = GWP1D_t(sigma,Qeq,imp_k,phase)
@@ -67,20 +67,20 @@
            !logical, parameter :: debug =.TRUE.
            !-----------------------------------------------------------
         
-           IF (debug) write(out_unitp,*) 'Q0,sigma,imp_k,phase',           &
+           IF (debug) write(out_unit,*) 'Q0,sigma,imp_k,phase',           &
                   GWP1D%Q0,GWP1D%sigma,GWP1D%imp_k,GWP1D%phase
         
-           write(out_unitp,*)                                             &
+           write(out_unit,*)                                             &
                 'sigma=',GWP1D%sigma,'Qeq=',GWP1D%Q0 ,'imp_k =',GWP1D%imp_k,'phase=',GWP1D%phase
         
          END SUBROUTINE Write_GWP1D
 
          FUNCTION calc_GWP1D(GWP1D,Q)
-           complex (kind=Rk)             :: calc_GWP1D
-           real (kind=Rk), intent(in)    :: Q
+           complex (kind=Rkind)             :: calc_GWP1D
+           real (kind=Rkind), intent(in)    :: Q
            TYPE (GWP1D_t),    intent(in) :: GWP1D
         
-           real (kind=Rk) :: ze,zk,DQ
+           real (kind=Rkind) :: ze,zk,DQ
            !----- for debuging --------------------------------------------------
            character (len=*), parameter :: name_sub='calc_GWP1D'
            logical, parameter :: debug =.FALSE.
@@ -101,7 +101,7 @@
           integer                      :: i,Rerr
           integer                      ::  ndim,Elecindex
 
-          complex (kind=Rk)            :: Coef
+          complex (kind=Rkind)            :: Coef
 
           NAMELIST /defGWP/ ndim,Elecindex,Coef
 
@@ -119,9 +119,9 @@
           read(nio,nml=defGWP,iostat=Rerr)
           IF (Rerr /= 0) THEN  
             print*,'Rerr',Rerr
-            write(out_unitp,*) ' ERROR in ',name_sub
-            write(out_unitp,*) ' problem while reading the namelist "defGWP"'
-            write(out_unitp,defGWP)
+            write(out_unit,*) ' ERROR in ',name_sub
+            write(out_unit,*) ' problem while reading the namelist "defGWP"'
+            write(out_unit,defGWP)
             STOP 'ERROR in Read_GWP: problem while reading the namelist "defGWP"'
           END IF
            GWP%ndim          = ndim
@@ -136,8 +136,8 @@
         END SUBROUTINE Read_GWP
 
        FUNCTION calc_GWP(GWP,Q)
-         complex (kind=Rk)          :: calc_GWP
-         real (kind=Rk), intent(in) :: Q(:)
+         complex (kind=Rkind)          :: calc_GWP
+         real (kind=Rkind), intent(in) :: Q(:)
          TYPE (GWP_t),      intent(in) :: GWP
 
          integer :: i
@@ -166,8 +166,8 @@
         !logical, parameter :: debug =.TRUE.
         !-----------------------------------------------------------
       
-        write(out_unitp,*) 'ndim,Elecindex,Coef',GWP%ndim , GWP%Elecindex , GWP%Coef
-        write(out_unitp,'(a)') ' Qeq         sigma       imp_k       phase'
+        write(out_unit,*) 'ndim,Elecindex,Coef',GWP%ndim , GWP%Elecindex , GWP%Coef
+        write(out_unit,'(a)') ' Qeq         sigma       imp_k       phase'
         DO i=1,size(GWP%tab_GWP1D)
           CALL Write_GWP1D(GWP%tab_GWP1D(i))
         END DO
@@ -218,8 +218,8 @@
          END SUBROUTINE Write_Tab_GWP
 
          SUBROUTINE calc_Tab_GWP(Tab_GWP,Q,psi)
-          complex (kind=Rk) ,intent(inout)   :: psi(:)
-          real (kind=Rk), intent(in)         :: Q(:)
+          complex (kind=Rkind) ,intent(inout)   :: psi(:)
+          real (kind=Rkind), intent(in)         :: Q(:)
           TYPE (GWP_t),      intent(in)      :: Tab_GWP(:)
           integer :: iGWP0
           !----- for debuging --------------------------------------------------

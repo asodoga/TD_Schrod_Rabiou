@@ -10,25 +10,25 @@ module Ana_psi_m
 contains
 
    SUBROUTINE Calc_AVQ_1D(psi_in, AVQ1, AVQel1, SQ1, SQel1, ib)
-      USE UtilLib_m
-      logical, parameter                         :: debug = .false.
-      TYPE(Psi_t), intent(in)                    :: psi_in
-      TYPE(Psi_t)                                :: psi
-      complex(kind=Rk), allocatable              :: psi_gb(:, :)
-      logical                                    :: Endloop_q
-      real(kind=Rk), intent(inout), optional     :: AVQ1, SQ1
-      real(kind=Rk), intent(inout), optional     :: AVQel1(:), SQel1(:)
+      USE QDUtil_m
+      logical, parameter                            :: debug = .false.
+      TYPE(Psi_t), intent(in)                       :: psi_in
+      TYPE(Psi_t)                                   :: psi
+      complex(kind=Rkind), allocatable              :: psi_gb(:, :)
+      logical                                       :: Endloop_q
+      real(kind=Rkind), intent(inout), optional     :: AVQ1, SQ1
+      real(kind=Rkind), intent(inout), optional     :: AVQel1(:), SQel1(:)
 
-      real(kind=Rk), allocatable                 :: AVQel(:), SQel(:)
-      real(kind=Rk)                              :: AVQ, SQ
-      integer, intent(in)                        :: ib
-      real(kind=Rk)                              :: WnD, X
-      real(kind=Rk), allocatable                 :: N(:)
-      integer, allocatable                       :: Tab_iq(:)
-      integer                                    :: iq, inbe, inb
+      real(kind=Rkind), allocatable                 :: AVQel(:), SQel(:)
+      real(kind=Rkind)                              :: AVQ, SQ
+      integer, intent(in)                           :: ib
+      real(kind=Rkind)                              :: WnD, X
+      real(kind=Rkind), allocatable                 :: N(:)
+      integer, allocatable                          :: Tab_iq(:)
+      integer                                       :: iq, inbe, inb
       IF (debug) THEN
-         write (out_unitp, *) 'Beging AVQ'
-         flush (out_unitp)
+         write (out_unit, *) 'Beging AVQ'
+         flush (out_unit)
       END IF
       allocate (N(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
       allocate (AVQel(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
@@ -87,23 +87,22 @@ contains
       Deallocate (Psi_gb)
       CALL dealloc_psi(psi)
       IF (debug) THEN
-         write (out_unitp, *) 'END AVQ'
-         flush (out_unitp)
+         write (out_unit, *) 'END AVQ'
+         flush (out_unit)
       END IF
    END SUBROUTINE
 
    SUBROUTINE Calc_AVQ_nD0(psi0, AVQ, AVQel, SQ, SQel)
-      USE UtilLib_m
-
+      USE QDUtil_m
       type(psi_t), intent(in), target                         :: psi0
       type(psi_t), target                                     :: psi
-      real(kind=Rk), intent(inout), optional                  :: AVQ(:), SQ(:)
-      real(kind=Rk), intent(inout), optional                  :: AVQel(:, :), SQel(:, :)
+      real(kind=Rkind), intent(inout), optional                  :: AVQ(:), SQ(:)
+      real(kind=Rkind), intent(inout), optional                  :: AVQel(:, :), SQel(:, :)
       logical, parameter                                      :: debug = .true.
       integer                                                 :: Inb, Ndim
 
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
 
       Ndim = size(psi0%Basis%tab_basis)
@@ -125,29 +124,28 @@ contains
 
       END DO
 
-      write (out_unitp, *) '<psi/Q/psi> =', AVQ
-      write (out_unitp, *) 'SQ =', SQ
+      write (out_unit, *) '<psi/Q/psi> =', AVQ
+      write (out_unit, *) 'SQ =', SQ
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       CALL dealloc_psi(psi)
    END SUBROUTINE
 
    SUBROUTINE Calc_AVQ_nD(psi0, AVQ, SQ)
-      USE UtilLib_m
-
+      USE QDUtil_m
       type(psi_t), intent(in), target                          :: psi0
       type(psi_t), target                                      :: psi
-      real(kind=Rk), intent(inout)                             :: AVQ(:), SQ(:)
-      real(kind=Rk), allocatable                               :: Q(:, :), W(:), Xe(:, :)
-      real(kind=Rk)                                            :: Norm
+      real(kind=Rkind), intent(inout)                             :: AVQ(:), SQ(:)
+      real(kind=Rkind), allocatable                               :: Q(:, :), W(:), Xe(:, :)
+      real(kind=Rkind)                                            :: Norm
       logical, parameter                                       :: debug = .true.
       integer                                                  :: Inb, Ndim, Iq, inbe
-      complex(kind=Rk), pointer                                :: BB(:, :)
-      real(kind=Rk), allocatable                               :: Qte(:, :), SQe(:, :)
+      complex(kind=Rkind), pointer                                :: BB(:, :)
+      real(kind=Rkind), allocatable                               :: Qte(:, :), SQe(:, :)
 
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
 
       Ndim = size(psi0%Basis%tab_basis) - 1
@@ -179,10 +177,10 @@ contains
          END DO
       End do
 
-      write (out_unitp, *) '<psi/Q/psi> =', AVQ
-      write (out_unitp, *) 'SQ =', SQ
+      write (out_unit, *) '<psi/Q/psi> =', AVQ
+      write (out_unit, *) 'SQ =', SQ
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       CALL dealloc_psi(psi)
    END SUBROUTINE
@@ -190,10 +188,10 @@ contains
    subroutine Population(Psi, Pop)
       implicit none
       type(Psi_t), intent(in), target                 :: Psi
-      complex(kind=Rk), pointer                       :: Psi_bb(:, :)
-      real(Kind=Rk), intent(inout), allocatable       ::Pop(:)
+      complex(kind=Rkind), pointer                       :: Psi_bb(:, :)
+      real(Kind=Rkind), intent(inout), allocatable       ::Pop(:)
       integer                                         :: inb
-      real(Kind=Rk)                                   :: Norm
+      real(Kind=Rkind)                                   :: Norm
 
       Psi_bb(1:Psi%Basis%nb, 1:Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb) => Psi%CVec
       call Calc_Norm_OF_Psi(Psi, Norm)
@@ -206,19 +204,19 @@ contains
 
    SUBROUTINE Qpop(Psi, Qp)
       USE Basis_m
-      USE UtilLib_m
+      USE QDUtil_m
       type(Psi_t), intent(in), target               :: Psi
       type(Psi_t), target                           :: Psi_g
-      complex(kind=Rk), pointer                     :: psi_gb(:, :)
+      complex(kind=Rkind), pointer                     :: psi_gb(:, :)
 
-      real(kind=Rk), intent(inout)                  :: Qp(:)
-      real(kind=Rk)                                 :: Norm(2)
+      real(kind=Rkind), intent(inout)                  :: Qp(:)
+      real(kind=Rkind)                                 :: Norm(2)
       logical, parameter                            :: debug = .true.
       integer                                       :: iq, inb, ndim
 
       IF (debug) THEN
-         !write(out_unitp,*) 'BEGINNING Qpop'
-         flush (out_unitp)
+         !write(out_unit,*) 'BEGINNING Qpop'
+         flush (out_unit)
       END IF
       Ndim = size(Psi%Basis%tab_basis)
       call init_psi(psi_g, psi%Basis, cplx=.TRUE., grid=.true.)
@@ -238,32 +236,32 @@ contains
 
       print *, Qp, Norm
       IF (debug) THEN
-         !        write(out_unitp,*) 'END Qpop
-         flush (out_unitp)
+         !        write(out_unit,*) 'END Qpop
+         flush (out_unit)
       END IF
    END SUBROUTINE Qpop
 
 
 
    SUBROUTINE Calc_Av_imp_k_1D(psi0, K, nio)
-      USE UtilLib_m
-      type(psi_t), intent(in), target                         :: psi0
-      real(kind=Rk), intent(inout)                            :: K
-      integer, intent(in)                                     :: nio
+      USE QDUtil_m
+      type(psi_t), intent(in), target                            :: psi0
+      real(kind=Rkind), intent(inout)                            :: K
+      integer, intent(in)                                        :: nio
       !locals variables---------------------------------------------------------
       type(psi_t), target                                     :: psi, ikpsi
       type(psi_t), target                                     :: psi_b, ikpsi_b
       logical, parameter                                      :: debug = .true.
-      complex(kind=Rk), pointer                               :: GB(:,:,:)
-      real(kind=Rk), pointer                                  ::d1gg(:,:,:)
-      complex(kind=Rk), pointer                               :: ikpsi0(:,:,:)
-      real(kind=Rk)                                           :: p
+      complex(kind=Rkind), pointer                               :: GB(:,:,:)
+      complex(kind=Rkind), pointer                                  ::d1gg_cplx(:,:,:)
+      complex(kind=Rkind), pointer                               :: ikpsi0(:,:,:)
+      real(kind=Rkind)                                           :: p
       Integer, allocatable         :: Ib1(:), Ib2(:), Ib3(:),Iq1(:), Iq2(:), Iq3(:)
       integer                                                 :: nq,inb,Ndim,Inbe,i1,i3
       !debuging----------------------------------------------------------------
       
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       
       Ndim = size(psi0%Basis%tab_basis)
@@ -285,20 +283,20 @@ contains
        
         GB(1:Iq1(nio),1:Iq2(nio),1:Iq3(nio))    => psi%CVec
         ikpsi0(1:Iq1(nio),1:Iq2(nio),1:Iq3(nio))=> ikpsi%CVec
-        d1gg(1:Iq2(nio),1:Iq2(nio),1:1)=> psi%Basis%tab_basis(nio)%d1gg(:, :, 1)
+        d1gg_cplx(1:Iq2(nio),1:Iq2(nio),1:1)=> psi%Basis%tab_basis(nio)%d1gg_cplx(:, :, 1)
         
         DO i3 = 1, ubound(GB, dim=3)
           DO i1 = 1, ubound(GB, dim=1)
-            ikpsi0(i1, :, i3) = ikpsi0(i1, :, i3)-EYE*matmul(d1gg(:,:,1),GB(i1,:,i3))
+            ikpsi0(i1, :, i3) = ikpsi0(i1, :, i3)-EYE*matmul(d1gg_cplx(:,:,1),GB(i1,:,i3))
           END DO
        END DO
       call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
       call GridTOBasis_nD_cplx(ikpsi_b%CVec, ikpsi%CVec, psi0%Basis)
       p = psi%Basis%tab_basis(nio)%Imp_k
       K = dot_product(psi_b%CVec, ikpsi_b%CVec) !+ p
-      ! write (out_unitp, *) '<psi/-id_x/psi> =', K
+      ! write (out_unit, *) '<psi/-id_x/psi> =', K
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       
       CALL dealloc_psi(psi)
@@ -309,19 +307,19 @@ contains
    END SUBROUTINE
 
    SUBROUTINE Calc_Av_imp_k_nD(psi0, K)
-      USE UtilLib_m
+      USE QDUtil_m
       type(psi_t), intent(in)                                 :: psi0
-      real(kind=Rk), intent(inout)                            :: K(:)
+      real(kind=Rkind), intent(inout)                            :: K(:)
       !locals variables---------------------------------------------------
       type(psi_t), target                                     :: psi
       logical, parameter                                      :: debug = .true.
       integer                                                 :: Ndim, Inb
-      real(kind=Rk)                                           :: p
+      real(kind=Rkind)                                           :: p
 
       !debuging----------------------------------------------------------------
 
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       Ndim = size(psi0%Basis%tab_basis) - 1
       call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
@@ -339,10 +337,10 @@ contains
          call Calc_Av_imp_k_1D(psi, K(inb), inb)
       End do
 
-      write (out_unitp, *) '<psi/-id_xi/psi> =', K
+      write (out_unit, *) '<psi/-id_xi/psi> =', K
 
       IF (debug) THEN
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       CALL dealloc_psi(psi)
 
@@ -350,26 +348,26 @@ contains
 
 
 
-    SUBROUTINE dnpsi_cplx(dnpsi_g, Psi_g, nio,Basis)
+   SUBROUTINE dnpsi_cplx(dnpsi_g, Psi_g, nio,Basis)
+    USE QDUtil_m
     USE Basis_m
-    USE UtilLib_m
     TYPE(Basis_t), intent(in), target            :: Basis
-    complex(kind=Rk), intent(in), target         :: psi_g(:)
-    complex(kind=Rk), intent(inout), target      :: dnpsi_g(:)
+    complex(kind=Rkind), intent(in), target         :: psi_g(:)
+    complex(kind=Rkind), intent(inout), target      :: dnpsi_g(:)
     integer,intent(in)                           :: nio
     
     !locals variables=============================================================================
     
-    complex(kind=Rk), pointer                    :: psi_ggb(:, :, :)
-    real(kind=Rk), pointer                       :: dngg(:, :)
-    complex(kind=Rk), pointer                    :: dnpsi_ggb(:, :, :)
+    complex(kind=Rkind), pointer                    :: psi_ggb(:, :, :)
+    complex(kind=Rkind), pointer                       :: dngg(:, :)
+    complex(kind=Rkind), pointer                    :: dnpsi_ggb(:, :, :)
     logical, parameter                           :: debug = .true.
     integer                                      :: iq, i1, i3, inb, Ndim
     integer, allocatable                         :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
     
     IF (debug) THEN
-       write(out_unitp,*) 'BEGINNING d2psi'
-       flush (out_unitp)
+       write(out_unit,*) 'BEGINNING d2psi'
+       flush (out_unit)
     END IF
     
     Ndim = size(Basis%tab_basis)
@@ -382,9 +380,9 @@ contains
        psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb))   => psi_g
        
        if(nio==1) then
-           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d1gg
+           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d1gg_cplx
        else
-           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
+           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg_cplx
        end if
        
        DO i3 = 1, ubound(psi_ggb, dim=3)
@@ -395,37 +393,37 @@ contains
     END DO
     Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
     IF (debug) THEN
-       write(out_unitp,*) 'END d2psi'
-       flush (out_unitp)
+       write(out_unit,*) 'END d2psi'
+       flush (out_unit)
     END IF
  END SUBROUTINE 
 
 
 
   SUBROUTINE Calc_Integral_cplx(psi_in, Alpha, nio)
-    USE UtilLib_m
+    USE QDUtil_m
     TYPE(Psi_t), intent(in)                    :: psi_in
     integer, intent(in)                        :: nio
-    complex(kind=Rk)  ,intent(inout)           :: Alpha(:)
+    complex(kind=Rkind)  ,intent(inout)           :: Alpha(:)
     
     !locals variables========================================================================================
     
     TYPE(Psi_t)                                :: psi,dnpsi
-    complex(kind=Rk), allocatable              :: psi_gb(:, :)
-    complex(kind=Rk), allocatable              :: dnpsi_gb(:, :)
+    complex(kind=Rkind), allocatable              :: psi_gb(:, :)
+    complex(kind=Rkind), allocatable              :: dnpsi_gb(:, :)
     logical                                    :: Endloop_q
     logical, parameter                         :: debug = .false.
-    complex(kind=Rk), allocatable              :: Int1(:),Int2(:),Int1el(:),Int2el(:),Int0(:)
+    complex(kind=Rkind), allocatable              :: Int1(:),Int2(:),Int1el(:),Int2el(:),Int0(:)
   
-    real(kind=Rk)                              :: W
+    real(kind=Rkind)                              :: W
     integer, allocatable                       :: Tab_iq(:)
     integer                                    :: iq, inbe, inb,ndim
     
     !debunging & allocation=============================================================================================
     
     if (debug) then
-       write (out_unitp, *) 'Beging Calc_Integral_cplx'
-       flush (out_unitp)
+       write (out_unit, *) 'Beging Calc_Integral_cplx'
+       flush (out_unit)
     end if
     ndim = size(psi_in%Basis%tab_basis)-1
     
@@ -491,8 +489,8 @@ contains
     call dealloc_psi(dnpsi)
     
     if (debug) then
-       write (out_unitp, *) 'END Calc_Integral_cplx'
-       flush (out_unitp)
+       write (out_unit, *) 'END Calc_Integral_cplx'
+       flush (out_unit)
     end if
  END SUBROUTINE
 

@@ -1,5 +1,6 @@
 module Auto_corr_m
-   USE UtilLib_m
+   USE QDUtil_m
+   USE polyortho_m
    USE Ana_psi_m
    USE psi_m
    USE Basis_m
@@ -10,19 +11,19 @@ module Auto_corr_m
 contains
 
    SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name)
-      USE UtilLib_m
+      USE QDUtil_m
       USE psi_m
 
       TYPE(psi_t), intent(in)                 :: psi0, psi_dt
-      complex(kind=Rk), intent(inout)         :: corre_coeff
-      real(kind=Rk), intent(inout)            :: arg_corre_coeff
+      complex(kind=Rkind), intent(inout)         :: corre_coeff
+      real(kind=Rkind), intent(inout)            :: arg_corre_coeff
       character(*), intent(in)                :: propa_name
 
       !local variables---------------------------------------------------
       TYPE(psi_t)                             :: psi
-      real(kind=Rk)                           :: X, Y
+      real(kind=Rkind)                           :: X, Y
 
-      write (out_unitp, *) 'Beging Calc_Auto_corr'
+      write (out_unit, *) 'Beging Calc_Auto_corr'
 
       if (propa_name == 'hagedorn') then
 
@@ -30,37 +31,36 @@ contains
          psi%CVec = CZERO
          call Hagedorn0(psi, psi_dt)
          corre_coeff = dot_product(Psi0%CVec, psi%CVec)/dot_product(Psi%CVec, psi%CVec)
-         X = real(corre_coeff, kind=RK)
+         X = real(corre_coeff, kind=Rkind)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
          call dealloc_psi(psi)
 
       else
          corre_coeff = dot_product(psi0%CVec, psi_dt%CVec)/dot_product(psi_dt%CVec, psi_dt%CVec)
-         X = real(corre_coeff, kind=RK)
+         X = real(corre_coeff, kind=Rkind)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
       end if
-      write (out_unitp, *) 'corre_coeff =', corre_coeff, 'arg_corre_coeff=', arg_corre_coeff
+      write (out_unit, *) 'corre_coeff =', corre_coeff, 'arg_corre_coeff=', arg_corre_coeff
 
-      write (out_unitp, *) 'End Calc_Auto_corr'
+      write (out_unit, *) 'End Calc_Auto_corr'
 
    End SUBROUTINE
 
    SUBROUTINE Calc_fft_Auto_corr(autocor_function, time, fft_autocor_function, delta_t, N)
-      USE NumParameters_m
-      USE UtilLib_m
-      COMPLEX(KIND=Rk), INTENT(IN), allocatable, DIMENSION(:)        :: autocor_function(:)
-      COMPLEX(KIND=Rk), INTENT(INOUT), ALLOCATABLE                  :: fft_autocor_function(:)
-      REAL(KIND=Rk), INTENT(IN), DIMENSION(:)                       :: time
-      REAL(KIND=Rk), ALLOCATABLE, DIMENSION(:)                       :: w
+      USE QDUtil_m
+      COMPLEX(KIND=Rkind), INTENT(IN), allocatable, DIMENSION(:)        :: autocor_function(:)
+      COMPLEX(KIND=Rkind), INTENT(INOUT), ALLOCATABLE                  :: fft_autocor_function(:)
+      REAL(KIND=Rkind), INTENT(IN), DIMENSION(:)                       :: time
+      REAL(KIND=Rkind), ALLOCATABLE, DIMENSION(:)                       :: w
       INTEGER, intent(in)                                           :: N
-      REAL(KIND=Rk)                                                :: delta_t
-      REAL(KIND=Rk)                                                 :: wm, wmax, dw
+      REAL(KIND=Rkind)                                                :: delta_t
+      REAL(KIND=Rkind)                                                 :: wm, wmax, dw
       INTEGER                                                       :: Iw, nw, I
       OPEN (UNIT=100, FILE="fft_autocor_function.dat")
       fft_autocor_function(:) = CZERO
-      wm = -0.001_Rk; wmax = 5._Rk; dw = 0.005_Rk
+      wm = -0.001_Rkind; wmax = 5._Rkind; dw = 0.005_Rkind
       nw = int((wmax - wm)/dw)
       !allocate( fft_autocor_function(0:nw))
       ALLOCATE (w(0:nw - 1))
@@ -75,19 +75,20 @@ contains
    END SUBROUTINE
 
    SUBROUTINE Hagedorn0(psi_dt_2, psi_dt_1)
+      USE QDUtil_m
       TYPE(psi_t), intent(in), target                  :: psi_dt_1
       TYPE(psi_t), intent(inout), target               :: psi_dt_2
-      complex(kind=Rk), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
-      complex(kind=Rk), allocatable, target            :: B1(:), B2(:)
+      complex(kind=Rkind), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
+      complex(kind=Rkind), allocatable, target            :: B1(:), B2(:)
       !logical, parameter                              :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim, iq, jq
       Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
-      real(Kind=Rk), allocatable                       ::  x(:), w(:)
-      complex(Kind=Rk), allocatable                    :: S(:, :)
-      real(Kind=Rk)                                    :: s1, s2, s3, x1, x2, x3,p1,p2
+      real(Kind=Rkind), allocatable                       ::  x(:), w(:)
+      complex(Kind=Rkind), allocatable                    :: S(:, :)
+      real(Kind=Rkind)                                    :: s1, s2, s3, x1, x2, x3,p1,p2
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
-      write (out_unitp, *) 'Begin Hagedorn projection'
+      write (out_unit, *) 'Begin Hagedorn projection'
       If (Ndim == 1) then
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
@@ -111,7 +112,7 @@ contains
 
          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
             Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-               CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2,p1,p2)
+              ! CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2,p1,p2)
             End Do
          End Do
          !----------------------------------------------------------------------------------
@@ -146,7 +147,7 @@ contains
          if (psi_dt_1%Basis%tab_basis(1)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(1)%Basis_name == 'ho') then
             Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
                Do jq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-                  CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2,p1,p2)
+                  !CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2,p1,p2)
                End Do
             End Do
          else
@@ -185,7 +186,7 @@ contains
 
                Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
                   Do jq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-                     CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2,p1,p2)
+                    ! CALL Hermite_product_integral(S(iq, jq), x, w, iq, jq, x1, x2, s1, s2,p1,p2)
                   End Do
                End Do
 
@@ -210,7 +211,7 @@ contains
          END DO
 
       END IF
-      write (out_unitp, *) 'END Hagedorn projection'
+      write (out_unit, *) 'END Hagedorn projection'
    END SUBROUTINE
 
 end module Auto_corr_m

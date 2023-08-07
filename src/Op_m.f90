@@ -1,5 +1,5 @@
 module Op_m
-   USE NumParameters_m
+   USE QDUtil_m
    USE Basis_m, only: Basis_t
    USE Molec_m
    Use Psi_m
@@ -10,7 +10,7 @@ module Op_m
 
       TYPE(Basis_t), pointer     :: Basis
 
-      real(kind=Rk), allocatable :: RMat(:, :)
+      real(kind=Rkind), allocatable :: RMat(:, :)
    END TYPE Op_t
 
    public :: Op_t, write_Op, Set_Op, dealloc_Op, calc_OpPsi, Calc_Hpsi, Kpsi_nD, Make_Mat_OP
@@ -40,21 +40,21 @@ contains
    END SUBROUTINE dealloc_Op
 
    SUBROUTINE write_Op(Op)
-      USE UtilLib_m, only: Write_RMat
+      USE QDUtil_m
 
       TYPE(Op_t), intent(in) :: Op
 
       ! integer :: i
 
       IF (associated(Op%Basis)) THEN
-         write (out_unitp, *) ' The basis is linked to Op.'
+         write (out_unit, *) ' The basis is linked to Op.'
       END IF
 
       IF (allocated(Op%RMat)) THEN
-         write (out_unitp, *) 'Writing Op (real):'
-         write (out_unitp, *)
-         CALL Write_RMat(Op%RMat, out_unitp, 5, name_info='Op%Rmat')
-         write (out_unitp, *) 'END Writing Op'
+         write (out_unit, *) 'Writing Op (real):'
+         write (out_unit, *)
+         CALL Write_VecMat(Op%RMat, out_unit, 5,  info='Op%Rmat')
+         write (out_unit, *) 'END Writing Op'
       END IF
 
    END SUBROUTINE write_Op
@@ -72,10 +72,10 @@ contains
       TYPE(psi_t)                        :: OpPsi_g, OpPsi_b
 
       IF (debug) THEN
-         write (out_unitp, *) 'BEGINNING Make_Mat_OP'
+         write (out_unit, *) 'BEGINNING Make_Mat_OP'
          call write_Op(Op)
          call write_basis(Op%Basis)
-         flush (out_unitp)
+         flush (out_unit)
       END IF
       CALL init_psi(psi_g, Op%Basis, cplx=.TRUE., grid=.true.)
       CALL init_psi(psi_b, Op%Basis, cplx=.TRUE., grid=.false.)
@@ -89,15 +89,15 @@ contains
          CALL BasisTOGrid_nD_cplx(Psi_g%CVec, Psi_b%CVec, Op%Basis)
          CALL Calc_Hpsi(Psi_g%CVec, OpPsi_g%CVec, Op%Basis)
          CALL GridTOBasis_nD_cplx(OpPsi_b%CVec, OpPsi_g%CVec, Op%Basis)
-         Op%RMat(:, ib) = real(OpPsi_b%CVec(:), kind=Rk)
+         Op%RMat(:, ib) = real(OpPsi_b%CVec(:), kind=Rkind)
       END DO
       !deallocate(Psi_b)
       !deallocate(Psi_g)
       !deallocate(OpPsi_g)
 
       IF (debug) THEN
-         write (out_unitp, *) 'END Make_Mat_OP'
-         flush (out_unitp)
+         write (out_unit, *) 'END Make_Mat_OP'
+         flush (out_unit)
       END IF
 
    END SUBROUTINE Make_Mat_OP
@@ -107,7 +107,7 @@ contains
 
       TYPE(Op_t), intent(inout)       :: Op
       TYPE(Basis_t), intent(in), target :: Basis
-      REAL(kind=Rk), ALLOCATABLE      :: d0bgw(:, :)
+      REAL(kind=Rkind), ALLOCATABLE      :: d0bgw(:, :)
 
       IF (.NOT. Basis_IS_allocated(Basis)) THEN
          STOP 'ERROR in Set_Op: the Basis is not initialized'
@@ -163,14 +163,14 @@ contains
       USE Psi_m
       USE Molec_m
 
-      complex(kind=Rk), intent(in), target            :: Psi_g(:)
-      complex(kind=Rk), intent(inout)                 :: HPsi_g(:)
-      type(Basis_t), intent(in), target               :: Basis
-      complex(kind=Rk), allocatable, target           ::VPsi_g(:), KPsi_g(:)
-      complex(kind=Rk), pointer                       :: VPsi_gb(:, :), Psi_gb(:, :)
-      complex(kind=Rk), allocatable                   :: Ppsi_g(:)
-      real(kind=Rk), allocatable                      :: V(:, :, :), Q(:, :)
-      INTEGER                                         ::iq, i2, j2, i1, Ndim
+      complex(kind=Rkind), intent(in), target            :: Psi_g(:)
+      complex(kind=Rkind), intent(inout)                 :: HPsi_g(:)
+      type(Basis_t), intent(in), target                  :: Basis
+      complex(kind=Rkind), allocatable, target           ::VPsi_g(:), KPsi_g(:)
+      complex(kind=Rkind), pointer                       :: VPsi_gb(:, :), Psi_gb(:, :)
+      complex(kind=Rkind), allocatable                   :: Ppsi_g(:)
+      real(kind=Rkind), allocatable                      :: V(:, :, :), Q(:, :)
+      INTEGER                                            ::iq, i2, j2, i1, Ndim
       !open(11, file = 'Pot_Retinal11.dat')
       !open(12, file = 'Pot_Retinal22.dat')
       !open(13, file = 'Pot_Retinal12.dat')
@@ -229,67 +229,66 @@ contains
 
    SUBROUTINE Kpsi_nD(KPsi_g, Psi_g, Basis)
       USE Basis_m
-      USE UtilLib_m
+      USE  QDUtil_m
       USE Molec_m
-      TYPE(Basis_t), intent(in), target      :: Basis
-      complex(kind=Rk), intent(in), target        :: Psi_g(:)
-      complex(kind=Rk), intent(inout), target      :: KPsi_g(:)
-      complex(kind=Rk), pointer                   :: Psi_ggb(:, :, :)
-      real(kind=Rk), pointer                   :: d2gg(:, :)
-      complex(kind=Rk), pointer                   :: KPsi_ggb(:, :, :)
-      real(kind=Rk), allocatable                   :: GGdef(:, :)
-      real(Kind=Rk)                               ::Mass_qphi(2)
-      logical, parameter                 :: debug = .true.
-      integer                                      :: iq, i1, i3, inb, Ndim
-      integer, allocatable                        :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
+      TYPE(Basis_t), intent(in), target               :: Basis
+      complex(kind=Rkind), intent(in), target         :: psi_g(:)
+      complex(kind=Rkind), intent(inout), target      :: Kpsi_g(:)
+      complex(kind=Rkind), pointer                    :: psi_ggb(:, :, :)
+      complex(kind=Rkind), pointer                    :: d2gg_cplx(:, :)
+      complex(kind=Rkind), pointer                    :: Kpsi_ggb(:, :, :)
+      real(kind=Rkind), allocatable                   :: GGdef(:, :)
+      logical, parameter                              :: debug = .true.
+      integer                                         :: iq, i1, i3, inb, Ndim
+      integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
 
       IF (debug) THEN
-         !write(out_unitp,*) 'BEGINNING Kpsi'
-         flush (out_unitp)
+         !write(out_unit,*) 'BEGINNING Kpsi'
+         flush (out_unit)
       END IF
 
       Ndim = size(Basis%tab_basis)
       allocate (GGdef(Ndim - 1, Ndim - 1))
       CALL get_Qmodel_GGdef(GGdef)
       call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
-      KPsi_g(:) = CZERO
+      Kpsi_g(:) = CZERO
       DO inb = 1, Ndim - 1
-         KPsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => KPsi_g
-         Psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Psi_g
-         d2gg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
-         DO i3 = 1, ubound(Psi_ggb, dim=3)
-            DO i1 = 1, ubound(Psi_ggb, dim=1)
+         Kpsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Kpsi_g
+         psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
+         d2gg_cplx(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg_cplx
+         DO i3 = 1, ubound(psi_ggb, dim=3)
+            DO i1 = 1, ubound(psi_ggb, dim=1)
                !KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, Psi_ggb(i1, :, i3))
-               KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*matmul(d2gg, Psi_ggb(i1, :, i3))
+               Kpsi_ggb(i1, :, i3) = Kpsi_ggb(i1, :, i3) - HALF*matmul(d2gg_cplx, psi_ggb(i1, :, i3))
             END DO
          END DO
       END DO
       Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
       IF (debug) THEN
-         !        write(out_unitp,*) 'END KPsi_nD'
-         flush (out_unitp)
+         !        write(out_unit,*) 'END KPsi_nD'
+         flush (out_unit)
       END IF
    END SUBROUTINE Kpsi_nD
 
 
       SUBROUTINE Ppsi_nD(Ppsi_g, Psi_g, Basis)
       USE Basis_m
-      USE UtilLib_m
+      USE  QDUtil_m
       USE Molec_m
-      TYPE(Basis_t), intent(in), target            :: Basis
-      complex(kind=Rk), intent(in), target         :: psi_g(:)
-      complex(kind=Rk), intent(inout), target      :: Ppsi_g(:)
-      complex(kind=Rk), pointer                    :: psi_ggb(:, :, :)
-      real(kind=Rk), pointer                       :: d1gg(:, :, :)
-      real(kind=Rk)                                :: p
-      complex(kind=Rk), pointer                    :: Ppsi_ggb(:, :, :)
-      real(kind=Rk), allocatable                   :: GGdef(:, :)
-      logical, parameter                           :: debug = .true.
-      integer                                      :: i1, i3, inb, Ndim
-      integer, allocatable                         :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
+      TYPE(Basis_t), intent(in), target               :: Basis
+      complex(kind=Rkind), intent(in), target         :: psi_g(:)
+      complex(kind=Rkind), intent(inout), target      :: Ppsi_g(:)
+      complex(kind=Rkind), pointer                    :: psi_ggb(:, :, :)
+      real(kind=Rkind), pointer                       :: d1gg(:, :, :)
+      real(kind=Rkind)                                :: p
+      complex(kind=Rkind), pointer                    :: Ppsi_ggb(:, :, :)
+      real(kind=Rkind), allocatable                   :: GGdef(:, :)
+      logical, parameter                              :: debug = .true.
+      integer                                         :: i1, i3, inb, Ndim
+      integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
       IF (debug) THEN
-         !write(out_unitp,*) 'BEGINNING Ppsi'
-         flush (out_unitp)
+         !write(out_unit,*) 'BEGINNING Ppsi'
+         flush (out_unit)
       END IF
       Ndim = size(Basis%tab_basis)
       allocate (GGdef(Ndim - 1, Ndim - 1))
@@ -297,7 +296,7 @@ contains
       call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
       Ppsi_g(:) = CZERO
       DO inb = 1, Ndim - 1
-         Ppsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Ppsi_g
+         ppsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Ppsi_g
          psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
          d1gg(1:Iq2(inb), 1:Iq2(inb), 1:1) => Basis%tab_basis(inb)%d1gg
          p = Basis%tab_basis(inb)%Imp_k
@@ -313,8 +312,8 @@ contains
 
       Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
       IF (debug) THEN
-         !        write(out_unitp,*) 'END Ppsi_nD'
-         flush (out_unitp)
+         !        write(out_unit,*) 'END Ppsi_nD'
+         flush (out_unit)
       END IF
    END SUBROUTINE
 

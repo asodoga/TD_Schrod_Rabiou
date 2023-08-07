@@ -1,26 +1,26 @@
 module Molec_m
-  USE NumParameters_m
+  USE QDUtil_m
   implicit none
   private
 
-  real(kind=Rk) :: mass =  2000._Rk
+  real(kind=Rkind) :: mass =  2000._Rkind
   integer :: potential_type = 1 !0 internal,1 QLM,2 options
   public :: Calc_pot,mass,sub_pot
 
 contains
   FUNCTION Calc_pot(Q)
-    real(kind=Rk)             :: Calc_pot
+    real(kind=Rkind)             :: Calc_pot
 
-    real(kind=Rk), intent(in) :: Q
+    real(kind=Rkind), intent(in) :: Q
 
   Calc_pot = mass*HALF * Q*Q
 
   END FUNCTION Calc_pot
 
   SUBROUTINE  sub_pot(Mat_V,Q,potential_type)
-       USE NumParameters_m
-       REAL(kind=Rk), intent(inout)   :: Mat_V(:,:)
-       REAL(kind=Rk), intent(in)      :: Q(:)
+       USE QDUtil_m
+       REAL(kind=Rkind), intent(inout)   :: Mat_V(:,:)
+       REAL(kind=Rkind), intent(in)      :: Q(:)
        INTEGER                        :: i,j,iq
        integer , intent(in)           :: potential_type
 
@@ -40,7 +40,7 @@ contains
                     if (abs(i-j)== 1) then
 
                          Mat_V(i,j) = ZERO
-                         !0.001_Rk*Q(1)
+                         !0.001_Rkind*Q(1)
                     end if
                  end do
             end do

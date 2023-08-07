@@ -8,28 +8,27 @@
 !> symetric tridiagonal matrix.
 !----------------------------------------------------------------------------------
 module lanczos_m
-  USE UtilLib_m
+  USE QDUtil_m
   USE Op_m
   USE psi_m
-  USE diago_m
   implicit none
 
 contains
 
 SUBROUTINE Krilov_Gram_Schmidt_basis(K,psi,num_max)
-USE UtilLib_m
+USE QDUtil_m
 implicit none
- complex(kind=Rk),allocatable,intent(inout) :: K(:,:)
- TYPE(psi_t),intent(in)                     :: psi
- integer,intent(in)                         :: num_max
+ complex(kind=Rkind),allocatable,intent(inout) :: K(:,:)
+ TYPE(psi_t),intent(in)                        :: psi
+ integer,intent(in)                            :: num_max
 
  ! locals variables ======================================================================================
 
- Complex(kind=Rk) ,allocatable              :: Q(:,:),V(:)
- TYPE(Op_t)                                 :: H
- TYPE(psi_t)                                :: psi_b1,psi_b2
- integer                                    :: i,j,nb
- real(kind=Rk) ,allocatable                 :: S(:,:)   ! Overlap matrix          
+ Complex(kind=Rkind) ,allocatable              :: Q(:,:),V(:)
+ TYPE(Op_t)                                    :: H
+ TYPE(psi_t)                                   :: psi_b1,psi_b2
+ integer                                       :: i,j,nb
+ real(kind=Rkind) ,allocatable                 :: S(:,:)   ! Overlap matrix          
 
 
  nb = size(psi%CVec)
@@ -80,7 +79,7 @@ END do
   !S = matmul(conjg(transpose(K)),K)
 !
   !do i = 1,num_max
-  !  write(out_unitp,*) (s(i,j),j=1,num_max)
+  !  write(out_unit,*) (s(i,j),j=1,num_max)
   !end do
 
    call dealloc_psi(psi_b1)
@@ -91,17 +90,17 @@ END do
 
 
 SUBROUTINE Construct_triband_matrix(Mat,K,psi,num_max)
-   real(kind=Rk),allocatable,intent(inout)                :: Mat(:,:)
-   complex(kind=Rk),allocatable,intent(inout) ,optional   ::K(:,:)
-   TYPE(psi_t),intent(in)                                 :: psi
-   integer,intent(in)                                     :: num_max
+   real(kind=Rkind),allocatable,intent(inout)                :: Mat(:,:)
+   complex(kind=Rkind),allocatable,intent(inout) ,optional   ::K(:,:)
+   TYPE(psi_t),intent(in)                                    :: psi
+   integer,intent(in)                                        :: num_max
 
    !locals variables =======================================================================
 
-   complex(kind=Rk) ,allocatable                          :: K1(:,:)
-   TYPE(Op_t)                                             :: H
-   integer                                                :: i,j,nb
-   TYPE(psi_t)                                            :: psi_b1,psi_b2,Hpsi_b2
+   complex(kind=Rkind) ,allocatable                          :: K1(:,:)
+   TYPE(Op_t)                                                :: H
+   integer                                                   :: i,j,nb
+   TYPE(psi_t)                                               :: psi_b1,psi_b2,Hpsi_b2
 
   CALL init_psi(psi_b1, psi%Basis, cplx=.TRUE., grid=.false.)
   CALL init_psi(psi_b2, psi%Basis, cplx=.TRUE., grid=.false.)
@@ -126,7 +125,7 @@ SUBROUTINE Construct_triband_matrix(Mat,K,psi,num_max)
    END do
  
    !do i = 1,num_max
-   !  write(out_unitp,*) (Mat(i,j),j=1,num_max)
+   !  write(out_unit,*) (Mat(i,j),j=1,num_max)
    !end do
 
 
@@ -137,25 +136,25 @@ END SUBROUTINE
  
  
  SUBROUTINE Lanczos_eign_syst_solve(EigenVal,Vec_Basis,psi,kmax)
-      Use diago_m
+       Use QDUtil_m
       Use psi_m
-      type(psi_t),intent(in)                        :: psi 
-      real (kind=Rk), allocatable ,intent(inout)    :: EigenVal(:)
-      complex (kind=Rk), allocatable ,intent(inout) :: Vec_Basis(:,:)
-      integer,intent(in)                            :: kmax
+      type(psi_t),intent(in)                           :: psi 
+      real (kind=Rkind), allocatable ,intent(inout)    :: EigenVal(:)
+      complex (kind=Rkind), allocatable ,intent(inout) :: Vec_Basis(:,:)
+      integer,intent(in)                               :: kmax
    
    !locals variables===================================================================================
-      real(kind=Rk) ,allocatable                    :: Matrix(:,:)
-      real (kind=Rk), allocatable                   :: EigenVec(:,:)
-      complex (kind=Rk), allocatable                :: K(:,:)
-      !logical,          parameter                  :: debug = .true.
-      logical,         parameter                    :: debug = .false.
-      integer                                       :: ib,jb,nb
+      real(kind=Rkind) ,allocatable                    :: Matrix(:,:)
+      real (kind=Rkind), allocatable                   :: EigenVec(:,:)
+      complex (kind=Rkind), allocatable                :: K(:,:)
+      !logical,          parameter                     :: debug = .true.
+      logical,         parameter                       :: debug = .false.
+      integer                                          :: ib,jb,nb
       
       
       IF (debug) THEN
-          write(out_unitp,*) 'BEGINNING Eig_syst_solve'
-          flush(out_unitp)
+          write(out_unit,*) 'BEGINNING Eig_syst_solve'
+          flush(out_unit)
       END IF
       
        nb = size(psi%CVec)
@@ -172,31 +171,31 @@ END SUBROUTINE
         END DO
       END DO
  
-    ! Write(out_unitp,*)
-    ! Write(out_unitp,*)
+    ! Write(out_unit,*)
+    ! Write(out_unit,*)
      
-    !Write(out_unitp,*) 'eigenvalues = '
+    !Write(out_unit,*) 'eigenvalues = '
     !DO ib=1,kmax
-    !   write(out_unitp,*) EigenVal(ib)
+    !   write(out_unit,*) EigenVal(ib)
     !END DO
      
-    !Write(out_unitp,*)
-    !Write(out_unitp,*) 'EigenVec'
+    !Write(out_unit,*)
+    !Write(out_unit,*) 'EigenVec'
      
     ! DO ib=1,kmax
     !     write(*,*) (EigenVec(ib,jb),jb=1,kmax)
     !END DO
 
-    !Write(out_unitp,*)
-    !Write(out_unitp,*) 'Vec_Basis'
+    !Write(out_unit,*)
+    !Write(out_unit,*) 'Vec_Basis'
     !DO ib=1,kmax
     ! write(*,*) (Vec_Basis(ib,jb),jb=1,kmax)
     !END DO
 
     
       IF (debug) THEN
-          write(out_unitp,*) 'END Eig_syst_solve'
-          flush(out_unitp)
+          write(out_unit,*) 'END Eig_syst_solve'
+          flush(out_unit)
       END IF
       
   END SUBROUTINE 
@@ -204,8 +203,8 @@ END SUBROUTINE
 SUBROUTINE TEST_Lonaczos_cplx(psi,kmax)
    integer,intent(in)                            :: kmax
    type(psi_t),intent(in)                        :: psi 
-   real (kind=Rk), allocatable                   :: EigenVal(:)
-   complex (kind=Rk), allocatable                :: Vec_Basis(:,:)
+   real (kind=Rkind), allocatable                   :: EigenVal(:)
+   complex (kind=Rkind), allocatable                :: Vec_Basis(:,:)
 
 
    CALL Lanczos_eign_syst_solve(EigenVal,Vec_Basis,psi,kmax)
@@ -220,14 +219,14 @@ SUBROUTINE TEST_Lonaczos_cplx(psi,kmax)
      TYPE(psi_t), INTENT(INOUT)                    :: psi_dt
      TYPE(psi_t), INTENT(IN)                       :: psi
      integer,intent(IN)                            :: kmax
-     real(kind=Rk), INTENT(IN)                     :: dt
+     real(kind=Rkind), INTENT(IN)                     :: dt
      
      
      !locals variables===================================================================
      
-     real (kind=Rk), allocatable                   :: EigenVal(:)
-     complex (kind=Rk), allocatable                :: Vec_Basis(:,:)
-     complex (kind=Rk), allocatable                :: C1(:),C2(:)
+     real (kind=Rkind), allocatable                   :: EigenVal(:)
+     complex (kind=Rkind), allocatable                :: Vec_Basis(:,:)
+     complex (kind=Rkind), allocatable                :: C1(:),C2(:)
       
       allocate(C1(kmax),C2(kmax))
       
