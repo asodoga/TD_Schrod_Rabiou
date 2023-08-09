@@ -15,7 +15,6 @@ PROGRAM TD_SCHROD
    TYPE(GWP_t), allocatable          :: tab_GWP(:)
    real(Kind=Rkind)                  :: E, Norm !, x(2), y1(2), y2(2) ,p(1), S(1),x0(1)
    complex(kind=Rkind)               :: Alpha(1)
-   complex(kind=Rkind),allocatable   :: SO(:,:),VO(:)
    real(kind=Rkind),allocatable      :: K(:,:)
 !====================================================================
 ! for QML
@@ -32,7 +31,7 @@ PROGRAM TD_SCHROD
    write (out_unit, *) 'ndim,nsurf', ndim, nsurf
    write (out_unit, *) 'pot_name'
 
-    ! p(1)=ONE; S(1)=ONE;x0(1)=ONE
+    !p(1)=ONE; S(1)=ONE;x0(1)=ONE
    !====================================================================
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
@@ -40,13 +39,13 @@ PROGRAM TD_SCHROD
    call construct_primitive_basis(Basis)
    !call init_Basis1_TO_Basis2(Basis0, Basis)
    !write (out_unit, *) 'p',p,'*********************************'
-   !call construct_primitive_basis(Basis0, x=x0, sx=s,p=p)
+  ! call construct_primitive_basis(Basis0, x=x0, sx=s,p=p)
     !stop 'cc1'
    
    !call Write_Basis(Basis)
 !====================================================================
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
-   write (out_unit, *) '======= Initialization of  psi0 ============'
+   write (out_unit, *) "======= Initialization of  psi0 ============"
 
    call init_psi(psi0, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
@@ -57,16 +56,14 @@ PROGRAM TD_SCHROD
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    !call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
-   !call H_test(psi0)
+   call H_test(psi0)
+
    !call Calc_varia_princinpe_overlap_s(SO,VO,psi0)
-   !call Calc_Integral_cplx(psi0, Alpha, 2)
-   !call Construct_triband_matrix(Mat=K,psi=psi0,num_max=10)
    !call TEST_Lonaczos_cplx(psi0,10)
    !psi%CVec = CZERO
    !psi0%CVec = CZERO
    !psi%CVec(1) = CONE
    !call Projection(psi0, psi)
-   !call TEST_S_cplx(psi0%Basis,psi0%CVec)
    !call Calc_AVQ_nD0(psi0=psi0,AVQ=y1, SQ=y2)
    !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
    !call Set_Op(H,Basis)

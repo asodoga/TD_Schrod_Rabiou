@@ -235,7 +235,7 @@ contains
       complex(kind=Rkind), intent(in), target         :: psi_g(:)
       complex(kind=Rkind), intent(inout), target      :: Kpsi_g(:)
       complex(kind=Rkind), pointer                    :: psi_ggb(:, :, :)
-      complex(kind=Rkind), pointer                    :: d2gg_cplx(:, :)
+      complex(kind=Rkind), pointer                    :: d2gg(:, :)
       complex(kind=Rkind), pointer                    :: Kpsi_ggb(:, :, :)
       real(kind=Rkind), allocatable                   :: GGdef(:, :)
       logical, parameter                              :: debug = .true.
@@ -255,11 +255,11 @@ contains
       DO inb = 1, Ndim - 1
          Kpsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Kpsi_g
          psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
-         d2gg_cplx(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg_cplx
+         d2gg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
          DO i3 = 1, ubound(psi_ggb, dim=3)
             DO i1 = 1, ubound(psi_ggb, dim=1)
                !KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, Psi_ggb(i1, :, i3))
-               Kpsi_ggb(i1, :, i3) = Kpsi_ggb(i1, :, i3) - HALF*matmul(d2gg_cplx, psi_ggb(i1, :, i3))
+               Kpsi_ggb(i1, :, i3) = Kpsi_ggb(i1, :, i3) - HALF*matmul(d2gg, psi_ggb(i1, :, i3))
             END DO
          END DO
       END DO
@@ -269,52 +269,5 @@ contains
          flush (out_unit)
       END IF
    END SUBROUTINE Kpsi_nD
-
-
-      SUBROUTINE Ppsi_nD(Ppsi_g, Psi_g, Basis)
-      USE Basis_m
-      USE  QDUtil_m
-      USE Molec_m
-      TYPE(Basis_t), intent(in), target               :: Basis
-      complex(kind=Rkind), intent(in), target         :: psi_g(:)
-      complex(kind=Rkind), intent(inout), target      :: Ppsi_g(:)
-      complex(kind=Rkind), pointer                    :: psi_ggb(:, :, :)
-      real(kind=Rkind), pointer                       :: d1gg(:, :, :)
-      real(kind=Rkind)                                :: p
-      complex(kind=Rkind), pointer                    :: Ppsi_ggb(:, :, :)
-      real(kind=Rkind), allocatable                   :: GGdef(:, :)
-      logical, parameter                              :: debug = .true.
-      integer                                         :: i1, i3, inb, Ndim
-      integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
-      IF (debug) THEN
-         !write(out_unit,*) 'BEGINNING Ppsi'
-         flush (out_unit)
-      END IF
-      Ndim = size(Basis%tab_basis)
-      allocate (GGdef(Ndim - 1, Ndim - 1))
-      CALL get_Qmodel_GGdef(GGdef)
-      call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
-      Ppsi_g(:) = CZERO
-      DO inb = 1, Ndim - 1
-         ppsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Ppsi_g
-         psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
-         d1gg(1:Iq2(inb), 1:Iq2(inb), 1:1) => Basis%tab_basis(inb)%d1gg
-         p = Basis%tab_basis(inb)%Imp_k
-         DO i3 = 1, ubound(Psi_ggb, dim=3)
-            DO i1 = 1, ubound(Psi_ggb, dim=1)
-               !Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) - EYE*p*GGdef(inb, inb)*matmul(d1gg(:, :, 1), psi_ggb(i1, :, i3))
-               !Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) + HALF*p*p*GGdef(inb, inb)*psi_ggb(i1, :, i3)
-               Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) - EYE*p*matmul(d1gg(:, :, 1), psi_ggb(i1, :, i3))
-               Ppsi_ggb(i1, :, i3) = Ppsi_ggb(i1, :, i3) + HALF*p*p*psi_ggb(i1, :, i3)
-            END DO
-         END DO
-      END DO
-
-      Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
-      IF (debug) THEN
-         !        write(out_unit,*) 'END Ppsi_nD'
-         flush (out_unit)
-      END IF
-   END SUBROUTINE
 
 end module Op_m

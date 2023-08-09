@@ -4,7 +4,7 @@
         implicit none
         private
      public:: poly_Hermite_exp,d0d1d2poly_Hermite_exp,d0d1d2poly_Hermite_exp_cplx,poly_Hermite
-     public:: hercom,herroot,herrec,d0d1d2box,d0d1d2fourier
+     public:: hercom,herroot,herrec,d0d1d2box,d0d1d2fourier,poly_Hermite_exp_cplx
 
 
     contains
@@ -158,7 +158,7 @@
         USE QDUtil_m
         IMPLICIT NONE
   
-         real(kind=Rkind) d0,d1,d2
+         complex(kind=Rkind) d0,d1,d2
          real(kind=Rkind) x,xx,c,s
          integer i
   
@@ -231,7 +231,7 @@
         USE QDUtil_m
         IMPLICIT NONE
   
-         real(kind=Rkind) d0,d1,d2
+         complex(kind=Rkind) d0,d1,d2
          real(kind=Rkind) x,xx,c,s
          integer i
   
@@ -903,6 +903,18 @@
 !      write(out_unit,*) x,poly_Hermite_exp
        RETURN
        end function poly_Hermite_exp
+
+       FUNCTION poly_Hermite_exp_cplx(x,p,l)
+        USE QDUtil_m
+        IMPLICIT NONE
+        complex(kind=Rkind) :: poly_Hermite_exp_cplx
+        real(kind=Rkind) x,p
+        integer l
+        poly_Hermite_exp_cplx = poly_Hermite(x,l) * exp(-x*x*HALF+EYE*x)
+         !write(out_unit,*) x,poly_Hermite_exp_cplx
+         RETURN
+         end function poly_Hermite_exp_cplx
+      
 !===================================================
 !
 !   calcule la valeur d'un polynome de Hermite l
@@ -1046,15 +1058,12 @@
         USE QDUtil_m
         IMPLICIT NONE
   
-         real(kind=Rkind) x,d0,d1,d2,pexp
+        complex(kind=Rkind)d0,d1,d2
+        real(kind=Rkind) x,pexp
   
          logical deriv
   
         integer l
-  
-  !----- function -----------------------------------
-         !real(kind=Rkind) poly_Hermite
-  !----- function -----------------------------------
   
          IF (deriv) THEN
   

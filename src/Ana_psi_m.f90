@@ -71,7 +71,7 @@ contains
       SQ = sum(SQel)/(Sum(N)**2)
       SQ = sqrt(SQ - AVQ*AVQ)
       SQ = ONE/(SQ*sqrt(TWO))
-      DO inbe = 1, Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb !electronic state
+      DO inbe = 1, psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb !electronic state
          if (N(inbe) /= ZERO) AVQel(inbe) = AVQel(inbe)/(N(inbe)**2)
       END DO
       if (present(AVQ1)) AVQ1 = AVQ
@@ -253,7 +253,7 @@ contains
       type(psi_t), target                                     :: psi_b, ikpsi_b
       logical, parameter                                      :: debug = .true.
       complex(kind=Rkind), pointer                               :: GB(:,:,:)
-      complex(kind=Rkind), pointer                                  ::d1gg_cplx(:,:,:)
+      complex(kind=Rkind), pointer                                  ::d1gg(:,:,:)
       complex(kind=Rkind), pointer                               :: ikpsi0(:,:,:)
       real(kind=Rkind)                                           :: p
       Integer, allocatable         :: Ib1(:), Ib2(:), Ib3(:),Iq1(:), Iq2(:), Iq3(:)
@@ -283,11 +283,11 @@ contains
        
         GB(1:Iq1(nio),1:Iq2(nio),1:Iq3(nio))    => psi%CVec
         ikpsi0(1:Iq1(nio),1:Iq2(nio),1:Iq3(nio))=> ikpsi%CVec
-        d1gg_cplx(1:Iq2(nio),1:Iq2(nio),1:1)=> psi%Basis%tab_basis(nio)%d1gg_cplx(:, :, 1)
+        d1gg(1:Iq2(nio),1:Iq2(nio),1:1)=> psi%Basis%tab_basis(nio)%d1gg(:, :, 1)
         
         DO i3 = 1, ubound(GB, dim=3)
           DO i1 = 1, ubound(GB, dim=1)
-            ikpsi0(i1, :, i3) = ikpsi0(i1, :, i3)-EYE*matmul(d1gg_cplx(:,:,1),GB(i1,:,i3))
+            ikpsi0(i1, :, i3) = ikpsi0(i1, :, i3)-EYE*matmul(d1gg(:,:,1),GB(i1,:,i3))
           END DO
        END DO
       call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
@@ -380,9 +380,9 @@ contains
        psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb))   => psi_g
        
        if(nio==1) then
-           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d1gg_cplx
+           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d1gg
        else
-           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg_cplx
+           dngg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
        end if
        
        DO i3 = 1, ubound(psi_ggb, dim=3)
