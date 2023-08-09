@@ -62,7 +62,6 @@ contains
       logical, parameter               :: debug = .true.
 
       ! variables locales------------------------------------------------------------------
-      TYPE(Basis_t)                       :: Basis1,Basis2
       REAL(kind=Rkind)                    :: t, t_deltat, Norm, E, y
       REAL(kind=Rkind), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:),Pt(:)
       complex(kind=Rkind)                 ::  x
@@ -103,14 +102,9 @@ contains
       E = ZERO;Alpha= CZERO
 
 
-      call init_Basis1_TO_Basis2(Basis1, psi0%Basis)
-      call init_Basis1_TO_Basis2(Basis2, psi0%Basis)
-      call construct_primitive_basis(Basis1)
-      call construct_primitive_basis(Basis2)
 
-
-      call init_psi(psi, Basis1, cplx=.TRUE., grid=.false.)
-      call init_psi(psi_dt,Basis2, cplx=.TRUE., grid=.false.)
+      call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
+      call init_psi(psi_dt,psi0%Basis, cplx=.TRUE., grid=.false.)
       call init_psi(psi00, psi0%Basis, cplx=.TRUE., grid=.false.)
 
       psi%CVec(:) = psi0%CVec(:)
@@ -205,14 +199,14 @@ contains
 
       ! variables locales--------------------------------------------------------------
       REAL(kind=Rkind), allocatable                   :: Qt(:), SQt(:),Pt(:)
-      REAL(kind=Rkind)                                :: Norm, E,E0
+      REAL(kind=Rkind)                                :: Norm,Norm0, E,E0
       integer                                         :: Ndim
      ! write (out_unit, *) 'Beging Hagedorn'
       !call Write_Basis(psi%Basis)
 
-      call Calc_Norm_OF_Psi(psi_dt,Norm)
-       call Calc_average_energy(psi_dt, E0)
-       write(out_unit,*) 'HAgedorn in <psi|psi> =',Norm,'E0=',E0
+      call Calc_Norm_OF_Psi(psi_dt,Norm0)
+      call Calc_average_energy(psi_dt, E0)
+      write(out_unit,*) 'HAgedorn in, <psi|H|psi> ',E0,'<psi|psi>',Norm0
 
       Ndim = size(psi_dt%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim))
@@ -223,13 +217,13 @@ contains
 
       call construct_primitive_basis(psi_dt%Basis, Qt,Pt,SQt)
       call projection(psi, psi_dt)
-      call construct_primitive_basis(psi%Basis, Qt,Pt,SQt)
      
       !write (out_unit, *) 'End Hagedorn'
 
       call Calc_Norm_OF_Psi(psi,Norm)
        call Calc_average_energy(psi, E)
-      write(out_unit,*) 'HAgedorn out <psi_dt|psi_dt> =',Norm,'E=',E
+      write(out_unit,*) 'HAgedorn out <psi|H|psi> ',E,'<psi|psi>',Norm
+
       IF (debug) THEN
          flush (out_unit)
       END IF
@@ -251,7 +245,7 @@ contains
       Qm(:) = ZERO
       Qp(:) = ZERO
       E = ZERO; Norm = ZERO
-      !===================================== beging Anapsi==================
+      !-------------------------------------- beging Anapsi------------------------
       call Population(psi, pop)
       call Calc_average_energy(psi, E)
       call Calc_Norm_OF_psi(psi, Norm)
@@ -260,7 +254,7 @@ contains
       write (4, *) t, Qm
       write (5, *) t, Qp
       deallocate (pop, Qm, Qp)
-      !====================================And Anapsi========================
+      !-----------------------------------------And Anapsi---------------------------------
 
    END SUBROUTINE Analyse
 
@@ -277,7 +271,7 @@ contains
       real(kind=Rkind), INTENT(IN)     :: t
       real(kind=Rkind)                 :: alpha
  
-      ! variables locales
+      ! variables locales-------------------------------------------------------------------------------
 
       real(kind=Rkind)                 :: Rkk, Norm, Norm0
       integer                          :: kk
@@ -288,7 +282,7 @@ contains
       !write(out_unit,*) 'psi',psi%CVec
       Rkk = ONE
       alpha = TEN**10
-        !!======================debut ordre 1==========================
+        !!--------------------------debut ordre 1-----------------------------------
       !psi_dt%CVec    = psi%CVec
       !CALL calc_OpPsi(H,psi,Hpsi)
       !Rkindk = Rkindk*delta_t
@@ -303,7 +297,7 @@ contains
       !write(out_unit,*) 'psi_dt',psi_dt%CVec
       !write(out_unit,*) 'END march_taylor'
 
-        !!===========================Ordre deux etplus=======================
+        !!---------------------------Ordre deux etplus------------------------------
       Psi_dt%CVec = Psi%CVec
       Psi0%CVec = Psi%CVec
       Do kk = 1, propa%max_iter, 1
@@ -341,7 +335,7 @@ contains
      TYPE(propa_t), INTENT(IN)    :: propa
      real(kind=Rkind), INTENT(IN)    :: t
 
-       ! variables locales ============================================================================
+       ! variables locales--------------------------------------------------------------------
 
      real(kind=Rkind)                    :: Norm, Norm0,E
       complex (kind=Rkind), allocatable  :: Vec_Basis(:,:)
@@ -481,7 +475,7 @@ contains
       TYPE(psi_t), intent(in)          :: psi
       TYPE(propa_t), intent(in)        :: propa
      
-      !  variables locales ==============================================================================
+      !  variables locales --------------------------------------------------------
       TYPE(psi_t)                      :: psi0
       real(kind=Rkind)                 :: E_old , E_new,Rkk,delta_E
       integer                          :: iq,kk,it,nt
@@ -503,13 +497,13 @@ contains
     psi_dt%CVec  = CZERO
 
         
-    write (out_unit, *) '================================================================='
+    write (out_unit, *) '----------------------------------------------------------------'
     write (out_unit, *) '--E_old--',E_old,'--delta_E--',delta_E,'--it--',it
     write (out_unit, *) '--E_new--',E_new,'--delta_E--',delta_E,'--it--',it
-    write (out_unit, *) '================================================================'
+    write (out_unit, *) '---------------------------------------------------------'
 
     if(delta_E <= ONETENTH**15) then
-      write (out_unit, *) 'the relaxation is fulfild after',it, 'iteration'
+      write (out_unit, *) '---the relaxation is fulfild after---',it, '---iteration----'
       exit
    end if
 
@@ -583,9 +577,9 @@ contains
    END SUBROUTINE write_propa
 
    SUBROUTINE Calc_average_energy(Psi, E)
-      !>======================================================
+      !>-------------------------------------------------------
       !>     E = <Psi | H | Psi>
-      !>======================================================
+      !>--------------------------------------------------------
       USE QDUtil_m
       USE psi_m
       USE Basis_m
@@ -613,7 +607,7 @@ contains
       end if
       call Calc_Norm_OF_Psi(psi, Norm)
       E = E/Norm**2
-      print *, "<psi|H|psi> = ", E, "<psi|psi> =", Norm
+      !print *, "<psi|H|psi> = ", E, "<psi|psi> =", Norm
 
       CALL dealloc_psi(Hpsi)
       CALL dealloc_psi(psi_b)
@@ -882,25 +876,16 @@ contains
    SUBROUTINE H_test(psi)
       TYPE(psi_t), INTENT(INOUT)      :: psi
       TYPE(psi_t)                     :: psi0
-      REAL(kind=Rkind), allocatable   :: Qt(:), SQt(:),Pt(:)
-      TYPE(Basis_t)                   :: Basis0
-      integer                         :: Ndim
 
+     
    
-      call init_Basis1_TO_Basis2(Basis0, psi%Basis)
-      call construct_primitive_basis(Basis0)
-      call init_psi(psi0, Basis0, cplx=.TRUE., grid=.false.)
-     ! allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim))
+      call init_psi(psi0, psi%Basis, cplx=.TRUE., grid=.false.)
   
 
-      !Qt(:) = ONE; SQt(:) = ONE; Pt(:) = ONE
-
       print*,'-------------------------debut du test-------------------------------'
-      !print*,'psi in',psi%CVec
       
       call Hagedorn(psi0, psi)
-     ! print*,'psi out',psi0%CVec
-
+      
        print*,'-------------------------fin du test-------------------------------'
 
 

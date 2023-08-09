@@ -910,7 +910,7 @@
         complex(kind=Rkind) :: poly_Hermite_exp_cplx
         real(kind=Rkind) x,p
         integer l
-        poly_Hermite_exp_cplx = poly_Hermite(x,l) * exp(-x*x*HALF+EYE*x)
+        poly_Hermite_exp_cplx = poly_Hermite(x,l)*exp(-x*x*HALF+EYE*p*x)
          !write(out_unit,*) x,poly_Hermite_exp_cplx
          RETURN
          end function poly_Hermite_exp_cplx
@@ -1199,12 +1199,12 @@
          end subroutine d0d1d2poly_Hermite_exp_cplx
 
 
-!===================================================
+!-------------------------------------------------------------------------
 !
 !   calcule pour les polynomes d'hermite 0 a nb_herm
 !   la valeur et les dirivees sur les points de la grille
 !
-!===================================================
+!-----------------------------------------------------------------------------
 !     SUBROUTINE d0d1d2poly_Hermite_grille(xh,                          &
 !       d0h,d1h,d2h,nb_herm,nb_gauss_h,deriv,num,step)
 !     USE QDUtil_m
@@ -1234,15 +1234,14 @@
 !      END DO
 !
 !      end subroutine d0d1d2poly_Hermite_grille
-!===================================================
-!
+!-----------------------------------------------------------------------------------
 !   calcule la derivee d'un polynome de Hermite (l>0)
 !   pour un x ( -inf =< x =< +inf )
 !
 !    avec la norme sqrt(2**l * l! *sqrt(pi) )
 !    Pl'(x) = sqrt(2*l) * Pl-1(x)
 !
-!===================================================
+!-------------------------------------------------------------------------------------------
 !     SUBROUTINE d0d1d2poly_Hermite_exp1(x,l,d0,d1,d2,deriv,num,step)
 !     USE QDUtil_m
 !     IMPLICIT NONE
@@ -1315,7 +1314,7 @@
 !   0 : paire
 !   1 : impaire
 !
-!===================================================
+!-------------------------------------------------------------------------------------
 !      SUBROUTINE d0d1d2poly_Hermite_exp_grille(xh,                      &
 !        d0h,d1h,d2h,nb_herm,nb_gauss_h,deriv,num,step)
 !      USE QDUtil_m
@@ -1412,7 +1411,7 @@
 !       END DO
 !
 !       end subroutine d0d1d2poly_Hermite_1_exp_grille
-!!===================================================
+!!-----------------------------------------------------------------------------------------
 !!
 !!   calcule la derivee d'un polynome de Hermite (l>0)
 !!   pour un x ( -inf =< x =< +inf )
@@ -1420,7 +1419,7 @@
 !!    avec la norme sqrt(2**l * l! *sqrt(pi) )
 !!    Pl'(x) = sqrt(2*l) * Pl-1(x)
 !!
-!!===================================================
+!!---------------------------------------------------------------------------------------------------
 !      SUBROUTINE d0d1d2poly_Hermite_exp_noexp(                          &
 !                                            x,l,d0,d1,d2,deriv,num,step)
 !      USE QDUtil_m
@@ -1484,12 +1483,12 @@
 !
 !       RETURN
 !       end subroutine d0d1d2poly_Hermite_exp_noexp
-!!===================================================
+!!---------------------------------------------------------------------------------
 !!
 !!   calcule pour les polynomes d'hermite 0 a nb_herm
 !!   la valeur et les dirivees sur les points de la grille
 !!
-!!===================================================
+!!-----------------------------------------------------------------------------------
 !      SUBROUTINE d0d1d2poly_Hermite_exp_noexp_G(xh,                &
 !        d0h,d1h,d2h,nb_herm,nb_gauss_h,deriv,num,step)
 !      USE QDUtil_m
@@ -1648,12 +1647,12 @@
 !       d0l = d0w*d0l
 !
 !END SUBROUTINE d0d1d2poly_laguerre_weight
-!!=============================================================
+!!------------------------------------------------------------------------------------------
 !!
 !!      determination des tous les Ln(xi)=serie_fourier(n,i)
 !!      + les derivees 1er et 2d.
 !!
-!!=============================================================
+!!-------------------------------------------------------------------------------------------
 !      SUBROUTINE d0d1d2poly_fourier_grille(xf,d0f,d1f,d2f,              &
 !                              nb_fourier,nb_quadra,deriv,num,step)
 !      USE QDUtil_m
@@ -1719,11 +1718,11 @@
 !      END DO
 !
 !      end subroutine d0d1d2poly_fourier_grille
-!!=============================================================
+!!---------------------------------------------------------------------------------------------
 !!
 !!      bessel bj(x) in x for j=0,to nmax
 !!
-!!=============================================================
+!!-----------------------------------------------------------------------------------------------
 !      SUBROUTINE bessel (x, nmax, bj)
 !      USE QDUtil_m
 !      IMPLICIT NONE

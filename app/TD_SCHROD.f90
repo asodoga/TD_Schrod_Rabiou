@@ -16,7 +16,7 @@ PROGRAM TD_SCHROD
    real(Kind=Rkind)                  :: E, Norm !, x(2), y1(2), y2(2) ,p(1), S(1),x0(1)
    complex(kind=Rkind)               :: Alpha(1)
    real(kind=Rkind),allocatable      :: K(:,:)
-!====================================================================
+!-------------------------------------------------------------------------------
 ! for QML
    integer :: ndim, nsurf, option
    logical :: adiabatic
@@ -32,20 +32,20 @@ PROGRAM TD_SCHROD
    write (out_unit, *) 'pot_name'
 
     !p(1)=ONE; S(1)=ONE;x0(1)=ONE
-   !====================================================================
+   !---------------------------------------------------------------------------------
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unit)
    call construct_primitive_basis(Basis)
    !call init_Basis1_TO_Basis2(Basis0, Basis)
-   !write (out_unit, *) 'p',p,'*********************************'
+   !write (out_unit, *) 'p',p,'--------------------------------------------------------'
   ! call construct_primitive_basis(Basis0, x=x0, sx=s,p=p)
     !stop 'cc1'
    
    !call Write_Basis(Basis)
-!====================================================================
+!-------------------------------------------------------------------------------------------
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
-   write (out_unit, *) "======= Initialization of  psi0 ============"
+   write (out_unit, *) "------------------- Initialization of  psi0 ---------------------"
 
    call init_psi(psi0, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
@@ -56,7 +56,10 @@ PROGRAM TD_SCHROD
    call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
    !call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
-   call H_test(psi0)
+   call Calc_Norm_OF_Psi(psi0,Norm)
+   write (out_unit, *)'-------------Energiy And Norme initial WP0-----------------------------'
+   write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
+   !call H_test(psi0)
 
    !call Calc_varia_princinpe_overlap_s(SO,VO,psi0)
    !call TEST_Lonaczos_cplx(psi0,10)
@@ -69,7 +72,7 @@ PROGRAM TD_SCHROD
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   STOP 'calcul de H|psi> est fait'
+   !STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

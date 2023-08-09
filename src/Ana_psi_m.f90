@@ -356,7 +356,7 @@ contains
     complex(kind=Rkind), intent(inout), target      :: dnpsi_g(:)
     integer,intent(in)                           :: nio
     
-    !locals variables=============================================================================
+    !locals variabls-------------------------------------------------------
     
     complex(kind=Rkind), pointer                    :: psi_ggb(:, :, :)
     complex(kind=Rkind), pointer                       :: dngg(:, :)
@@ -406,7 +406,7 @@ contains
     integer, intent(in)                        :: nio
     complex(kind=Rkind)  ,intent(inout)           :: Alpha(:)
     
-    !locals variables========================================================================================
+    !locals variabls---------------------------------------------------------------------------
     
     TYPE(Psi_t)                                :: psi,dnpsi
     complex(kind=Rkind), allocatable              :: psi_gb(:, :)
@@ -419,7 +419,7 @@ contains
     integer, allocatable                       :: Tab_iq(:)
     integer                                    :: iq, inbe, inb,ndim
     
-    !debunging & allocation=============================================================================================
+    !debunging & allocation-----------------------------------------------------------------------
     
     if (debug) then
        write (out_unit, *) 'Beging Calc_Integral_cplx'
@@ -452,7 +452,7 @@ contains
     psi_gb(:, :)    =  reshape(psi%CVec,shape=[psi%Basis%nq, psi%Basis%tab_basis(ndim+1)%nb])
     dnpsi_gb(:, :) =   reshape(dnpsi%CVec,shape=[dnpsi%Basis%nq, dnpsi%Basis%tab_basis(ndim+1)%nb])
     
-    !Evaluation of Alpha=================================================================================================    
+    !Evaluation of Alpha------------------------------------------------------------------    
     
     do inb= 1,ndim
     

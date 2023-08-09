@@ -144,7 +144,6 @@ contains
             CALL init_psi(HPsi_g, Psi%Basis, .true., .true.)
             CALL Calc_Hpsi(Psi%CVec, Hpsi_g%CVec, Psi%Basis)
             CALL GridTOBasis_nD_cplx(HPsi%CVec, HPsi_g%CVec, psi%Basis)
-            ! CALL GTB_nDcplx(HPsi%CVec,HPsi_g%CVec,psi%Basis)
             CALL dealloc_psi(HPsi_g)
          ELSE
             CALL init_psi(Psi_g, Psi%Basis, .true., .true.)

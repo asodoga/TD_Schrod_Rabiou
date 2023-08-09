@@ -702,9 +702,9 @@ CONTAINS
          END DO
       END DO
 
-      !Basis%S = matmul(d0bgw,d0gb)
-      call Hagedorn_ovelp_mat(Basis%S,nb,nq,B1,B2)
-      !call  Write_VecMat(Basis%S, out_unit, 5,  info='S')
+      Basis%S = matmul(d0bgw,d0gb)
+      !call Hagedorn_ovelp_mat(Basis%S,nb,nq,B1,B2)
+      call  Write_VecMat(Basis%S, out_unit, 5,  info='S')
       deallocate(d0gb,d0bgw,w,Q)
 
    END SUBROUTINE Construct_Basis_Hagedorn

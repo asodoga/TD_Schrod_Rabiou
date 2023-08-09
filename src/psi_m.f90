@@ -196,8 +196,9 @@ contains
       call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
       call Calc_Norm_OF_psi(psi_dt_1,Norm0)
-      write (out_unit, *) 'Begin Hagedorn projection',Norm0
-      !write (out_unit, *) 'out',psi_dt_1%CVec
+      write (out_unit, *) 'Begin Hagedorn projection <psi|psi>=',Norm0
+      !write (out_unit, *) 'out',psi_dt_2%CVec
+      !call  Write_VecMat(psi_dt_1%Basis%tab_basis(1)%S, out_unit, 5,  info='S')
 
       If (Ndim == 1) then
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
@@ -237,7 +238,7 @@ contains
 
       END IF
         call Calc_Norm_OF_psi(psi_dt_2,Norm0)
-      write (out_unit, *) 'END Hagedorn projection',Norm0
+      write (out_unit, *) 'END Hagedorn projection <psi|psi>=',Norm0
       !write (out_unit, *) 'out',psi_dt_2%CVec
 
    END SUBROUTINE Projection

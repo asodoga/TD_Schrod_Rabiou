@@ -22,7 +22,7 @@ implicit none
  TYPE(psi_t),intent(in)                        :: psi
  integer,intent(in)                            :: num_max
 
- ! locals variables ======================================================================================
+ ! locals variables --------------------------------------------------------------
 
  Complex(kind=Rkind) ,allocatable              :: Q(:,:),V(:)
  TYPE(Op_t)                                    :: H
@@ -40,7 +40,7 @@ implicit none
  call calc_OpPsi(H, psi, psi_b1)
  Q(:,1) = psi_b1%CVec(:)
 
- ! construction de la base de krylov non normalisee========================================. 
+ ! construction of krylov normalize basis  --------------------------------------. 
 
  Do i=2,num_max
 
@@ -51,7 +51,7 @@ implicit none
 
  END Do
 
-! FIRST Normalisation avec gram shmidt============================================================
+! FIRST Normalisation With gram shmidt--------------------------------------------------.
 
  K(:,1) = Q(:,1)
  K(:,1)= K(:,1)/sqrt(dot_product(K(:,1),K(:,1)))
@@ -65,7 +65,7 @@ implicit none
    V= CZERO
  END do
 
-! SECOND NORMALISATION =============================================================
+! Snd Normalisation ---------------------------------------------------------------.
 K(:,1)= K(:,1)/sqrt(dot_product(K(:,1),K(:,1)))
 Do i=2,num_max
  V(:) = K(:,i)
@@ -95,7 +95,7 @@ SUBROUTINE Construct_triband_matrix(Mat,K,psi,num_max)
    TYPE(psi_t),intent(in)                                    :: psi
    integer,intent(in)                                        :: num_max
 
-   !locals variables =======================================================================
+   !locals variables ------------------------------------------------------
 
    complex(kind=Rkind) ,allocatable                          :: K1(:,:)
    TYPE(Op_t)                                                :: H
@@ -222,7 +222,7 @@ SUBROUTINE TEST_Lonaczos_cplx(psi,kmax)
      real(kind=Rkind), INTENT(IN)                     :: dt
      
      
-     !locals variables===================================================================
+     !locals variables-----------------------------------------------------------------
      
      real (kind=Rkind), allocatable                   :: EigenVal(:)
      complex (kind=Rkind), allocatable                :: Vec_Basis(:,:)
