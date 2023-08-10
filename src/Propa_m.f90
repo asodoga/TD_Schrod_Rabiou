@@ -660,7 +660,7 @@ contains
       fmt = "(E0.1)"
 
       write (dt, fmt) propa%delta_t
-      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.dat'
+      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.lua'
       name_tot = trim(name_tot)
 
       open (unit=nio, file=name_tot)

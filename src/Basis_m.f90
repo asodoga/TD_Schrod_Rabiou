@@ -117,19 +117,19 @@ CONTAINS
       IF (.NOT. allocated(Basis%x)) THEN
          write(out_unit,*)' Basis table x is not allocated.'
       ELSE
-         CALL  Write_VecMat(Basis%x, out_unit, 5,  info='x')
+         call  Write_VecMat(Basis%x, out_unit, 5,  info='x')
       END IF
       write (out_unit, *)
       IF (.NOT. allocated(Basis%W)) THEN
            write(out_unit,*)' Basis table w is not allocated.'
       ELSE
-         CALL  Write_VecMat(Basis%w, out_unit, 5,  info='w')
+         call  Write_VecMat(Basis%w, out_unit, 5,  info='w')
       END IF
       write (out_unit, *)
        IF (.NOT.allocated(Basis%d0gb)) THEN
         write(out_unit,*)' Basis table d0gb is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%d0gb, out_unit, 5,  info='d0gb')
+      call   Write_VecMat(Basis%d0gb, out_unit, 5,  info='d0gb')
        END IF
           
 
@@ -137,7 +137,7 @@ CONTAINS
        IF (.NOT.allocated(Basis%dp0gb)) THEN
         write(out_unit,*)' Basis table dp0gb is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%dp0gb, out_unit, 5,  info='dp0gb')
+      call   Write_VecMat(Basis%dp0gb, out_unit, 5,  info='dp0gb')
        END IF
       
        
@@ -145,69 +145,69 @@ CONTAINS
        IF (.NOT.allocated(Basis%dq0gb)) THEN
         write(out_unit,*)' Basis table dq0gb is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%dq0gb, out_unit, 5,  info='dq0gb')
+      call   Write_VecMat(Basis%dq0gb, out_unit, 5,  info='dq0gb')
        END IF
        
        write (out_unit, *)
        IF (.NOT.allocated(Basis%dagb)) THEN
         write(out_unit,*)' Basis table dagb is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%dagb, out_unit, 5,  info='dagb')
+      call   Write_VecMat(Basis%dagb, out_unit, 5,  info='dagb')
        END IF
 
        write (out_unit, *)
        IF (.NOT.allocated(Basis%dagg)) THEN
         write(out_unit,*)' Basis table dagg is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%dagg, out_unit, 5,  info='dagg')
+      call   Write_VecMat(Basis%dagg, out_unit, 5,  info='dagg')
        END IF
 
        write (out_unit, *)
        IF (.NOT.allocated(Basis%dp0gg)) THEN
         write(out_unit,*)' Basis table dp0gg is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%dp0gg, out_unit, 5,  info='dp0gg')
+      call   Write_VecMat(Basis%dp0gg, out_unit, 5,  info='dp0gg')
        END IF
       
        write (out_unit, *)
        IF (.NOT.allocated(Basis%dq0gg)) THEN
         write(out_unit,*)' Basis table dq0gg is not allocated.'
       ELSE
-      CALL   Write_VecMat(Basis%dq0gg, out_unit, 5,  info='dq0gg')
+      call   Write_VecMat(Basis%dq0gg, out_unit, 5,  info='dq0gg')
        END IF
 
       write(out_unit,*)
         IF (.NOT.allocated(Basis%d0bgw)) THEN
            write(out_unit,*)' Basis table d0bgw is not allocated.'
          ELSE
-      CALL   Write_VecMat(Basis%d0bgw,out_unit,5, info='d0gbw')
+      call   Write_VecMat(Basis%d0bgw,out_unit,5, info='d0gbw')
         END IF
 
          write(out_unit,*)
          IF (.NOT.allocated(Basis%d1gb)) THEN
            write(out_unit,*)' Basis table d1gb is not allocated.'
          ELSE
-      CALL   Write_VecMat(Basis%d1gb(:,:,1),out_unit,5, info='d1gb')
+      call   Write_VecMat(Basis%d1gb(:,:,1),out_unit,5, info='d1gb')
          END IF
          write(out_unit,*)
          IF (.NOT.allocated(Basis%d1gg)) THEN
            write(out_unit,*)' Basis table d1gb is not allocated.'
          ELSE
-      CALL   Write_VecMat(Basis%d1gg(:,:,1),out_unit,5, info='d1gg')
+      call   Write_VecMat(Basis%d1gg(:,:,1),out_unit,5, info='d1gg')
          END IF
 
          write(out_unit,*)
          IF (.NOT.allocated(Basis%d2gb)) THEN
            write(out_unit,*)' Basis table d1gb is not allocated.'
          ELSE
-      CALL   Write_VecMat(Basis%d2gb(:,:,1,1),out_unit,5, info='d2gb')
+      call   Write_VecMat(Basis%d2gb(:,:,1,1),out_unit,5, info='d2gb')
          END IF
 
          write(out_unit,*)
          IF (.NOT.allocated(Basis%d2gg)) THEN
            write(out_unit,*)' Basis table d2gg is not allocated.'
          ELSE
-      CALL   Write_VecMat(Basis%d2gg(:,:,1,1),out_unit,5, info='d2gg')
+      call   Write_VecMat(Basis%d2gg(:,:,1,1),out_unit,5, info='d2gg')
          END IF
           
 
@@ -215,13 +215,13 @@ CONTAINS
          IF (.NOT.allocated(Basis%S)) THEN
             write(out_unit,*)' Basis table S is not allocated.'
          ELSE
-      CALL   Write_VecMat(Basis%S,out_unit,5, info='S')
+      call  Write_VecMat(Basis%S,out_unit,5, info='S')
          END IF  
          IF (allocated(Basis%tab_basis)) THEN
             DO i = 1, size(Basis%tab_basis)
-            IF (Basis%tab_basis(i)%Basis_name /= 'el') CALL Write_Basis(Basis%tab_basis(i))
-           END DO
-        END IF
+              IF (Basis%tab_basis(i)%Basis_name /= 'el') CALL Write_Basis(Basis%tab_basis(i))
+            END DO
+         END IF
       write (out_unit, *) '--------------------------------------------------------------------------'
 
    END SUBROUTINE Write_Basis
@@ -238,7 +238,7 @@ CONTAINS
          Basis2%nb_basis = Basis1%nb_basis
          allocate (Basis2%tab_basis(Basis2%nb_basis))
          DO ib = 1, Basis1%nb_basis
-            CALL init_Basis1_TO_Basis2(Basis2%tab_basis(ib), Basis1%tab_basis(ib))
+            call init_Basis1_TO_Basis2(Basis2%tab_basis(ib), Basis1%tab_basis(ib))
          END DO
          Basis2%nb = 1
          Basis2%nq = 1
@@ -264,7 +264,6 @@ CONTAINS
 
    RECURSIVE SUBROUTINE Deallocate_Basis(Basis)
       USE QDUtil_m
-
       TYPE(Basis_t), intent(inout)     :: Basis
       integer                          :: i
 
@@ -375,7 +374,7 @@ CONTAINS
       IF (nb_basis > 1) THEN
          Basis%Basis_name = 'Dp'
          Basis%nb_basis = nb_basis
-         CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+         call string_uppercase_TO_lowercase(Basis%Basis_name)
          allocate (Basis%tab_basis(nb_basis))
          DO i = 1, nb_basis
             CALL Read_Basis(Basis%tab_basis(i), nio)
@@ -424,8 +423,8 @@ CONTAINS
             NDend_q(i) = Basis%tab_basis(i)%nq
             NDend_b(i) = Basis%tab_basis(i)%nb
          END DO
-         CALL Init_NDindex(Basis%NDindexq, NDend_q, Basis%nb_basis - 1)
-         CALL Init_NDindex(Basis%NDindexb, NDend_b, Basis%nb_basis - 1)
+         call Init_NDindex(Basis%NDindexq, NDend_q, Basis%nb_basis - 1)
+         call Init_NDindex(Basis%NDindexb, NDend_b, Basis%nb_basis - 1)
 
          DO i = 1, Basis%nb_basis
             CALL construct_primitive_basis(Basis%tab_basis(i))
@@ -437,21 +436,21 @@ CONTAINS
             write (6, *) 'Electronic basis. Electronic state number:', basis%nb
             basis%nq = 0
          CASE ('boxab')
-            CALL Construct_Basis_Sin(Basis)
+            call Construct_Basis_Sin(Basis)
             Basis%Q0 = Basis%A
             Basis%scaleQ = pi/(Basis%B - Basis%A)
          CASE ('fourier')
-            CALL Construct_Basis_Fourier(Basis)
+            call Construct_Basis_Fourier(Basis)
          CASE ('herm', 'ho')
-            CALL Construct_Basis_Ho(Basis)
+            call Construct_Basis_Ho(Basis)
          CASE default
             STOP 'ERROR  Noting to construct'
          END SELECT
          !  this part wil not have sens for 'el' basis
-         CALL Scale_Basis(Basis, Basis%Q0, Basis%scaleQ)
-         CALL Calc_tranpose_d0gb(Basis)
-         CALL Calc_dngg_grid(Basis)
-         CALL CheckOrtho_Basis(Basis, nderiv=2)
+         call Scale_Basis(Basis, Basis%Q0, Basis%scaleQ)
+         call Calc_tranpose_d0gb(Basis)
+         call Calc_dngg_grid(Basis)
+         call CheckOrtho_Basis(Basis, nderiv=2)
       END IF
       ! write(out_unit,*) ' End  construct  primitive Basis '
    END SUBROUTINE construct_primitive_basis0
@@ -557,10 +556,10 @@ CONTAINS
       nq = Basis%nq
       dx = TWO*pi/nq
 
-      !>*************** grid and weight *************************************8
+      !>------------------grid and weight -----------------------------------------
       Basis%x = [(iq*dx - dx/2 - pi, iq=1, nq)]
       Basis%w = [(dx, iq=1, nq)]
-      !> **********************allocation **********************************
+      !> ---------------------allocation ---------------------------------------
       allocate (Basis%d0gb(nq, nb))
       allocate (Basis%d1gb(nq, nb, 1))
       allocate (Basis%d2gb(nq, nb, 1, 1))
@@ -571,7 +570,7 @@ CONTAINS
                            &,Basis%d2gb(iq, ib, 1, 1),ib)
          END DO                  
       END DO
-      !**************************************************************************
+      !---------------------------------------------------------------------------
       IF (Basis%nb == Basis%nq .AND. mod(Basis%nb, 2) == 0) THEN
          Basis%d0gb(:, nb) = Basis%d0gb(:, nb)/sqrt(TWO)
          Basis%d1gb(:, nb, :) = Basis%d1gb(:, nb, :)/sqrt(TWO)
@@ -714,7 +713,6 @@ CONTAINS
 
       TYPE(Basis_t), intent(in)     :: Basis
       integer, intent(in)           :: nderiv
-
       integer                       :: ib, jb
       real(kind=Rkind), ALLOCATABLE    :: S(:, :)
       real(kind=Rkind)                 :: Sii, Sij
@@ -790,19 +788,15 @@ CONTAINS
 
    SUBROUTINE Calc_tranpose_d0gb(Basis)
       USE QDUtil_m
-      TYPE(Basis_t), INTENT(INOUT)     :: Basis
-      !real(kind=Rkind),        INTENT(INOUT)  :: d0bgw(:,:)
-      INTEGER                                 :: ib, iq,nb,nq
+      TYPE(Basis_t), intent(inout)     :: Basis
+      INTEGER                          :: ib,nb
 
       nb= Basis%nb
-      nq = Basis%nq
 
       if (allocated(Basis%d0bgw)) deallocate (Basis%d0bgw)
       if (Basis%Basis_name == 'el') then
          return
       end if
-
-      allocate (Basis%d0bgw(nb, nq))
 
       Basis%d0bgw = transpose(Basis%d0gb)
       DO ib = 1, nb
@@ -883,15 +877,15 @@ CONTAINS
       Basis%dp0gg(:, :) = matmul(Basis%dp0gb,conjg(Basis%d0bgw))
 
       IF (debug) THEN
-         CALL   Write_VecMat(Basis%d1gg(:, :, 1), out_unit, 5,  info='d1gg')
+         call   Write_VecMat(Basis%d1gg(:, :, 1), out_unit, 5,  info='d1gg')
          write (out_unit, *)
-         CALL   Write_VecMat(Basis%d2gg(:, :, 1, 1), out_unit, 5,  info='d2gg')
+         call    Write_VecMat(Basis%d2gg(:, :, 1, 1), out_unit, 5,  info='d2gg')
          write (out_unit, *)
-         CALL   Write_VecMat(Basis%dp0gg(:, :), out_unit, 5,  info='dp0gg')
+         call    Write_VecMat(Basis%dp0gg(:, :), out_unit, 5,  info='dp0gg')
          write (out_unit, *)
-         CALL   Write_VecMat(Basis%dq0gg(:, :), out_unit, 5,  info='dq0gg')
+         call    Write_VecMat(Basis%dq0gg(:, :), out_unit, 5,  info='dq0gg')
          write (out_unit, *)
-         CALL   Write_VecMat(Basis%dagg(:, :), out_unit, 5,  info='dagg')
+         call   Write_VecMat(Basis%dagg(:, :), out_unit, 5,  info='dagg')
          write (out_unit, *) 'END Calc_dngg_grid'
          flush (out_unit)
       END IF
@@ -901,12 +895,12 @@ CONTAINS
    SUBROUTINE test_basitogridgridtobasis(Basis)
       USE QDUtil_m
       TYPE(Basis_t), intent(in)       :: Basis
-      logical, parameter        :: debug = .true.
-      COMPLEX(kind=Rkind), allocatable   :: G1(:), B1(:)!,G(:), Hpsi(:)
-      COMPLEX(kind=Rkind), allocatable   :: G2(:), B2(:)
-      COMPLEX(kind=Rkind), allocatable   :: B(:)
-      REAL(kind=Rkind), allocatable       :: diff_g(:), diff_b(:)
-      !REAL(KIND=Rkind)                      :: Norm0,Norm1,min_diff,max_diff
+      logical, parameter                 :: debug = .true.
+      complex(kind=Rkind), allocatable   :: G1(:), B1(:)!,G(:), Hpsi(:)
+      complex(kind=Rkind), allocatable   :: G2(:), B2(:)
+      complex(kind=Rkind), allocatable   :: B(:)
+      real(kind=Rkind), allocatable       :: diff_g(:), diff_b(:)
+      !REAL(KIND=Rkind)                   :: Norm0,Norm1,min_diff,max_diff
       integer                             :: iq, ndim
       ndim = size(Basis%tab_basis)
 
