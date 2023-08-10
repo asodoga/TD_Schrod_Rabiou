@@ -454,7 +454,7 @@ contains
     
     !Evaluation of Alpha------------------------------------------------------------------    
     
-    do inb= 1,ndim
+    DO inb= 1,ndim
     
     DO inbe = 1, psi%Basis%tab_basis(ndim+1)%nb !electronic state
        Int1el(inbe) = CZERO
