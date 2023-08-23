@@ -741,25 +741,23 @@ contains
       END SUBROUTINE
 
       SUBROUTINE Calc_vp_func(CVec,psi)
+       !> cette subroutine a pour mission de calculer lambda(:);
+       !> elle a besoin de psi pour construire S(:,:) et V(:);
+       !> et à partire de S(:,:) et V(:), on construit lambda(:) = inv(S)*V;
 
          type(psi_t), intent(in)           :: psi
          complex(kind=Rkind),allocatable,intent(inout) :: CVec(:)
 
          !locals variables-----------------------------------------------------------
-         complex(kind=Rkind),allocatable  :: C1Vec(:),CSMat(:,:)!,S(:,:),V(:),res(:)
+         complex(kind=Rkind),allocatable  :: V(:),S(:,:)
          integer                          :: n,nb
 
          nb = psi%Basis%nb
          n = nb+3
          allocate(CVec(n))
-         !allocate(V(2),S(2,2),res(2))
-         !S(1,1) =TWO;S(1,2) =ONE;S(2,1) =ONE;S(2,2) =-ONE;V(1) =SIX;V(2) =TWO
-         !res = LinearSys_Solve(S,V,LS_type=0)
-         !print*,'-----------------res----------------',res
-         call Calc_varia_princinpe_overlap_s(CSMat,C1Vec,psi)
- 
-         CVec = LinearSys_Solve(CSMat,C1Vec,LS_type=0)
-         deallocate(C1Vec,CSMat)
+         call Calc_varia_princinpe_overlap_s(S,V,psi)
+         CVec = LinearSys_Solve(S,V,LS_type=0)
+         deallocate(V,S)
      END SUBROUTINE
 
      SUBROUTINE Lambda_rk4(Clambda,psi,propa)
@@ -871,6 +869,37 @@ contains
          flush(out_unit)
       END IF
    END SUBROUTINE 
+
+
+   SUBROUTINE Function_rk4(L,Basis)
+       complex(kind=Rkind),intent(inout):: L(:)
+       type(Basis_t),intent(in)         :: Basis
+       type(Basis_t)                    :: B
+       type(psi_t)                      :: psi
+       complex(kind=Rkind),allocatable  :: Lambda(:)
+       real(kind=Rkind),allocatable     :: Qt(:),SQt(:),Pt(:)
+       integer                          :: ndim,nb
+
+       ndim = size(Basis%tab_basis)-1
+       nb = Basis%nb
+
+       allocate(Qt(ndim),SQt(ndim),Pt(ndim))
+        Qt(:)=ZERO;SQt(:)=ONE;Pt(:)=ZERO
+
+        SQt(1) = L(nb+1) 
+        Qt(1) =  L(nb+2)
+        Pt(1) =  L(nb+3)
+
+       call init_Basis1_TO_Basis2(B, Basis)
+       call construct_primitive_basis(B, x=Qt, sx=SQt,p=Pt)
+       call init_psi(psi, B, cplx=.TRUE., grid=.false.)
+       psi%CVec(1:nb) = L(1:nb)
+       call Calc_vp_func(Lambda,psi)
+       L = Lambda
+       call dealloc_psi(psi)
+       deallocate(Lambda)
+
+   END SUBROUTINE
 
 
    SUBROUTINE H_test(psi)

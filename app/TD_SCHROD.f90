@@ -72,7 +72,7 @@ PROGRAM TD_SCHROD
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   !STOP 'calcul de H|psi> est fait'
+   STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

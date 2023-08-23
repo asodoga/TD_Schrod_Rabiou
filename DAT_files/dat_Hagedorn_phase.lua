@@ -10,4 +10,4 @@
  &defWP0  sigma= 1.41421356237  Qeq= 1.0   imp_k=1.0 phase=0.0 /
 
    &prop t0  = 0.0  tf  = 10.0 delta_t =0.01 eps= 0.0000000001
-        max_iter =  500  kmax=10 propa_name ='non_hagedorn'  propa_name2 = 'taylor' /
+        max_iter =  500  kmax=10 propa_name ='hagedorn'  propa_name2 = 'taylor' /

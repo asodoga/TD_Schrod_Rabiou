@@ -601,7 +601,7 @@ contains
       call Calc_Norm_OF_Psi(psiG, NormG)
       print *, 'NormB = ', NormB
       print *, 'NormG = ', NormG
-      print *, '=================================================='
+      print *, '--------------------------------------------------------'
       psiG%CVec(:) = CONE
       ! psiG%CVec(1) = CONE
       call Calc_Norm_OF_Psi(PsiG, NormG)
@@ -646,5 +646,6 @@ contains
           call dealloc_psi(G)
           
    END SUBROUTINE
+
 
 end module psi_m
