@@ -7,8 +7,9 @@ make
 #gfortran -fopenmp -o TD_SCHRfourierMDIR/app_TD_SCHROD.f90.o $FPMDIR/libTD_SCHROD.a $QMLDIR/libpot.a $QMLDIR/libAD_dnSVM.a -lblas -llapack
 #./TD_SCHROD.x <DAT_files/dat_fourier> resultat
 mkdir -p ../results
-#./TD_SCHROD.x <DAT_files/dat_retinal_non_Hagedorn> resultat
-./TD_SCHROD.x </home/rabiou_issa/rabiou.issa/TD_Schrod_Rabiou/DAT_files/dat_Hagedorn_phase.lua> resultat.lua
+./TD_SCHROD.x <DAT_files/dat_retinal_non_Hagedorn.lua> resultat.lua
+#./TD_SCHROD.x </home/rabiou_issa/rabiou.issa/TD_Schrod_Rabiou/DAT_files/dat_Hagedorn_phase.lua> resultat.lua
+#./TD_SCHROD.x </home/rabiou_issa/rabiou.issa/TD_Schrod_Rabiou/DAT_files/dat_Hagedorn_phase2D.lua> resultat.lua
 #./TD_SCHROD.x <DAT_files/dat_Hagedorn2d> resultat
 
 #paste psi_Ha_hagedorn_taylor.dat psi_NHa_non_hagedorn_taylor.dat | awk '{print $2-$6,$3-$7 }'> psi_diff

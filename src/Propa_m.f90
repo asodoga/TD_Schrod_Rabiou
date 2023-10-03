@@ -62,14 +62,15 @@ contains
       logical, parameter               :: debug = .true.
 
       ! variables locales------------------------------------------------------------------
+      TYPE(Basis_t)                       :: B1,B2
       REAL(kind=Rkind)                    :: t, t_deltat, Norm, E, y
       REAL(kind=Rkind), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:),Pt(:)
       complex(kind=Rkind)                 ::  x
-      complex(kind=Rkind) ,allocatable    :: Alpha(:)
+      complex(kind=Rkind) ,allocatable    :: At(:)
       integer                             :: Ndim
 
-      INTEGER                          :: i, nt, Iq, nf
-      TYPE(psi_t)                      :: psi, psi_dt, psi00
+      INTEGER                             :: i, nt, Iq, nf
+      TYPE(psi_t)                         :: psi, psi_dt, psi1,psi2
       if (debug) then
 
          write (out_unit, *) 'BEGINNIG propagation', propa%t0, propa%tf, propa%delta_t
@@ -87,31 +88,34 @@ contains
       call creat_file_unit(nio=12, name='E', propa=propa)
       call creat_file_unit(nio=13, name='SQt', propa=propa)
       call creat_file_unit(nio=14, name='Norm', propa=propa)
+      call creat_file_unit(nio=16, name='pf', propa=propa)
       call creat_file_unit(nio=15, name='Auto_corr_func', propa=propa)
-      !call creat_file_unit(nio=16, name='psi_Ha', propa=propa)
-      !call creat_file_unit(nio=17, name='psi_NHa', propa=propa)
       call creat_file_unit(nio=18, name='pop', propa=propa)
       call creat_file_unit(nio=19, name='Imp_k', propa=propa)
       call creat_file_unit(nio=20, name='alpha', propa=propa)
+      
 
       Ndim = size(psi0%Basis%tab_basis) - 1
-      allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim),Alpha(Ndim))
+      allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim),At(Ndim))
       allocate (populat(psi0%Basis%tab_basis(Ndim + 1)%nb))
       Qt(:) = ZERO; SQt(:) = ONE
       nt = int((propa%tf - propa%t0)/propa%delta_t)
-      E = ZERO;Alpha= CZERO
+      E = ZERO;At= CZERO
 
-
+      call init_Basis1_TO_Basis2(B1, psi0%Basis)
+      call init_Basis1_TO_Basis2(B2, psi0%Basis)
+      call construct_primitive_basis(B1)
+      call construct_primitive_basis(B2)
 
       call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
       call init_psi(psi_dt,psi0%Basis, cplx=.TRUE., grid=.false.)
-      call init_psi(psi00, psi0%Basis, cplx=.TRUE., grid=.false.)
+      call init_psi(psi1, B1, cplx=.TRUE., grid=.false.)
+      call init_psi(psi2, B2, cplx=.TRUE., grid=.false.)
 
       psi%CVec(:) = psi0%CVec(:)
-      !call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
-      !               , print_basis=.false., t=ZERO, int_print=20, real_part=.false.)
-      !call Calc_average_energy(Psi0, E)
-      !call Calc_average_energy(psi, E)
+      psi1%CVec(:) = psi0%CVec(:)
+      psi2%CVec(:) = CZERO
+       !STOP 'cc'
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
       DO i = 0, nt
          t = i*propa%delta_t
@@ -121,8 +125,8 @@ contains
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
          call Calc_Av_imp_k_nD(psi,Pt)
-         !call Calc_Integral_cplx(psi, Alpha, 2)
-         !call Population(psi, populat)
+         call  Calc_Avg_A_nD(psi, At)
+         call Population(psi, populat)
 
           write (11,*) t, Qt
           write (12,*) t, E
@@ -130,24 +134,27 @@ contains
           write (14,*) t, Norm
           write (18,*) t, populat
           write (19,*) t, Pt
-         !write (20,*) t, Alpha
-         !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
-         !write (12, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, E
-         !write (13, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, SQt
-         !write (14, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Norm
-         !write (18, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, populat(:)
-         !write (19, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Pt(:)
-         !write (20, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Alpha
+         write (20,*) t, At(:),SQt(:)*SQt (:)
 
-         if (mod(i, 1) == 0) then
-            call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
-                           , print_basis=.false., t=t, int_print=10, real_part=.false.)
-             write(10,*)
+         !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
+
+         if (mod(i, 2 ) == 0) then
+          ! if (propa%propa_name == 'hagedorn') Then
+          !    call GO_BackTO_initBasis(psi2,psi1)
+          !    call write_psi(psi=psi2, psi_cplx=.true., print_psi_grid=.true. &
+          !        , print_basis=.false., t=t, int_print=10, real_part=.true.)
+          !    write(10,*)
+          ! else
+              call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
+                             , print_basis=.false., t=t, int_print=10, real_part=.false.)
+               write(10,*)
+          ! end if
          end if
 
          CALL march(psi, psi_dt, t, propa)
          if (propa%propa_name == 'hagedorn') Then
             call Hagedorn(psi, psi_dt)
+            !call CopyPsi(psi1,psi)
          else
             psi%CVec(:) = psi_dt%CVec(:)
          end if
@@ -169,23 +176,31 @@ contains
        ! end if
 
       END DO
+
       psif = psi_dt
-      CALL Calc_Norm_OF_Psi(psif, Norm)
-      IF (debug) THEN
+      CALL Calc_Norm_OF_Psi(psif, Norm)         
+
+      IF (propa%propa_name == 'hagedorn') Then
+
+           !call GO_BackTO_initBasis(psi2,psif)
+           !call write_psi(psi=psi2, psi_cplx=.true., print_psi_grid=.true. &
+           !    , print_basis=.false., t=t, int_print=16, real_part=.true.)
+           !write(16,*)
+
+      ELSE
+
+          call write_psi(psi=psif, psi_cplx=.true., print_psi_grid=.true. &
+                         , print_basis=.false., t=t, int_print=16, real_part=.true.)
+           write(16,*)
+
+      END IF
+
+      IF(debug) then
+
          write (out_unit, *) 'END propagation'
          write (out_unit, *) 'norm,psi_dt', Norm
-
-         ! if (propa%propa_name == 'hagedorn') Then
-         !    psi00%CVec = CZERO
-         !    call Hagedorn0(psi00, psi)
-         !    call write_psi(psi=psi00, psi_cplx=.true., print_psi_grid=.false. &
-         !                   , print_basis=.false., t=t, int_print=16, real_part=.true.)
-         ! else
-         !    call write_psi(psi=psif, psi_cplx=.true., print_psi_grid=.false. &
-         !                   , print_basis=.false., t=t, int_print=17, real_part=.true.)
-         ! end if
-!
          flush (out_unit)
+
       END IF
 
    END SUBROUTINE
@@ -198,8 +213,9 @@ contains
       logical, parameter                              :: debug = .true.
 
       ! variables locales--------------------------------------------------------------
-      REAL(kind=Rkind), allocatable                   :: Qt(:), SQt(:),Pt(:)
-      REAL(kind=Rkind)                                :: Norm,Norm0, E,E0
+      real(kind=Rkind), allocatable                   :: Qt(:), SQt(:),Pt(:)
+      complex(kind=Rkind), allocatable                :: At(:)
+      real(kind=Rkind)                                :: Norm,Norm0, E,E0
       integer                                         :: Ndim
      ! write (out_unit, *) 'Beging Hagedorn'
       !call Write_Basis(psi%Basis)
@@ -209,13 +225,16 @@ contains
       write(out_unit,*) 'HAgedorn in, <psi|H|psi> ',E0,'<psi|psi>',Norm0
 
       Ndim = size(psi_dt%Basis%tab_basis) - 1
-      allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim))
-      Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO
+      allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim),At(Ndim))
+      Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
 
       call Calc_AVQ_nD0(psi0=psi_dt, AVQ=Qt, SQ=SQt)
       call Calc_Av_imp_k_nD(psi_dt,Pt)
+      call  Calc_Avg_A_nD(psi_dt, At)
+   
 
-      call construct_primitive_basis(psi_dt%Basis, Qt,Pt,SQt)
+      call construct_primitive_basis(psi_dt%Basis, Qt,Pt,At,SQt)
+      
       call projection(psi, psi_dt)
      
       !write (out_unit, *) 'End Hagedorn'
@@ -229,6 +248,308 @@ contains
       END IF
 
    END SUBROUTINE
+
+
+   SUBROUTINE CopyPsi(psi2,psi1)
+     implicit none
+    TYPE(psi_t), intent(in)                    :: psi1
+    TYPE(psi_t), intent(inout)                 :: psi2
+    real(Kind=Rkind), allocatable             ::Pt(:),Qt(:),SQt(:)
+    complex(Kind=Rkind), allocatable          :: At(:)
+    integer                                   :: Ndim,i1
+
+    Ndim = size(psi1%Basis%tab_basis) - 1
+    allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
+     Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
+
+      call Calc_AVQ_nD0(psi0=psi1, AVQ=Qt, SQ=SQt)
+      call Calc_Av_imp_k_nD(psi1,Pt)
+      call  Calc_Avg_A_nD(psi1, At)
+   
+     call construct_primitive_basis(psi2%Basis, Qt,Pt,At,SQt)
+      psi2%CVec(:) = psi1%CVec(:)
+
+ END SUBROUTINE
+
+
+   SUBROUTINE GO_BackTO_initBasis(psi2,psi1)
+       implicit none
+      TYPE(psi_t), intent(in)                    :: psi1
+      TYPE(psi_t), intent(inout)                 :: psi2
+
+       real(Kind=Rkind), allocatable             ::Pt(:),Qt(:),SQt(:)
+       complex(Kind=Rkind), allocatable          :: At(:)
+       integer                                   :: Ndim,i1
+
+
+      Ndim = size(psi1%Basis%tab_basis) - 1
+      allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
+
+       Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
+
+       Do i1 = 1,Ndim
+
+         Qt(i1) =   psi1%Basis%tab_basis(i1)%Q0
+         Pt(i1) =   psi1%Basis%tab_basis(i1)%Imp_k
+         At(i1) =   psi1%Basis%tab_basis(i1)%Alpha  
+
+       END DO
+
+       call Hagedorn_std(psi2, psi1)
+
+       !call construct_primitive_basis(psi2%Basis, Qt,Pt,At,SQt)
+
+
+   END SUBROUTINE
+
+ SUBROUTINE Hagedorn_std(psi_dt_2, psi_dt_1)
+    USE QDUtil_m
+    TYPE(psi_t), intent(in), target                     :: psi_dt_1
+    TYPE(psi_t), intent(inout), target                  :: psi_dt_2
+
+   !Locals varialbls -----------------------------------------------------------------------------
+
+    complex(kind=Rkind), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
+    complex(kind=Rkind), allocatable, target            :: B1(:), B2(:)
+    integer                                             :: inb, i1, i3, Ndim, iq, ib
+    integer, allocatable                                :: Ib1(:), Ib2(:), Ib3(:)
+    real(Kind=Rkind), allocatable                       :: Q(:), w(:),Pt(:),Qt(:),SQt(:)
+    complex(Kind=Rkind), allocatable                    :: S(:, :),At(:)
+    real(Kind=Rkind)                                    :: sQeq1, sQeq2, sQeq, Q1, Q2, Qeq,p1,p2
+    complex(Kind=Rkind)                                 ::A1,A2
+     complex(kind=Rkind),allocatable                    :: d0gb(:,:),d0bgw(:,:)
+
+    Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
+    Ndim = size(psi_dt_1%Basis%tab_basis) - 1
+    write (out_unit, *) 'Begin Hagedorn projection'
+
+    allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
+
+    If (Ndim == 1) then
+       BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
+       BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
+       !constuction of ovelap  S(:,:)
+       !----------------------------------------------------------------------------
+       allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
+       allocate (Q(psi_dt_1%Basis%tab_basis(1)%nq))
+       allocate (w(psi_dt_1%Basis%tab_basis(1)%nq))
+       call hercom(psi_dt_1%Basis%tab_basis(1)%nq, Q(:), w(:))
+      
+      
+       Q1 = psi_dt_1%Basis%tab_basis(1)%Q0
+       Q2 = psi_dt_2%Basis%tab_basis(1)%Q0
+
+       A1 =psi_dt_1%Basis%tab_basis(1)%Alpha
+       A2 =psi_dt_2%Basis%tab_basis(1)%Alpha
+
+       sQeq1 =sqrt(real(A1,kind=Rkind))
+       sQeq2 =sqrt(real(A2,kind=Rkind))
+
+       p1= psi_dt_1%Basis%tab_basis(1)%Imp_k
+       p2= psi_dt_2%Basis%tab_basis(1)%Imp_k
+
+       sQeq = sqrt(sQeq1*sQeq1 + sQeq2*sQeq2)/sqrt(TWO)
+       Qeq = (sQeq1*sQeq1*Q1 + sQeq2*sQeq2*Q2)/(sQeq1*sQeq1 + sQeq2*sQeq2)
+       w(:) = w(:)/sQeq
+       Q(:) = Qeq + Q(:)/sQeq
+
+       allocate (d0gb(psi_dt_1%Basis%tab_basis(1)%nq, psi_dt_1%Basis%tab_basis(1)%nb)) 
+       allocate (d0bgw(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nq))
+
+
+       Do ib = 1, psi_dt_1%Basis%tab_basis(1)%nb
+
+          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nq
+
+             d0gb(iq, ib) =Hagedorn_basis_cplx(sQeq1*(Q(iq)-Q1), p1,A1, ib-1)
+             d0bgw(ib, iq)= conjg(Hagedorn_basis_cplx(sQeq2*(Q(iq)-Q2), p2,A2,ib -1)*w(iq))
+
+          End Do
+
+       End Do
+
+        S = matmul(d0bgw,d0gb)
+        call  Write_VecMat(S, out_unit, 5,  info='S')
+
+       !----------------------------------------------------------------------------------
+       psi_dt_2%CVec(:) = CZERO
+       DO i3 = 1, ubound(BBB1, dim=3)
+          DO i1 = 1, ubound(BBB1, dim=1)
+
+            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
+
+         END DO
+       END DO
+
+        deallocate(d0gb,d0bgw,w,Q,S)
+    else
+    
+       psi_dt_2%CVec = CZERO
+       allocate (B1(Ib1(1)*Ib2(1)*Ib3(1)))
+       BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
+       BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B1
+       !constuction of ovelap  S(:,:)
+       !----------------------------------------------------------------------------
+       allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
+       allocate (Q(psi_dt_1%Basis%tab_basis(1)%nq))
+       allocate (w(psi_dt_1%Basis%tab_basis(1)%nq))
+       call hercom(psi_dt_1%Basis%tab_basis(1)%nq, Q(:), w(:))
+
+       Q1 = psi_dt_1%Basis%tab_basis(1)%Q0
+       Q2 = psi_dt_2%Basis%tab_basis(1)%Q0
+
+       A1 = psi_dt_1%Basis%tab_basis(1)%Alpha
+       A2 = psi_dt_2%Basis%tab_basis(1)%Alpha
+
+       p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
+       p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
+
+
+       sQeq1 =sqrt(real(A1,kind=Rkind))
+       sQeq2 =sqrt(real(A2,kind=Rkind))
+       
+       sQeq = sqrt(sQeq1*sQeq1 + sQeq2*sQeq2)/sqrt(TWO)
+       Qeq = (sQeq1*sQeq1*Q1 + sQeq2*sQeq2*Q2)/(sQeq1*sQeq1 + sQeq2*sQeq2)
+
+       w(:) = w(:)/sQeq
+       Q(:) = Qeq + Q(:)/sQeq
+
+       allocate (d0gb(psi_dt_1%Basis%tab_basis(1)%nq, psi_dt_1%Basis%tab_basis(1)%nb)) 
+       allocate (d0bgw(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nq))
+       
+
+       if (psi_dt_1%Basis%tab_basis(1)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(1)%Basis_name == 'ho') then
+
+       Do ib = 1, psi_dt_1%Basis%tab_basis(1)%nb 
+
+          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nq
+
+              d0gb(iq, ib) =Hagedorn_basis_cplx(sQeq1*(Q(iq)-Q1), p1,A1, ib-1)
+    
+              d0bgw(ib, iq)= conjg(Hagedorn_basis_cplx(sQeq2*(Q(iq)-Q2), p2,A2,ib -1)*w(iq))
+
+         End Do
+
+      End Do
+
+        S = matmul(d0bgw,d0gb)
+        call  Write_VecMat(S, out_unit, 5,  info='S')
+
+
+      else
+         S(:, :) = ZERO
+
+         Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
+
+            S(iq, iq) = ONE
+
+         End Do
+
+      end if
+
+       !----------------------------------------------------------------------------------
+       DO i3 = 1, ubound(BBB1, dim=3)
+
+       DO i1 = 1, ubound(BBB1, dim=1)
+
+          BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
+
+       END DO
+
+       END DO
+
+       deallocate(d0gb,d0bgw,w,Q,S)
+
+       Do inb = 2, Ndim
+
+          allocate (B2(Ib1(inb)*Ib2(inb)*Ib3(inb)))
+
+          BBB1(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B1
+
+          BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
+
+          !constuction of ovelap  S(:,:)
+          !----------------------------------------------------------------------------
+
+          allocate (S(psi_dt_1%Basis%tab_basis(Inb)%nb, psi_dt_1%Basis%tab_basis(Inb)%nb))
+          allocate (Q(psi_dt_1%Basis%tab_basis(Inb)%nq))
+          allocate (w(psi_dt_1%Basis%tab_basis(Inb)%nq))
+
+          call hercom(psi_dt_1%Basis%tab_basis(Inb)%nq, Q(:), w(:))
+
+          Q1 = psi_dt_1%Basis%tab_basis(Inb)%Q0
+          Q2 = psi_dt_2%Basis%tab_basis(Inb)%Q0
+
+          p1 =   psi_dt_1%Basis%tab_basis(Inb)%Imp_k
+          p1 =   psi_dt_2%Basis%tab_basis(Inb)%Imp_k
+
+          sQeq1 =sqrt(real(A1,kind=Rkind))
+          sQeq2 =sqrt(real(A2,kind=Rkind))
+
+          sQeq = sqrt(sQeq1*sQeq1 + sQeq2*sQeq2)/sqrt(TWO)
+          Qeq = (sQeq1*sQeq1*Q1 + sQeq2*sQeq2*Q2)/(sQeq1*sQeq1 + sQeq2*sQeq2)
+
+          w(:) = w(:)/sQeq
+          Q(:) = sQeq + Q(:)/sQeq
+
+          if (psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'ho') then
+          
+          Do ib = 1, psi_dt_1%Basis%tab_basis(1)%nb 
+
+            Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nq
+
+               d0gb(iq, ib) =Hagedorn_basis_cplx(sQeq1*(Q(iq)-Q1), p1,A1, ib-1)
+
+               d0bgw(ib, iq)= conjg(Hagedorn_basis_cplx(sQeq2*(Q(iq)-Q2), p2,A2,ib -1)*w(iq))
+
+            End Do
+
+          End Do  
+
+           S = matmul(d0bgw,d0gb)
+           call  Write_VecMat(S, out_unit, 5,  info='S')  
+
+          else
+             S(:, :) = ZERO
+             Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
+                S(iq, iq) = ONE
+             End Do
+          end if
+
+
+          ! ---------------------------------------------------------------------------------
+
+          DO i3 = 1, ubound(BBB1, dim=3)
+
+             DO i1 = 1, ubound(BBB1, dim=1)
+
+                BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
+
+             END DO
+
+          END DO
+
+          B1 = B2
+          B2 = CZERO
+
+          deallocate (B2)
+          if (inb == Ndim) psi_dt_2%CVec = B1
+          deallocate(d0gb,d0bgw,w,Q,S)
+       END DO
+    END IF
+    write (out_unit, *) 'END Hagedorn projection'
+
+       Do ib = 1,Ndim
+         At(ib) = psi_dt_1%Basis%tab_basis(ib)%Alpha
+         Pt(ib) = psi_dt_1%Basis%tab_basis(ib)%Imp_k
+         SQt(ib) =sqrt(real(At(ib),kind=Rkind))
+         Qt(ib) = psi_dt_1%Basis%tab_basis(ib)%Q0
+       End do
+
+       !call construct_primitive_basis(psi_dt_2%Basis, Qt,Pt,At,SQt)
+
+ END SUBROUTINE
+
 
    SUBROUTINE Analyse(psi, t)
       implicit none

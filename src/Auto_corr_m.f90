@@ -6,7 +6,7 @@ module Auto_corr_m
    USE Basis_m
 
    implicit none
-   public :: Calc_Auto_corr, Calc_fft_Auto_corr
+   public :: Calc_Auto_corr, Calc_fft_Auto_corr,Hagedorn0
 
 contains
 
@@ -76,13 +76,13 @@ contains
 
    SUBROUTINE Hagedorn0(psi_dt_2, psi_dt_1)
       USE QDUtil_m
-      TYPE(psi_t), intent(in), target                  :: psi_dt_1
-      TYPE(psi_t), intent(inout), target               :: psi_dt_2
-      complex(kind=Rkind), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
+      TYPE(psi_t), intent(in), target                    :: psi_dt_1
+      TYPE(psi_t), intent(inout), target                 :: psi_dt_2
+      complex(kind=Rkind), pointer                       :: BBB1(:, :, :), BBB2(:, :, :)
       complex(kind=Rkind), allocatable, target            :: B1(:), B2(:)
-      !logical, parameter                              :: debug = .true.
-      integer                                          :: inb, i1, i3, Ndim, iq, jq
-      Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
+      !logical, parameter                                 :: debug = .true.
+      integer                                             :: inb, i1, i3, Ndim, iq, jq
+      Integer, allocatable                                :: Ib1(:), Ib2(:), Ib3(:)
       real(Kind=Rkind), allocatable                       ::  x(:), w(:)
       complex(Kind=Rkind), allocatable                    :: S(:, :)
       real(Kind=Rkind)                                    :: s1, s2, s3, x1, x2, x3,p1,p2

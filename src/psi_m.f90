@@ -496,6 +496,78 @@ contains
 
    END SUBROUTINE
 
+
+     SUBROUTINE psi0_init_Harmic(psi0)
+
+     type(psi_t), intent(inout)            ::psi0
+     type(psi_t), target                   ::psi
+     complex(Kind= Rkind), allocatable     ::g(:)
+     real(Kind= Rkind), allocatable        ::Q(:, :)
+     complex(Kind= Rkind), pointer         ::gb(:, :)
+     real(Kind= Rkind)                     ::DQ1, DQ2, NormG, NormB, Q1,Q2
+     integer                               ::Iq
+     logical                               :: Endloop_q
+     integer, allocatable                  :: Tab_iq(:)
+     
+
+
+     DQ1 = sqrt(TWO)
+     DQ2 = sqrt(TWO)
+
+     Q1 = ONE
+     Q2 = ONE 
+     
+     Allocate (Tab_iq(size(psi0%Basis%tab_basis) - 1))
+     call calc_Q_grid(Q, psi0%Basis)
+     allocate (g(psi0%Basis%nq))
+
+     CALL init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
+
+
+       Call Init_tab_ind(Tab_iq, psi0%Basis%NDindexq)
+       Iq = 0
+       DO
+          Iq = Iq + 1
+          CALL increase_NDindex(Tab_iq, psi0%Basis%NDindexq, Endloop_q)
+          IF (Endloop_q) exit
+       
+           g(Iq) = exp(-((psi0%Basis%tab_basis(1)%X(Tab_iq(1)) - Q1)/DQ1)**2)/sqrt(sqrt(pi/TWO)*DQ1)
+           g(Iq) = g(Iq)*exp(-((psi0%Basis%tab_basis(2)%X(Tab_iq(2)) - Q2)/DQ2)**2)/sqrt(sqrt(pi/TWO)*DQ2)
+        
+       END DO
+      
+      psi%CVec = CZERO
+      psi%CVec(1:psi0%Basis%nq) = g(:)
+
+    ! gb(1:psi0%Basis%nq, 1:psi0%Basis%tab_basis(size(psi0%Basis%tab_basis))%nb) => psi%CVec
+     !gb(:, :) = CZERO
+     !gb(:, 1) = g(:)
+
+     call Calc_Norm_OF_Psi(psi, NormG)
+
+     print *, 'NormG = ', NormG
+     psi%CVec = psi%CVec/NormG
+
+     call Calc_Norm_OF_Psi(psi, NormG)
+     print *, 'renormed NormG = ', NormG
+
+     call GridTOBasis_nD_cplx(psi0%CVec, psi%CVec, psi0%Basis)
+
+     call Calc_Norm_OF_Psi(psi0, NormB)
+     print *, 'NormB = ', NormB
+
+     psi0%CVec = psi0%CVec/NormB
+
+     call Calc_Norm_OF_Psi(psi, NormB)
+     print *, 'renormed NormB = ', NormB
+
+     deallocate (g)
+     deallocate (Q)
+     CALL dealloc_psi(psi)
+
+  END SUBROUTINE psi0_init_Harmic
+
+
    SUBROUTINE psi0_init(psi0)
       type(psi_t), intent(inout)            ::psi0
       type(psi_t), target                   ::psi
