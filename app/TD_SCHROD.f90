@@ -13,35 +13,29 @@ PROGRAM TD_SCHROD
    TYPE(psi_t)                       :: psi0, psif, psi
    TYPE(propa_t)                     :: propa
    TYPE(GWP_t), allocatable          :: tab_GWP(:)
-   real(Kind=Rkind)                  :: E, Norm !, x(2), y1(2), y2(2) ,p(1), S(1),x0(1)
-   complex(kind=Rkind)               :: Alpha(1)
-   real(kind=Rkind),allocatable      :: K(:,:)
+   real(Kind=Rkind)                  :: E, Norm !,SQ(2),Q(2),Pt(2)
+   complex(kind=Rkind)               :: At(2)
+
 !-------------------------------------------------------------------------------
 ! for QML
    integer :: ndim, nsurf, option
    logical :: adiabatic
    character(len=16)                  :: pot_name
 
-   ndim = 1
-   nsurf = 1
+   ndim = 2
+   nsurf = 2
    pot_name = 'read_model'
    adiabatic = .false.
    option = 1
    call sub_Init_Qmodel(ndim, nsurf, pot_name, adiabatic, option)
    write (out_unit, *) 'ndim,nsurf', ndim, nsurf
    write (out_unit, *) 'pot_name'
-
-    !p(1)=ONE; S(1)=ONE;x0(1)=ONE
+   
    !---------------------------------------------------------------------------------
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unit)
    call construct_primitive_basis(Basis)
-   !call init_Basis1_TO_Basis2(Basis0, Basis)
-   !write (out_unit, *) 'p',p,'--------------------------------------------------------'
-  ! call construct_primitive_basis(Basis0, x=x0, sx=s,p=p)
-    !stop 'cc1'
-   
    !call Write_Basis(Basis)
 !-------------------------------------------------------------------------------------------
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
@@ -51,31 +45,30 @@ PROGRAM TD_SCHROD
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psi, Basis, cplx=.TRUE., grid=.false.)
 
-   call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
+   !call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
    !call test_basitogridgridtobasis(Basis)
-   call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
-   !call psi0_init(psi0)
+   !call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
+   call psi0_init(psi0)
    call Calc_average_energy(psi0, E)
    call Calc_Norm_OF_Psi(psi0,Norm)
-   write (out_unit, *)'-------------Energiy And Norme initial WP0-----------------------------'
+   write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
    write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
    !call H_test(psi0)
-
-   !call Calc_varia_princinpe_overlap_s(SO,VO,psi0)
-   !call TEST_Lonaczos_cplx(psi0,10)
-   !psi%CVec = CZERO
-   !psi0%CVec = CZERO
-   !psi%CVec(1) = CONE
-   !call Projection(psi0, psi)
-   !call Calc_AVQ_nD0(psi0=psi0,AVQ=y1, SQ=y2)
-   !call Calc_AVQ_nD(psi0=psi0, AVQ=y1, SQ=y2)
+  ! call Calc_reduced_density(psi0%CVec,Basis)
+   ! print*,'sq = et sq*sq =',0.9592722,0.9592722*0.9592722 
+   !At = CZERO
+  ! call  Calc_Avg_A_nD(psi0, At)
+   !call Calc_Avg_A_1D(psi0, At(1), 1)
+  ! call Calc_AVQ_nD0(psi0=psi0,AVQ=Q, SQ=SQ)
+   !call Calc_Av_imp_k_nD(psi0,Pt)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   STOP 'calcul de H|psi> est fait'
+  ! STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)
+    print*, 'Fin de la propagationt'
    ! CALL Write_psi(psif)
    write (out_unit, *) 'deallocation'
    call dealloc_psi(psi0)
