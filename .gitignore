@@ -5,8 +5,12 @@ fort.*
 *.pdf
 *.dat
 *.swap
+*.lua
 # Prerequisites
 *.d
+cplx-basis-test
+EXT_Lib
+
 
 # Compiled Object files
 *.slo

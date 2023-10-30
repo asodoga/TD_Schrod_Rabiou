@@ -7,15 +7,16 @@ PROGRAM TD_SCHROD
    USE Propa_m
    USE Ana_psi_m
    USE lanczos_m
+   Use Vp_m
    IMPLICIT NONE
-   TYPE(Basis_t), target             :: Basis,Basis0
+   TYPE(Basis_t), target             :: Basis
    !TYPE(Op_t)                       :: H
-   TYPE(psi_t)                       :: psi0, psif, psi
+   TYPE(psi_t)                       :: psi0, psif
    TYPE(propa_t)                     :: propa
    TYPE(GWP_t), allocatable          :: tab_GWP(:)
-   real(Kind=Rkind)                  :: E, Norm !,SQ(2),Q(2),Pt(2)
-   complex(kind=Rkind)               :: At(2)
-
+   real(Kind=Rkind)                  :: E, Norm 
+   real(Kind=Rkind) ,allocatable     :: Mat(:,:)
+ 
 !-------------------------------------------------------------------------------
 ! for QML
    integer :: ndim, nsurf, option
@@ -43,32 +44,26 @@ PROGRAM TD_SCHROD
 
    call init_psi(psi0, Basis, cplx=.TRUE., grid=.false.)
    call init_psi(psif, Basis, cplx=.TRUE., grid=.false.)
-   call init_psi(psi, Basis, cplx=.TRUE., grid=.false.)
 
-   !call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
+   call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
    !call test_basitogridgridtobasis(Basis)
-   !call psi_init_GWP0(psi=psi0, Tab_GWP=tab_GWP)
-   call psi0_init(psi0)
+   call psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
    call Calc_average_energy(psi0, E)
    call Calc_Norm_OF_Psi(psi0,Norm)
    write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
    write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
    !call H_test(psi0)
-  ! call Calc_reduced_density(psi0%CVec,Basis)
-   ! print*,'sq = et sq*sq =',0.9592722,0.9592722*0.9592722 
-   !At = CZERO
-  ! call  Calc_Avg_A_nD(psi0, At)
-   !call Calc_Avg_A_1D(psi0, At(1), 1)
-  ! call Calc_AVQ_nD0(psi0=psi0,AVQ=Q, SQ=SQ)
-   !call Calc_Av_imp_k_nD(psi0,Pt)
+  ! call Vp_test(psi0)
+  !call Calc_GlobalOverlap_S(Mat,Basis)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-  ! STOP 'calcul de H|psi> est fait'
+   !call  Calc_Avg_A_nDtemp(psi0,At)
+   STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)
-    print*, 'Fin de la propagationt'
+   print*, 'Fin de la propagationt'
    ! CALL Write_psi(psif)
    write (out_unit, *) 'deallocation'
    call dealloc_psi(psi0)

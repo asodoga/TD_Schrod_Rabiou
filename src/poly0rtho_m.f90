@@ -5,8 +5,7 @@
         private
      public:: poly_Hermite_exp,d0d1d2poly_Hermite_exp,d0d1d2poly_Hermite_exp_cplx,poly_Hermite
      public:: hercom,herroot,herrec,d0d1d2box,d0d1d2fourier,poly_Hermite_exp_cplx
-     public:: poly_Hagedorn_exp,d0d1d2W,d0d1d2poly_Hagedorn_exp,d0d1d2poly_Hermite_expcplx
-     public:: Hagedorn_basis_cplx!,Construct_Basis_Fourier0
+     public:: d0d1d2_time_dependant_poly_Hermite_exp_cplx
 
 
     contains
@@ -109,137 +108,62 @@
 !       end subroutine d0d1d2d3poly
 
 
-  
-       SUBROUTINE d0d1d2poly_Hagedorn_exp(x,p,beta,l,d0,d1,d2,deriv)
-        USE QDUtil_m
-        IMPLICIT NONE
-  
-        complex(kind=Rkind)d0,d1,d2,pexp
-        real(kind=Rkind) x,p,beta
-        complex(kind=Rkind) cst,cst1,cst2
-  
-        logical deriv
-  
-        integer l
 
-        cst = -HALF*x*x+HALF*EYE*Beta*x*x+EYE*p*x
-        cst1 = -x+EYE*Beta*x+EYE*p
-        cst2 = -ONE+EYE*Beta
-        pexp = exp(cst)
-  
-         IF (deriv) THEN
-  
-           d0 = poly_Hermite(x,l)
-           IF (l == 0) THEN
-             d1 = ZERO
-             d2 = ZERO
-           ELSE IF (l == 1) THEN
-             d1 = sqrt(TWO)*poly_Hermite(x,0)
-             d2 = ZERO
-           ELSE IF (l == 2) THEN
-             d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(x,l-1)
-             d2 = TWO*(x*d1-d0*real(l,kind=Rkind))
-           ELSE
-             d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(x,l-1)
-             d2 = TWO*(x*d1-d0*real(l,kind=Rkind))
-           END IF
-  
-  !        on rajoute la partie exponentielle
-  !        pour d0 d1 d2
-
-           d2 = (d2+TWO*cst1*d1+(cst2+cst1*cst1)*d0)*pexp
-           d1 = (d1+cst1*d0)*pexp
-           d0 = d0*pexp
-  
-         ELSE
-           d0 = poly_Hermite(x ,l)*pexp
-           d1 = ZERO
-           d2 = ZERO
-         END IF
-  
-        !write(out_unit,*) 'l x,p,beta, d0 ,d1, d2 Hagedorn :',l,x,p,beta,d0,d1,d2
-  
-  
-         RETURN
-         end subroutine 
-
-
-
-  SUBROUTINE d0d1d2poly_Hermite_expcplx(x,p,A,l,d0,d1,d2,deriv)
+  SUBROUTINE d0d1d2_time_dependant_poly_Hermite_exp_cplx(Q,Pt,At,l,d0,d1,d2,deriv)
     USE QDUtil_m
     IMPLICIT NONE
-    complex(kind=Rkind)d0,d1,d2,pexp,A
-    real(kind=Rkind) x,p
-
-    complex(kind=Rkind) cst,cst1,cst2,Peq,alpha
-    logical deriv
-    integer l
-
-    alpha = complex(ONE,aimag(A)/real(A,kind=Rkind))
-    Peq = p/sqrt(real(A,kind=Rkind))
-    
-    cst = -HALF*alpha*x*x+EYE*Peq*x
-    cst1 = -x*alpha+EYE*Peq
-    cst2 = cst1*cst1-alpha
-    pexp = exp(cst)
+    complex(kind=Rkind),intent(inout) :: d0,d1,d2
+    real(kind=Rkind),intent(in)       :: Q,Pt
+    complex(kind=Rkind),intent(in)    :: At
+    logical ,intent(in)               :: deriv
+    integer,intent(in)                :: l
 
 
-     IF (deriv) THEN
-       d0 = poly_Hermite(x,l)
-       IF (l == 0) THEN
-         d1 = ZERO
-         d2 = ZERO
-       ELSE IF (l == 1) THEN
-         d1 = sqrt(TWO)*poly_Hermite(x,0)
-         d2 = ZERO
-       ELSE IF (l == 2) THEN
-         d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(x,l-1)
-         d2 = TWO*(x*d1-d0*real(l,kind=Rkind))
-       ELSE
-         d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(x,l-1)
-         d2 = TWO*(x*d1-d0*real(l,kind=Rkind))
-       END IF
-       !on rajoute la partie exponentielle
-       !pour d0 d1 d2
-       d2 = (d2+TWO*cst1*d1+cst2*d0)*pexp
-       d1 = (d1+cst1*d0)*pexp
-       d0 = d0*pexp
-     ELSE
-       d0 = poly_Hermite(x ,l)*pexp
-       d1 = ZERO
-       d2 = ZERO
-     END IF
-    !write(out_unit,*) 'l x,p,beta, d0 ,d1, d2 Hagedorn :',l,x,p,beta,d0,d1,
-     RETURN
-  END SUBROUTINE
+    complex(kind=Rkind)               :: cst,cst1,cst2,alpha,pexp
+    real(kind=Rkind)                  :: SQeq,Peq
 
 
 
-
-   FUNCTION Hagedorn_basis_cplx(x,p,A,l)
-   USE QDUtil_m
-   IMPLICIT NONE
-!------------------------------------------------------------------------------
-   complex(kind=Rkind)  Hagedorn_basis_cplx
-!-----------------------------------------------------------------------------------
-
-   complex(kind=Rkind) d0,pexp,A
-   real(kind=Rkind) x,p,SQ
-   complex(kind=Rkind) cst,Peq,alpha
-   integer l
-
-
-  SQ= sqrt(real(A,kind=Rkind))
-
-   alpha = complex(ONE,aimag(A)/(SQ*SQ))
-   Peq = p/SQ
-   cst = -HALF*alpha*x*x+EYE*Peq*x
+    SQeq  =  sqrt(real(At,kind=Rkind)) 
+    alpha = complex( ONE, aimag(At)/(SQeq*SQeq) )
+    Peq   = Pt/SQeq
+   
+   cst = -HALF*alpha*Q*Q+EYE*Peq*Q
+   cst1 = -Q*alpha+EYE*Peq
+   cst2 = cst1*cst1-alpha
    pexp = exp(cst)
 
-  Hagedorn_basis_cplx  = sqrt(SQ)*poly_Hermite(x ,l)*pexp
+    IF (deriv) THEN
 
+      d0 = poly_Hermite(Q,l)
+      IF (l == 0) THEN
+        d1 = ZERO
+        d2 = ZERO
+      ELSE IF (l == 1) THEN
+        d1 = sqrt(TWO)*poly_Hermite(Q,0)
+        d2 = ZERO
+      ELSE IF (l == 2) THEN
+        d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(Q,l-1)
+        d2 = TWO*(Q*d1-d0*real(l,kind=Rkind))
+      ELSE
+        d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(Q,l-1)
+        d2 = TWO*(Q*d1-d0*real(l,kind=Rkind))
+      END IF
+      !on rajoute la partie exponentielle
+      !pour d0 d1 d2
+      d2 = (d2+TWO*cst1*d1+cst2*d0)*pexp
+      d1 = (d1+cst1*d0)*pexp
+      d0 = d0*pexp
+    ELSE
+      d0 = poly_Hermite(Q ,l)*pexp
+      d1 = ZERO
+      d2 = ZERO
+    END IF
+   !write(out_unit,*) 'l x,p,beta, d0 ,d1, d2 Hagedorn :',l,x,p,beta,d0,d1,
     RETURN
- END FUNCTION
+
+ END SUBROUTINE
+
 
 
 !!================================================================

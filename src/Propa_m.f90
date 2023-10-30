@@ -14,8 +14,7 @@ module Propa_m
       real(kind=Rkind)      :: tf
       real(kind=Rkind)      :: delta_t
       real(kind=Rkind)      :: eps
-      integer             :: max_iter
-      integer             :: Kmax
+      integer               :: max_iter
       character(len=:), allocatable  :: propa_name
       character(len=:), allocatable  :: propa_name2
    END TYPE propa_t
@@ -62,11 +61,11 @@ contains
       logical, parameter               :: debug = .true.
 
       ! variables locales------------------------------------------------------------------
-      TYPE(Basis_t)                       :: B1,B2
       REAL(kind=Rkind)                    :: t, t_deltat, Norm, E, y
-      REAL(kind=Rkind), allocatable       :: Qt(:), SQt(:), Auto_corr_function(:), populat(:),Pt(:)
+      REAL(kind=Rkind), allocatable       :: Qt(:), SQt(:),  populat(:),Pt(:)
       complex(kind=Rkind)                 ::  x
       complex(kind=Rkind) ,allocatable    :: At(:)
+      TYPE(REDUCED_DENSIRY_t)             :: Rd
       integer                             :: Ndim
 
       INTEGER                             :: i, nt, Iq, nf
@@ -84,6 +83,7 @@ contains
 
       end if
       call creat_file_unit(nio=10, name='psi', propa=propa)
+       call creat_file_unit(nio=111, name='psitemp1', propa=propa)
       call creat_file_unit(nio=11, name='Qt', propa=propa)
       call creat_file_unit(nio=12, name='E', propa=propa)
       call creat_file_unit(nio=13, name='SQt', propa=propa)
@@ -93,35 +93,30 @@ contains
       call creat_file_unit(nio=18, name='pop', propa=propa)
       call creat_file_unit(nio=19, name='Imp_k', propa=propa)
       call creat_file_unit(nio=20, name='alpha', propa=propa)
+      call creat_file_unit(nio=21, name='Rd', propa=propa)
       
 
       Ndim = size(psi0%Basis%tab_basis) - 1
       allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim),At(Ndim))
       allocate (populat(psi0%Basis%tab_basis(Ndim + 1)%nb))
-      Qt(:) = ZERO; SQt(:) = ONE
+
+      Qt(:) = ZERO; SQt(:) = ONE;Pt(:)= ZERO; At(:) = CZERO
       nt = int((propa%tf - propa%t0)/propa%delta_t)
       E = ZERO;At= CZERO
 
-      call init_Basis1_TO_Basis2(B1, psi0%Basis)
-      call init_Basis1_TO_Basis2(B2, psi0%Basis)
-      call construct_primitive_basis(B1)
-      call construct_primitive_basis(B2)
-
       call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.false.)
       call init_psi(psi_dt,psi0%Basis, cplx=.TRUE., grid=.false.)
-      call init_psi(psi1, B1, cplx=.TRUE., grid=.false.)
-      call init_psi(psi2, B2, cplx=.TRUE., grid=.false.)
+      CALL Rdensity_alloc(Rd,psi%Basis) 
 
       psi%CVec(:) = psi0%CVec(:)
-      psi1%CVec(:) = psi0%CVec(:)
-      psi2%CVec(:) = CZERO
        !STOP 'cc'
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
       DO i = 0, nt
          t = i*propa%delta_t
          t_deltat = t + propa%delta_t
          write (out_unit, *) propa%propa_name2, i, t, t_deltat
-         call Calc_AVQ_nD0(Psi0=psi, AVQ=Qt, SQ=SQt)
+
+         call Calc_AVQ_nD(psi0=psi, AVQ=Qt, SQ=SQt)
          call Calc_average_energy(psi, E)
          call Calc_Norm_OF_Psi(psi, Norm)
          call Calc_Av_imp_k_nD(psi,Pt)
@@ -134,27 +129,27 @@ contains
           write (14,*) t, Norm
           write (18,*) t, populat
           write (19,*) t, Pt
-         write (20,*) t, At(:),SQt(:)*SQt (:)
+         write (20,*) t, At(:),real(At(:),kind=Rkind)-SQt(:)*SQt (:)
 
          !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
 
-         if (mod(i, 2 ) == 0) then
-          ! if (propa%propa_name == 'hagedorn') Then
-          !    call GO_BackTO_initBasis(psi2,psi1)
-          !    call write_psi(psi=psi2, psi_cplx=.true., print_psi_grid=.true. &
-          !        , print_basis=.false., t=t, int_print=10, real_part=.true.)
-          !    write(10,*)
-          ! else
-              call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
+         if (mod(i, 10 ) == 0) then
+              call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
                              , print_basis=.false., t=t, int_print=10, real_part=.false.)
                write(10,*)
-          ! end if
+
+             call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
+             call Rdensity_Writing(Rd,psi%Basis,nio=21,ib=1,t=t)
+             write(21,*)
          end if
 
          CALL march(psi, psi_dt, t, propa)
          if (propa%propa_name == 'hagedorn') Then
             call Hagedorn(psi, psi_dt)
-            !call CopyPsi(psi1,psi)
+             call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
+               , print_basis=.false., t=t, int_print=111, real_part=.false.)
+                 write(111,*)
+
          else
             psi%CVec(:) = psi_dt%CVec(:)
          end if
@@ -182,7 +177,6 @@ contains
 
       IF (propa%propa_name == 'hagedorn') Then
 
-           !call GO_BackTO_initBasis(psi2,psif)
            !call write_psi(psi=psi2, psi_cplx=.true., print_psi_grid=.true. &
            !    , print_basis=.false., t=t, int_print=16, real_part=.true.)
            !write(16,*)
@@ -216,7 +210,7 @@ contains
       real(kind=Rkind), allocatable                   :: Qt(:), SQt(:),Pt(:)
       complex(kind=Rkind), allocatable                :: At(:)
       real(kind=Rkind)                                :: Norm,Norm0, E,E0
-      integer                                         :: Ndim
+      integer                                         :: Ndim,ib
      ! write (out_unit, *) 'Beging Hagedorn'
       !call Write_Basis(psi%Basis)
 
@@ -228,16 +222,23 @@ contains
       allocate (Qt(Ndim), SQt(Ndim),Pt(Ndim),At(Ndim))
       Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
 
-      call Calc_AVQ_nD0(psi0=psi_dt, AVQ=Qt, SQ=SQt)
+      call Calc_AVQ_nD(psi0=psi_dt, AVQ=Qt, SQ=SQt)
       call Calc_Av_imp_k_nD(psi_dt,Pt)
       call  Calc_Avg_A_nD(psi_dt, At)
-   
 
-      call construct_primitive_basis(psi_dt%Basis, Qt,Pt,At,SQt)
-      
+     !Do ib = 1,ndim
+
+     !   !If (real(At(Ib),kind=Rkind)< 0)
+     !    !At(Ib) = complex(SQt(Ib)*SQt(Ib),aimag(At(Ib)))
+     !    !At(Ib) = complex(SQt(Ib)*SQt(Ib),ZERO)
+
+     !End Do
+
+      call construct_primitive_basis(psi_dt%Basis,Qt,Pt,At,SQt)
       call projection(psi, psi_dt)
      
       !write (out_unit, *) 'End Hagedorn'
+      deallocate(Qt,SQt,At,Pt)
 
       call Calc_Norm_OF_Psi(psi,Norm)
        call Calc_average_energy(psi, E)
@@ -262,291 +263,12 @@ contains
     allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
      Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
 
-      call Calc_AVQ_nD0(psi0=psi1, AVQ=Qt, SQ=SQt)
+      call Calc_AVQ_nD(psi0=psi1, AVQ=Qt, SQ=SQt)
       call Calc_Av_imp_k_nD(psi1,Pt)
       call  Calc_Avg_A_nD(psi1, At)
    
      call construct_primitive_basis(psi2%Basis, Qt,Pt,At,SQt)
       psi2%CVec(:) = psi1%CVec(:)
-
- END SUBROUTINE
-
-
-   SUBROUTINE GO_BackTO_initBasis(psi2,psi1)
-       implicit none
-      TYPE(psi_t), intent(in)                    :: psi1
-      TYPE(psi_t), intent(inout)                 :: psi2
-
-       real(Kind=Rkind), allocatable             ::Pt(:),Qt(:),SQt(:)
-       complex(Kind=Rkind), allocatable          :: At(:)
-       integer                                   :: Ndim,i1
-
-
-      Ndim = size(psi1%Basis%tab_basis) - 1
-      allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
-
-       Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
-
-       Do i1 = 1,Ndim
-
-         Qt(i1) =   psi1%Basis%tab_basis(i1)%Q0
-         Pt(i1) =   psi1%Basis%tab_basis(i1)%Imp_k
-         At(i1) =   psi1%Basis%tab_basis(i1)%Alpha  
-
-       END DO
-
-       call Hagedorn_std(psi2, psi1)
-
-       !call construct_primitive_basis(psi2%Basis, Qt,Pt,At,SQt)
-
-
-   END SUBROUTINE
-
- SUBROUTINE Hagedorn_std(psi_dt_2, psi_dt_1)
-    USE QDUtil_m
-    TYPE(psi_t), intent(in), target                     :: psi_dt_1
-    TYPE(psi_t), intent(inout), target                  :: psi_dt_2
-
-   !Locals varialbls -----------------------------------------------------------------------------
-
-    complex(kind=Rkind), pointer                        :: BBB1(:, :, :), BBB2(:, :, :)
-    complex(kind=Rkind), allocatable, target            :: B1(:), B2(:)
-    integer                                             :: inb, i1, i3, Ndim, iq, ib
-    integer, allocatable                                :: Ib1(:), Ib2(:), Ib3(:)
-    real(Kind=Rkind), allocatable                       :: Q(:), w(:),Pt(:),Qt(:),SQt(:)
-    complex(Kind=Rkind), allocatable                    :: S(:, :),At(:)
-    real(Kind=Rkind)                                    :: sQeq1, sQeq2, sQeq, Q1, Q2, Qeq,p1,p2
-    complex(Kind=Rkind)                                 ::A1,A2
-     complex(kind=Rkind),allocatable                    :: d0gb(:,:),d0bgw(:,:)
-
-    Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
-    Ndim = size(psi_dt_1%Basis%tab_basis) - 1
-    write (out_unit, *) 'Begin Hagedorn projection'
-
-    allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
-
-    If (Ndim == 1) then
-       BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
-       BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
-       !constuction of ovelap  S(:,:)
-       !----------------------------------------------------------------------------
-       allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
-       allocate (Q(psi_dt_1%Basis%tab_basis(1)%nq))
-       allocate (w(psi_dt_1%Basis%tab_basis(1)%nq))
-       call hercom(psi_dt_1%Basis%tab_basis(1)%nq, Q(:), w(:))
-      
-      
-       Q1 = psi_dt_1%Basis%tab_basis(1)%Q0
-       Q2 = psi_dt_2%Basis%tab_basis(1)%Q0
-
-       A1 =psi_dt_1%Basis%tab_basis(1)%Alpha
-       A2 =psi_dt_2%Basis%tab_basis(1)%Alpha
-
-       sQeq1 =sqrt(real(A1,kind=Rkind))
-       sQeq2 =sqrt(real(A2,kind=Rkind))
-
-       p1= psi_dt_1%Basis%tab_basis(1)%Imp_k
-       p2= psi_dt_2%Basis%tab_basis(1)%Imp_k
-
-       sQeq = sqrt(sQeq1*sQeq1 + sQeq2*sQeq2)/sqrt(TWO)
-       Qeq = (sQeq1*sQeq1*Q1 + sQeq2*sQeq2*Q2)/(sQeq1*sQeq1 + sQeq2*sQeq2)
-       w(:) = w(:)/sQeq
-       Q(:) = Qeq + Q(:)/sQeq
-
-       allocate (d0gb(psi_dt_1%Basis%tab_basis(1)%nq, psi_dt_1%Basis%tab_basis(1)%nb)) 
-       allocate (d0bgw(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nq))
-
-
-       Do ib = 1, psi_dt_1%Basis%tab_basis(1)%nb
-
-          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nq
-
-             d0gb(iq, ib) =Hagedorn_basis_cplx(sQeq1*(Q(iq)-Q1), p1,A1, ib-1)
-             d0bgw(ib, iq)= conjg(Hagedorn_basis_cplx(sQeq2*(Q(iq)-Q2), p2,A2,ib -1)*w(iq))
-
-          End Do
-
-       End Do
-
-        S = matmul(d0bgw,d0gb)
-        call  Write_VecMat(S, out_unit, 5,  info='S')
-
-       !----------------------------------------------------------------------------------
-       psi_dt_2%CVec(:) = CZERO
-       DO i3 = 1, ubound(BBB1, dim=3)
-          DO i1 = 1, ubound(BBB1, dim=1)
-
-            BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
-
-         END DO
-       END DO
-
-        deallocate(d0gb,d0bgw,w,Q,S)
-    else
-    
-       psi_dt_2%CVec = CZERO
-       allocate (B1(Ib1(1)*Ib2(1)*Ib3(1)))
-       BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
-       BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B1
-       !constuction of ovelap  S(:,:)
-       !----------------------------------------------------------------------------
-       allocate (S(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nb))
-       allocate (Q(psi_dt_1%Basis%tab_basis(1)%nq))
-       allocate (w(psi_dt_1%Basis%tab_basis(1)%nq))
-       call hercom(psi_dt_1%Basis%tab_basis(1)%nq, Q(:), w(:))
-
-       Q1 = psi_dt_1%Basis%tab_basis(1)%Q0
-       Q2 = psi_dt_2%Basis%tab_basis(1)%Q0
-
-       A1 = psi_dt_1%Basis%tab_basis(1)%Alpha
-       A2 = psi_dt_2%Basis%tab_basis(1)%Alpha
-
-       p1 = psi_dt_1%Basis%tab_basis(1)%Imp_k
-       p2 = psi_dt_2%Basis%tab_basis(1)%Imp_k
-
-
-       sQeq1 =sqrt(real(A1,kind=Rkind))
-       sQeq2 =sqrt(real(A2,kind=Rkind))
-       
-       sQeq = sqrt(sQeq1*sQeq1 + sQeq2*sQeq2)/sqrt(TWO)
-       Qeq = (sQeq1*sQeq1*Q1 + sQeq2*sQeq2*Q2)/(sQeq1*sQeq1 + sQeq2*sQeq2)
-
-       w(:) = w(:)/sQeq
-       Q(:) = Qeq + Q(:)/sQeq
-
-       allocate (d0gb(psi_dt_1%Basis%tab_basis(1)%nq, psi_dt_1%Basis%tab_basis(1)%nb)) 
-       allocate (d0bgw(psi_dt_1%Basis%tab_basis(1)%nb, psi_dt_1%Basis%tab_basis(1)%nq))
-       
-
-       if (psi_dt_1%Basis%tab_basis(1)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(1)%Basis_name == 'ho') then
-
-       Do ib = 1, psi_dt_1%Basis%tab_basis(1)%nb 
-
-          Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nq
-
-              d0gb(iq, ib) =Hagedorn_basis_cplx(sQeq1*(Q(iq)-Q1), p1,A1, ib-1)
-    
-              d0bgw(ib, iq)= conjg(Hagedorn_basis_cplx(sQeq2*(Q(iq)-Q2), p2,A2,ib -1)*w(iq))
-
-         End Do
-
-      End Do
-
-        S = matmul(d0bgw,d0gb)
-        call  Write_VecMat(S, out_unit, 5,  info='S')
-
-
-      else
-         S(:, :) = ZERO
-
-         Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nb
-
-            S(iq, iq) = ONE
-
-         End Do
-
-      end if
-
-       !----------------------------------------------------------------------------------
-       DO i3 = 1, ubound(BBB1, dim=3)
-
-       DO i1 = 1, ubound(BBB1, dim=1)
-
-          BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
-
-       END DO
-
-       END DO
-
-       deallocate(d0gb,d0bgw,w,Q,S)
-
-       Do inb = 2, Ndim
-
-          allocate (B2(Ib1(inb)*Ib2(inb)*Ib3(inb)))
-
-          BBB1(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B1
-
-          BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
-
-          !constuction of ovelap  S(:,:)
-          !----------------------------------------------------------------------------
-
-          allocate (S(psi_dt_1%Basis%tab_basis(Inb)%nb, psi_dt_1%Basis%tab_basis(Inb)%nb))
-          allocate (Q(psi_dt_1%Basis%tab_basis(Inb)%nq))
-          allocate (w(psi_dt_1%Basis%tab_basis(Inb)%nq))
-
-          call hercom(psi_dt_1%Basis%tab_basis(Inb)%nq, Q(:), w(:))
-
-          Q1 = psi_dt_1%Basis%tab_basis(Inb)%Q0
-          Q2 = psi_dt_2%Basis%tab_basis(Inb)%Q0
-
-          p1 =   psi_dt_1%Basis%tab_basis(Inb)%Imp_k
-          p1 =   psi_dt_2%Basis%tab_basis(Inb)%Imp_k
-
-          sQeq1 =sqrt(real(A1,kind=Rkind))
-          sQeq2 =sqrt(real(A2,kind=Rkind))
-
-          sQeq = sqrt(sQeq1*sQeq1 + sQeq2*sQeq2)/sqrt(TWO)
-          Qeq = (sQeq1*sQeq1*Q1 + sQeq2*sQeq2*Q2)/(sQeq1*sQeq1 + sQeq2*sQeq2)
-
-          w(:) = w(:)/sQeq
-          Q(:) = sQeq + Q(:)/sQeq
-
-          if (psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'herm' .or. psi_dt_1%Basis%tab_basis(Inb)%Basis_name == 'ho') then
-          
-          Do ib = 1, psi_dt_1%Basis%tab_basis(1)%nb 
-
-            Do iq = 1, psi_dt_1%Basis%tab_basis(1)%nq
-
-               d0gb(iq, ib) =Hagedorn_basis_cplx(sQeq1*(Q(iq)-Q1), p1,A1, ib-1)
-
-               d0bgw(ib, iq)= conjg(Hagedorn_basis_cplx(sQeq2*(Q(iq)-Q2), p2,A2,ib -1)*w(iq))
-
-            End Do
-
-          End Do  
-
-           S = matmul(d0bgw,d0gb)
-           call  Write_VecMat(S, out_unit, 5,  info='S')  
-
-          else
-             S(:, :) = ZERO
-             Do iq = 1, psi_dt_1%Basis%tab_basis(Inb)%nb
-                S(iq, iq) = ONE
-             End Do
-          end if
-
-
-          ! ---------------------------------------------------------------------------------
-
-          DO i3 = 1, ubound(BBB1, dim=3)
-
-             DO i1 = 1, ubound(BBB1, dim=1)
-
-                BBB2(i1, :, i3) = matmul(BBB1(i1, :, i3), S)
-
-             END DO
-
-          END DO
-
-          B1 = B2
-          B2 = CZERO
-
-          deallocate (B2)
-          if (inb == Ndim) psi_dt_2%CVec = B1
-          deallocate(d0gb,d0bgw,w,Q,S)
-       END DO
-    END IF
-    write (out_unit, *) 'END Hagedorn projection'
-
-       Do ib = 1,Ndim
-         At(ib) = psi_dt_1%Basis%tab_basis(ib)%Alpha
-         Pt(ib) = psi_dt_1%Basis%tab_basis(ib)%Imp_k
-         SQt(ib) =sqrt(real(At(ib),kind=Rkind))
-         Qt(ib) = psi_dt_1%Basis%tab_basis(ib)%Q0
-       End do
-
-       !call construct_primitive_basis(psi_dt_2%Basis, Qt,Pt,At,SQt)
 
  END SUBROUTINE
 
@@ -586,10 +308,10 @@ contains
 
       TYPE(psi_t), INTENT(INOUT)       :: psi_dt
       TYPE(psi_t), INTENT(IN)          :: psi
-      TYPE(psi_t)                      :: psi0
-      TYPE(psi_t)                      :: Hpsi
       TYPE(propa_t), INTENT(IN)        :: propa
       real(kind=Rkind), INTENT(IN)     :: t
+      TYPE(psi_t)                      :: psi0
+      TYPE(psi_t)                      :: Hpsi
       real(kind=Rkind)                 :: alpha
  
       ! variables locales-------------------------------------------------------------------------------
@@ -623,12 +345,11 @@ contains
       Psi0%CVec = Psi%CVec
       Do kk = 1, propa%max_iter, 1
          CALL mEyeHPsi(psi0, Hpsi)
-         Rkk = Rkk*(propa%delta_t/kk)
-         psi_dt%CVec(:) = psi_dt%CVec(:) + Rkk*Hpsi%CVec(:)
-         psi0%CVec(:) = Hpsi%CVec(:)
-         Hpsi%CVec(:) = CZERO
+
+          psi0%CVec(:) = Hpsi%CVec(:)*(propa%delta_t/kk)
+          psi_dt%CVec(:) = psi_dt%CVec(:) + psi0%CVec(:)
+          Hpsi%CVec(:) = CZERO
          call Calc_Norm_OF_Psi(psi0, Norm)
-         Norm = Rkk*Norm
          write (out_unit, *) 'sqrt(<Hpsi|Hpsi>) = ', kk, Norm
          if (Norm >= alpha) then
             stop "wrong choice of delta_t"
@@ -642,8 +363,8 @@ contains
       CALL Calc_Norm_OF_Psi(Psi_dt, Norm)
       write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =', abs(Norm0 - Norm)
       write (out_unit, *) 'END march_taylor'
-      !CALL dealloc_psi(psi0)
-      !CALL dealloc_psi(Hpsi)
+      CALL dealloc_psi(psi0)
+      CALL dealloc_psi(Hpsi)
    END SUBROUTINE march_taylor
 
 
@@ -651,18 +372,15 @@ contains
      USE lanczos_m
      USE psi_m
      USE Basis_m
-     TYPE(psi_t), INTENT(INOUT)   :: psi_dt
-     TYPE(psi_t), INTENT(IN)      :: psi
-     TYPE(propa_t), INTENT(IN)    :: propa
-     real(kind=Rkind), INTENT(IN)    :: t
+     TYPE(psi_t),  intent(inout) :: psi_dt
+     TYPE(psi_t),  intent(in)    :: psi
+     TYPE(propa_t),intent(in)    :: propa
+     real(kind=Rkind),intent(in) :: t
 
        ! variables locales--------------------------------------------------------------------
 
-     real(kind=Rkind)                    :: Norm, Norm0,E
-      complex (kind=Rkind), allocatable  :: Vec_Basis(:,:)
-      real (kind=Rkind), allocatable     :: EigenVal(:)
-       TYPE(psi_t)        :: Psi0
-     logical, parameter               :: debug=.false.
+     real(kind=Rkind)                   :: Norm, Norm0
+     logical, parameter                 :: debug=.false.
 
          IF (debug) THEN
             !write(out_unit,*) 'psi_t',psi%CVec
@@ -670,23 +388,17 @@ contains
          END IF
     
           write (out_unit, *) 'BEGINNIG march_SIL ', t, propa%delta_t
-          write(out_unit,*) 'Krylov Basis size',propa%Kmax
-          call init_psi(psi0, psi%Basis, cplx=.TRUE., grid=.false.)
-          CALL Lanczos_eign_syst_solve( EigenVal,Vec_Basis,psi,propa%kmax)
-          psi0%CVec = Vec_Basis(:,1)
-           call Calc_average_energy(psi0, E)
-          print*,'==E1==',EigenVal(1:5),E,'=='
-          CALL Calc_psi_step_cplx(psi_dt,psi,propa%delta_t,propa%Kmax)
+          call Calc_psi_step_cplx(psi_dt,psi,propa%eps,propa%delta_t)
     
-     CALL Calc_Norm_OF_Psi(psi, Norm0)
-     CALL Calc_Norm_OF_Psi(psi_dt, Norm)
+     call Calc_Norm_OF_Psi(psi, Norm0)
+     call Calc_Norm_OF_Psi(psi_dt, Norm)
      write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi|psi>)  =', abs(Norm0 - Norm)
      write (out_unit, *) 'END march_SIL'
-     
-     
+
       IF (debug) THEN
         flush(out_unit)
      END IF
+
   END SUBROUTINE 
 
 
@@ -845,15 +557,14 @@ contains
       TYPE(propa_t), intent(inout)   :: propa
       real(kind=Rkind)               :: t0, tf, delta_t, eps
       character(len=40)              :: propa_name, propa_name2
-      integer                        ::  max_iter,kmax
+      integer                        :: max_iter
 
-      namelist /prop/ t0, tf, delta_t, eps, max_iter,Kmax,propa_name, propa_name2
+      namelist /prop/ t0, tf, delta_t,max_iter,eps,propa_name, propa_name2
       t0 = ZERO
-      tf = 10._Rkind
-      delta_t = 0.001
+      tf = TEN
+      delta_t = ONETENTH**3
       eps = ONETENTH**10
-      max_iter = 5000
-      Kmax     = 10
+      max_iter = 500
       propa_name = 'non_hagedorn'
       propa_name2 = 'rk4'
 
@@ -863,8 +574,7 @@ contains
       propa%tf = tf
       propa%delta_t = delta_t
       propa%eps = eps
-      propa%max_iter = max_iter
-      propa%Kmax = Kmax
+       propa%max_iter = max_iter
       propa%propa_name = propa_name
       propa%propa_name2 = propa_name2
 
@@ -891,7 +601,6 @@ contains
       write (out_unit, *) 'deltat_t = ', propa%delta_t
       write (out_unit, *) 'eps = ', propa%eps
       write (out_unit, *) 'max_iter = ', propa%max_iter
-      write (out_unit, *) 'Kmax= ', propa%Kmax
       write (out_unit, *) 'propa_name = ', propa%propa_name
       write (out_unit, *) 'propa_name2 = ', propa%propa_name2
 
@@ -906,8 +615,8 @@ contains
       USE Basis_m
 
       TYPE(psi_t), intent(in)                        :: psi
+      REAL(kind=Rkind), intent(inout)                :: E
       TYPE(psi_t)                                    :: Hpsi, psi_b
-      REAL(KIND=Rkind), intent(inout)                :: E
       TYPE(Op_t)                                     :: H
       REAL(KIND=Rkind)                               :: Norm
       if (Psi%Grid) then
@@ -989,159 +698,6 @@ contains
    end subroutine
 
 
-   SUBROUTINE Calc_varia_princinpe_overlap_s(S,V,psi)
-      type(psi_t), intent(in)           :: psi
-      complex(kind=Rkind),allocatable,intent(inout) :: V(:),S(:,:)
-      !------------------locals variables----------------------------------------------------
-      integer                            :: nb,nq,ib,jb,n
-      type(psi_t)                        :: Hpsi,psi_g,dapsi,dq0psi,dp0psi,dag,dpg,dqg
-      complex(kind=Rkind),allocatable    :: Q(:,:),QT(:,:)
-
-      TYPE(Op_t)                         :: H
-
-      nb = psi%Basis%nb
-      nq = psi%Basis%nq
-      n = nb+3
-
-      call init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.false.)  
-      call init_psi(dapsi, psi%Basis, cplx=.TRUE., grid=.false.)
-      call init_psi(dq0psi, psi%Basis, cplx=.TRUE., grid=.false.)
-      call init_psi(dp0psi, psi%Basis, cplx=.TRUE., grid=.false.)
-
-      call init_psi(psi_g, psi%Basis, cplx=.TRUE., grid=.true.)
-      call init_psi(dag, psi%Basis, cplx=.TRUE., grid=.true.)
-      call init_psi(dpg, psi%Basis, cplx=.TRUE., grid=.true.)
-      call init_psi(dqg, psi%Basis, cplx=.TRUE., grid=.true.)
-
-      allocate(V(n),S(n,n),Q(nq,n),QT(n,nq))
-
-      call  calc_OpPsi(H, psi, Hpsi)
-      call  CalcDapqpsi(dapsi,dq0psi,dp0psi,psi)
-      call  BasisTOGrid_nD_cplx(psi_g%CVec, Hpsi%CVec, psi%Basis)
-      call  BasisTOGrid_nD_cplx(dag%CVec, dapsi%CVec, psi%Basis)
-      call  BasisTOGrid_nD_cplx(dqg%CVec, dq0psi%CVec, psi%Basis)
-      call  BasisTOGrid_nD_cplx(dpg%CVec, dp0psi%CVec, psi%Basis)
-       !stop 'ici'
-      do ib = 1,nb
-         QT(ib,:) = psi%Basis%tab_basis(1)%d0bgw(ib,:)
-      end do
-
-      QT(nb+1,:) = dag%CVec(:)*psi%Basis%tab_basis(1)%w(:)
-      QT(nb+2,:) = dqg%CVec(:)*psi%Basis%tab_basis(1)%w(:)
-      QT(nb+3,:) = dpg%CVec(:)*psi%Basis%tab_basis(1)%w(:)
-
-      do ib = 1,nb
-         Q(:,ib) = psi%Basis%tab_basis(1)%d0gb(:,ib)
-      end do
-
-      Q(:,nb+1) = dag%CVec(:)
-      Q(:,nb+2) = dqg%CVec(:)
-      Q(:,nb+3) = dpg%CVec(:)
-
-
-      do ib = 1,n
-         V(ib) = -EYE*dot_product(conjg(QT(ib,:)),psi_g%CVec(:))
-      end do
-       S = matmul(conjg(QT),Q)
-
-       CALL   Write_VecMat(S, out_unit, 5,  info='S')
-       CALL   Write_VecMat(V, out_unit, 5,  info='V')
-
-       !deallocation ------------------------------------------------------
-       call dealloc_psi(Hpsi)
-       call dealloc_psi(psi_g)
-       call dealloc_psi(dapsi)
-       call dealloc_psi(dq0psi)
-       call dealloc_psi(dp0psi)
-
-       call dealloc_psi(dag)
-       call dealloc_psi(dpg)
-       call dealloc_psi(dqg)
-       deallocate(QT,Q)
-      
-      END SUBROUTINE
-
-      SUBROUTINE Calc_vp_func(CVec,psi)
-       !> cette subroutine a pour mission de calculer lambda(:);
-       !> elle a besoin de psi pour construire S(:,:) et V(:);
-       !> et à partire de S(:,:) et V(:), on construit lambda(:) = inv(S)*V;
-
-         type(psi_t), intent(in)           :: psi
-         complex(kind=Rkind),allocatable,intent(inout) :: CVec(:)
-
-         !locals variables-----------------------------------------------------------
-         complex(kind=Rkind),allocatable  :: V(:),S(:,:)
-         integer                          :: n,nb
-
-         nb = psi%Basis%nb
-         n = nb+3
-         allocate(CVec(n))
-         call Calc_varia_princinpe_overlap_s(S,V,psi)
-         CVec = LinearSys_Solve(S,V,LS_type=0)
-         deallocate(V,S)
-     END SUBROUTINE
-
-     SUBROUTINE Lambda_rk4(Clambda,psi,propa)
-
-      type(psi_t), intent(in)           :: psi
-      type(propa_t), intent(in)         :: propa
-      complex(kind=Rkind),allocatable,intent(inout) :: Clambda(:)
-
-        !locals variables-----------------------------------------------------------
-      type(psi_t)                        :: Vec,Vec1,Vec2,Vec3,Vec4
-      complex(kind=Rkind),allocatable    :: lambda1(:),lambda2(:),lambda3(:),lambda4(:),Clambda0(:)
-      real(kind=Rkind)                   :: dt
-      integer                            :: n,nb
-
-      nb = psi%Basis%nb
-      n = nb+3
-
-      call init_psi(Vec, psi%Basis,  cplx=.TRUE., grid=.false.)  
-      call init_psi(Vec1, psi%Basis, cplx=.TRUE., grid=.false.)  
-      call init_psi(Vec2, psi%Basis, cplx=.TRUE., grid=.false.)  
-      call init_psi(Vec3, psi%Basis, cplx=.TRUE., grid=.false.)  
-      call init_psi(Vec4, psi%Basis, cplx=.TRUE., grid=.false.) 
-
-      allocate(Clambda0(n))!(,lambda2(n),lambda3(n),lambda4(n),lambda(n))
-      
-             dt = propa%delta_t
-             !call Calc_vp_func(lambda,Vec)
-
-             Clambda0(1:nb) = psi%CVec(1:nb)
-             Clambda0(nb+1) = psi%Basis%tab_basis(1)%scaleQ
-             Clambda0(nb+1) = psi%Basis%tab_basis(1)%Q0
-             Clambda0(nb+1) = psi%Basis%tab_basis(1)%Imp_k
-              
-             Vec%CVec(:) = psi%CVec(:)
-             call mEyeHPsi(Vec, Vec1)
-             call Calc_vp_func(lambda1,Vec1)
-             Vec%CVec = psi%CVec + (dt*HALF)*Vec1%CVec
-   
-             call mEyeHPsi(Vec, Vec2)
-             call Calc_vp_func(lambda2,Vec2)
-             Vec%CVec = psi%CVec + (dt*HALF)*Vec2%CVec
-          
-             call mEyeHPsi(Vec, Vec3)
-             Vec%CVec = psi%CVec + dt*Vec3%CVec
-             call Calc_vp_func(lambda3,Vec3)
-            
-             call mEyeHPsi(Vec, Vec4)
-             call Calc_vp_func(lambda4,Vec4)
-
-             Clambda(:) = Clambda0(:)+ dt*SIXTH*(lambda1(:)+TWO*lambda2(:)+TWO*lambda3(:)+lambda4(:))
-
-             
-      call dealloc_psi(Vec)
-      call dealloc_psi(Vec1)
-      call dealloc_psi(Vec2)
-      call dealloc_psi(Vec3)
-      call dealloc_psi(Vec4)
-
-      deallocate(lambda1,lambda2,lambda3,lambda4,Clambda0)
-
-     END SUBROUTINE
-
-
      SUBROUTINE march_VP(psi, psi_dt, t, propa)
       USE lanczos_m
       USE psi_m
@@ -1168,15 +724,9 @@ contains
           END IF
      
            write (out_unit, *) 'BEGINNIG march VP ', t, propa%delta_t
-           allocate(Clambda(n))
-           call Lambda_rk4(Clambda,psi,propa)
+   
+   
 
-            psi_dt%CVec(1:nb) = Clambda(1:nb)
-            SQt = abs(Clambda(nb+1))
-            Qt =  abs(Clambda(nb+2))
-            Pt =  abs(Clambda(nb+1))
-            call construct_primitive_basis(psi%Basis, x=Qt, sx=SQt,p=Pt) 
-            call construct_primitive_basis(psi_dt%Basis, x=Qt, sx=SQt,p=Pt)
 
             write (out_unit, *) 'lambda',Clambda
      
@@ -1190,37 +740,6 @@ contains
          flush(out_unit)
       END IF
    END SUBROUTINE 
-
-
-   SUBROUTINE Function_rk4(L,Basis)
-       complex(kind=Rkind),intent(inout):: L(:)
-       type(Basis_t),intent(in)         :: Basis
-       type(Basis_t)                    :: B
-       type(psi_t)                      :: psi
-       complex(kind=Rkind),allocatable  :: Lambda(:)
-       real(kind=Rkind),allocatable     :: Qt(:),SQt(:),Pt(:)
-       integer                          :: ndim,nb
-
-       ndim = size(Basis%tab_basis)-1
-       nb = Basis%nb
-
-       allocate(Qt(ndim),SQt(ndim),Pt(ndim))
-        Qt(:)=ZERO;SQt(:)=ONE;Pt(:)=ZERO
-
-        SQt(1) = L(nb+1) 
-        Qt(1) =  L(nb+2)
-        Pt(1) =  L(nb+3)
-
-       call init_Basis1_TO_Basis2(B, Basis)
-       call construct_primitive_basis(B, x=Qt, sx=SQt,p=Pt)
-       call init_psi(psi, B, cplx=.TRUE., grid=.false.)
-       psi%CVec(1:nb) = L(1:nb)
-       call Calc_vp_func(Lambda,psi)
-       L = Lambda
-       call dealloc_psi(psi)
-       deallocate(Lambda)
-
-   END SUBROUTINE
 
 
    SUBROUTINE H_test(psi)
