@@ -743,8 +743,8 @@ CONTAINS
      allocate (d0gb(nq, nb)) 
      allocate (d0bgw(nb, nq))
 
-     !print*,'SQ0,Q0,P0,A0',SQ0,Q0,P0,A0
-     !print*,'SQ,Qt,Pt,At',SQ,Qt,Pt,At
+     print*,'SQ0,Q0,P0,A0',SQ0,Q0,P0,A0
+     print*,'SQ,Qt,Pt,At',SQ,Qt,Pt,At
 !
      DO iq = 1, nq
         DO ib = 1, nb

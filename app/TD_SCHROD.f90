@@ -59,7 +59,7 @@ PROGRAM TD_SCHROD
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
    !call  Calc_Avg_A_nDtemp(psi0,At)
-   STOP 'calcul de H|psi> est fait'
+   !STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)
