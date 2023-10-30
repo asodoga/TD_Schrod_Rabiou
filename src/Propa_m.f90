@@ -10,13 +10,15 @@ module Propa_m
    implicit none
 
    TYPE propa_t
-      real(kind=Rkind)      :: t0
-      real(kind=Rkind)      :: tf
-      real(kind=Rkind)      :: delta_t
-      real(kind=Rkind)      :: eps
-      integer               :: max_iter
+      real(kind=Rkind)               :: t0
+      real(kind=Rkind)               :: tf
+      real(kind=Rkind)               :: delta_t
+      real(kind=Rkind)               :: eps
+      integer                        :: max_iter
       character(len=:), allocatable  :: propa_name
       character(len=:), allocatable  :: propa_name2
+      logical                        :: Beta 
+      logical                        :: P 
    END TYPE propa_t
 
    public :: march_taylor, marh_RK4th, read_propa
@@ -55,10 +57,10 @@ contains
       USE psi_m
       USE Basis_m
 
-      TYPE(psi_t), intent(inout)       :: psif
-      TYPE(psi_t), intent(in)          :: psi0
-      TYPE(propa_t), intent(inout)     :: propa
-      logical, parameter               :: debug = .true.
+      TYPE(psi_t), intent(inout)          :: psif
+      TYPE(psi_t), intent(in)             :: psi0
+      TYPE(propa_t), intent(inout)        :: propa
+      logical, parameter                  :: debug = .true.
 
       ! variables locales------------------------------------------------------------------
       REAL(kind=Rkind)                    :: t, t_deltat, Norm, E, y
@@ -70,18 +72,17 @@ contains
 
       INTEGER                             :: i, nt, Iq, nf
       TYPE(psi_t)                         :: psi, psi_dt, psi1,psi2
+
       if (debug) then
-
          write (out_unit, *) 'BEGINNIG propagation', propa%t0, propa%tf, propa%delta_t
-         ! write(out_unit,*) ''
-
+          write(out_unit,*) ''
          write (out_unit, *) '-------------propagation parameters---------------'
          Call write_propa(propa)
       else
          STOP ' check your data!'
          flush (out_unit)
-
       end if
+
       call creat_file_unit(nio=10, name='psi', propa=propa)
        call creat_file_unit(nio=111, name='psitemp1', propa=propa)
       call creat_file_unit(nio=11, name='Qt', propa=propa)
@@ -145,7 +146,7 @@ contains
 
          CALL march(psi, psi_dt, t, propa)
          if (propa%propa_name == 'hagedorn') Then
-            call Hagedorn(psi, psi_dt)
+            call Hagedorn(psi, psi_dt, propa)
              call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
                , print_basis=.false., t=t, int_print=111, real_part=.false.)
                  write(111,*)
@@ -199,20 +200,24 @@ contains
 
    END SUBROUTINE
 
-   SUBROUTINE Hagedorn(psi, psi_dt)
+   SUBROUTINE Hagedorn(psi, psi_dt,propa)
       USE psi_m
       USE Basis_m
 
       TYPE(psi_t), intent(inout)                      :: psi, psi_dt
-      logical, parameter                              :: debug = .true.
+      TYPE(propa_t), intent(in)                       :: propa
 
       ! variables locales--------------------------------------------------------------
+      logical, parameter                              :: debug = .false.
       real(kind=Rkind), allocatable                   :: Qt(:), SQt(:),Pt(:)
       complex(kind=Rkind), allocatable                :: At(:)
       real(kind=Rkind)                                :: Norm,Norm0, E,E0
       integer                                         :: Ndim,ib
-     ! write (out_unit, *) 'Beging Hagedorn'
-      !call Write_Basis(psi%Basis)
+
+      IF (debug) THEN
+         write (out_unit, *) 'Beging Hagedorn'
+         call Write_Basis(psi%Basis)  
+      END IF
 
       call Calc_Norm_OF_Psi(psi_dt,Norm0)
       call Calc_average_energy(psi_dt, E0)
@@ -223,28 +228,34 @@ contains
       Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
 
       call Calc_AVQ_nD(psi0=psi_dt, AVQ=Qt, SQ=SQt)
-      call Calc_Av_imp_k_nD(psi_dt,Pt)
-      call  Calc_Avg_A_nD(psi_dt, At)
+      
 
-     !Do ib = 1,ndim
+      If(propa%Beta)then
+        call  Calc_Avg_A_nD(psi_dt, At)
+        write(out_unit,*) 'Imaginary part Of alpha will be used'
+      Else
+      At(:) = SQt(:)*SQt(:)
+      write(out_unit,*) 'Only The real part Of alpha a = SQ*SQ  will be used'
+      End If
 
-     !   !If (real(At(Ib),kind=Rkind)< 0)
-     !    !At(Ib) = complex(SQt(Ib)*SQt(Ib),aimag(At(Ib)))
-     !    !At(Ib) = complex(SQt(Ib)*SQt(Ib),ZERO)
-
-     !End Do
+      If(propa%P)then 
+        call Calc_Av_imp_k_nD(psi_dt,Pt)
+        write(out_unit,*) 'The  Time Dependent Basis will be constructed With phasis'
+      Else 
+        Pt(:) = ZERO
+         write(out_unit,*) 'The  Time Dependent Basis will be constructed Without phasis'
+      End If
 
       call construct_primitive_basis(psi_dt%Basis,Qt,Pt,At,SQt)
       call projection(psi, psi_dt)
-     
-      !write (out_unit, *) 'End Hagedorn'
+      call Calc_Norm_OF_Psi(psi,Norm)
+      call Calc_average_energy(psi, E)
+
+      write(out_unit,*) 'HAgedorn out <psi|H|psi> ',E,'<psi|psi>',Norm
       deallocate(Qt,SQt,At,Pt)
 
-      call Calc_Norm_OF_Psi(psi,Norm)
-       call Calc_average_energy(psi, E)
-      write(out_unit,*) 'HAgedorn out <psi|H|psi> ',E,'<psi|psi>',Norm
-
       IF (debug) THEN
+         write (out_unit, *) 'End Hagedorn'
          flush (out_unit)
       END IF
 
@@ -544,9 +555,7 @@ contains
      
   write(out_unit,*) ' End imaginary time propagation'
  
-  call dealloc_psi(psi0)
-      
-         
+  call dealloc_psi(psi0) 
       
    END SUBROUTINE 
 
@@ -558,8 +567,9 @@ contains
       real(kind=Rkind)               :: t0, tf, delta_t, eps
       character(len=40)              :: propa_name, propa_name2
       integer                        :: max_iter
+      logical                        :: Beta,P
 
-      namelist /prop/ t0, tf, delta_t,max_iter,eps,propa_name, propa_name2
+      namelist /prop/ t0, tf, delta_t,max_iter,eps,propa_name, propa_name2 , Beta,P
       t0 = ZERO
       tf = TEN
       delta_t = ONETENTH**3
@@ -567,6 +577,8 @@ contains
       max_iter = 500
       propa_name = 'non_hagedorn'
       propa_name2 = 'rk4'
+      Beta        = .true.
+      P           = .true.
 
       read (*, nml=prop)
 
@@ -577,8 +589,11 @@ contains
        propa%max_iter = max_iter
       propa%propa_name = propa_name
       propa%propa_name2 = propa_name2
+      propa%Beta =   Beta
+      propa%P = P 
 
    END SUBROUTINE read_propa
+
    SUBROUTINE mEyeHPsi(psi, Hpsi) !calcul de -iHpsi
       USE op_m
       USE psi_m
@@ -603,6 +618,8 @@ contains
       write (out_unit, *) 'max_iter = ', propa%max_iter
       write (out_unit, *) 'propa_name = ', propa%propa_name
       write (out_unit, *) 'propa_name2 = ', propa%propa_name2
+       write (out_unit, *) 'Beta = ', propa%Beta
+      write (out_unit, *) 'P = ', propa%P
 
    END SUBROUTINE write_propa
 
@@ -742,9 +759,10 @@ contains
    END SUBROUTINE 
 
 
-   SUBROUTINE H_test(psi)
-      TYPE(psi_t), INTENT(INOUT)      :: psi
+   SUBROUTINE H_test(psi,propa)
+      TYPE(psi_t), intent(inout)      :: psi
       TYPE(psi_t)                     :: psi0
+      TYPE(propa_t), intent(in)       :: propa
 
      
    
@@ -753,7 +771,7 @@ contains
 
       print*,'-------------------------debut du test-------------------------------'
       
-      call Hagedorn(psi0, psi)
+      call Hagedorn(psi0, psi,propa)
       
        print*,'-------------------------fin du test-------------------------------'
 

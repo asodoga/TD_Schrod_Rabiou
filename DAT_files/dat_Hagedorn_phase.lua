@@ -13,5 +13,6 @@
  &defWP0  sigma=   1.41421356237  Qeq= 2.0   imp_k=0.0 phase=0.0 /
  
 
-   &prop t0  = 0.0  tf  = 60.0 delta_t =0.1 eps= 0.0000000001
-        max_iter =  500   propa_name ='hagedorn'  propa_name2 = 'SIL' /
+   &prop t0  = 0.0  tf  = 6.0 delta_t =0.1 eps= 0.0000000001
+        max_iter =  500   propa_name ='hagedorn'  propa_name2 = 'taylor'
+        Beta = F  P = F /
