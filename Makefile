@@ -1,7 +1,7 @@
 FC=gfortran
 #FC=ifort
-FFLAGS=-O3 -Wall -Wextra -fopenmp -J$(MOD_DIR)
-#FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
+#FFLAGS=-O3 -Wall -Wextra -fopenmp -J$(MOD_DIR)
+FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
 OBJ_DIR=obj
 MOD_DIR=obj
 SRC_DIR=src
@@ -65,7 +65,7 @@ $(OBJ_DIR)/Basis_m.o: $(OBJ_DIR)/NDindex_m.o  $(OBJ_DIR)/poly0rtho_m.o
 $(OBJ_DIR)/psi_m.o: $(OBJ_DIR)/Basis_m.o $(OBJ_DIR)/param_WP0_m.o
 
 $(OBJ_DIR)/Ana_psi_m.o: $(OBJ_DIR)/psi_m.o
-$(OBJ_DIR)/Vp_m.o: $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/Basis_m.o
+$(OBJ_DIR)/Vp_m.o: $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/Op_m.o $(OBJ_DIR)/Basis_m.o $(OBJ_DIR)/NDindex_m.o
 
 $(OBJ_DIR)/Auto_corr_m.o: $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/poly0rtho_m.o
 

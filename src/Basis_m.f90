@@ -687,7 +687,6 @@ CONTAINS
       allocate (Basis%d2gb(nq, nb, 1, 1))
 
       DO iq = 1, nq
-
          DO ib = 1, nb
             !d0d1d2_time_dependant_poly_Hermite_exp_cplx(Q,Pt,At,l,d0,d1,d2,deriv)
             call d0d1d2_time_dependant_poly_Hermite_exp_cplx(Basis%x(iq),Peq,Aeq,ib - 1, Basis%d0gb(iq, ib),&
@@ -836,6 +835,7 @@ CONTAINS
          Basis%d0gb(:, :) = Basis%d0gb(:, :)*sqrt(sx)
          Basis%d1gb(:, :, :) = Basis%d1gb(:, :, :)*sqrt(sx)*sx
          Basis%d2gb(:, :, :, :) = Basis%d2gb(:, :, :, :)*sqrt(sx)*sx*sx
+         !Basis%dagb(:, :)       = Basis%dagb(:, :)*sqrt(sx)
 
       ELSE
          write (out_unit, *) ' ERROR in Scale_Basis'
@@ -893,12 +893,16 @@ CONTAINS
       integer                         :: ib,iq,nb,nq
       !logical, parameter             :: debug = .true.
       logical, parameter              :: debug = .false.
-      real(kind=Rkind)                :: a,Q0 
+      real(kind=Rkind)                :: a,Q0,b,p,dq
+      complex(kind=Rkind)             :: At,cst,cst2,cst3
 
       Q0=Basis%Q0
-      a = Basis%SCALEQ
+      a =real( Basis%alpha,kind=Rkind)
+      b = aimag( Basis%alpha)
+      p=  Basis%Imp_k
       nb = Basis%nb
       nq = Basis%nq
+      At = Basis%alpha
 
       IF (debug) THEN
          write (out_unit, *) 'BEGINNING Calc_dngg_grid'
@@ -931,12 +935,17 @@ CONTAINS
 
       do ib = 1,nb
          do iq = 1,nq
+         dq = Basis%x(iq)-Q0
+         cst = -At*dq+EYE*p
+         cst2 = ONE/(FOUR*a)-(cst*dq)/(TWO*a) - dq*dq
+         cst3=(dq)/(TWO*a)
 
-            Basis%dagb(iq, ib)  = (ONE/a)*(HALF*Basis%d0gb(iq, ib)+(Basis%x(iq)-Q0)*Basis%d1gb(iq, ib, 1))
+            Basis%dagb(iq, ib)  = cst2*Basis%d0gb(iq, ib)+cst3*Basis%d1gb(iq, ib, 1)
 
             Basis%dq0gb(iq, ib) = -Basis%d1gb(iq, ib, 1)
 
-            Basis%dp0gb(iq, ib) =EYE*a*(Basis%x(iq)-Q0)*Basis%d0gb(iq, ib)
+            Basis%dp0gb(iq, ib) =EYE*dq*Basis%d0gb(iq, ib)
+            
 
          end do
       end do
