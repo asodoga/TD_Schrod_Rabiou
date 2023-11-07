@@ -16,7 +16,7 @@ module Vp_m
   implicit none
 
   private
-  public :: Runge_Kutta_Vp_Func,Vp_test,test_func
+  public :: Runge_Kutta_Vp_Func,Vp_test
 
 contains
 
@@ -262,8 +262,6 @@ deallocate(Tab_Ib,tab_iq,Tab_Jb)
 End SUBROUTINE
 
 
-<<<<<<< HEAD
-=======
 
 
 SUBROUTINE Calc_Overlap_S(Mat,Basis)
@@ -1082,5 +1080,4 @@ SUBROUTINE Runge_Kutta_Vp_Func(Lpsi,psi)
 END SUBROUTINE
 
 
->>>>>>> dev
    end module Vp_m

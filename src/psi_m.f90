@@ -19,6 +19,7 @@ module psi_m
       GENERIC, PUBLIC          :: ASSIGNMENT(=) => Copy_psi
 
    END TYPE psi_t
+   private
 
    public :: psi_t, write_psi, init_psi, dealloc_psi, write_psi_grid
    public :: write_psi_basis, Calc_Norm_OF_PsiBasis, Calc_Norm_OF_PsiGrid, Calc_Norm_OF_Psi

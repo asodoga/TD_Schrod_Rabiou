@@ -50,16 +50,14 @@ PROGRAM TD_SCHROD
    call Calc_Norm_OF_Psi(psi0,Norm)
    write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
    write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
-
-   call  test_func(psi0)
-   !call Runge_Kutta_Vp_Func(psif,psi0)
+   call Runge_Kutta_Vp_Func(psif,psi0)
    !call H_test(psi0)
    !call Vp_test(psi0)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
    !call  Calc_Avg_A_nDtemp(psi0,At)
-   !STOP 'calcul de H|psi> est fait'
+   STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)
