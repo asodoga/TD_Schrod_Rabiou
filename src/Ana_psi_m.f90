@@ -294,7 +294,7 @@ END SUBROUTINE
           DO i1 = 1, ubound(GB, dim=1)
             ikpsi0(i1, :, i3) = ikpsi0(i1, :, i3)-EYE*matmul(d1gg(:,:,1),GB(i1,:,i3))
           END DO
-       END DO
+        END DO
       call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi0%Basis)
       call GridTOBasis_nD_cplx(ikpsi_b%CVec, ikpsi%CVec, psi0%Basis)
       K = dot_product(psi_b%CVec, ikpsi_b%CVec) 

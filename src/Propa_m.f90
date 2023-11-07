@@ -134,13 +134,13 @@ contains
 
          !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
 
-         if (mod(i, 10 ) == 0) then
+         if (mod(i, 1 ) == 0) then
               call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
                              , print_basis=.false., t=t, int_print=10, real_part=.false.)
                write(10,*)
 
-             call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
-             call Rdensity_Writing(Rd,psi%Basis,nio=21,ib=1,t=t)
+            ! call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
+            ! call Rdensity_Writing(Rd,psi%Basis,nio=21,ib=1,t=t)
              write(21,*)
          end if
 
@@ -726,10 +726,8 @@ contains
 
         ! variables locales -------------------------------------------------------------------------------
 
-      real(kind=Rkind)                    :: Norm, Norm0,E
-       complex (kind=Rkind), allocatable  :: Clambda(:)
+      real(kind=Rkind)                    :: Norm, Norm0,E 
       logical, parameter                  :: debug=.false.
-      real(kind=Rkind)                    :: SQt(1),Qt(1),Pt(1)
       integer                             :: n,nb
 
           nb = psi%Basis%nb
@@ -743,9 +741,6 @@ contains
            write (out_unit, *) 'BEGINNIG march VP ', t, propa%delta_t
    
    
-
-
-            write (out_unit, *) 'lambda',Clambda
      
       CALL Calc_Norm_OF_Psi(psi, Norm0)
       CALL Calc_Norm_OF_Psi(psi_dt, Norm)
