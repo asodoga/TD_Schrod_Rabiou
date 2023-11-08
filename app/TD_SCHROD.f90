@@ -7,7 +7,7 @@ PROGRAM TD_SCHROD
    USE Propa_m
    USE Ana_psi_m
    USE lanczos_m
-   Use Vp_m
+   USE Sub_Vp_m
    IMPLICIT NONE
    TYPE(Basis_t), target             :: Basis
    !TYPE(Op_t)                       :: H
@@ -50,15 +50,12 @@ PROGRAM TD_SCHROD
    call Calc_Norm_OF_Psi(psi0,Norm)
    write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
    write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
-
-   call  test_func(psi0)
-   !call Runge_Kutta_Vp_Func(psif,psi0)
    !call H_test(psi0)
-   !call Vp_test(psi0)
+   !call Vp_test_temp(psi0)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   STOP 'calcul de H|psi> est fait'
+   !STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

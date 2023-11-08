@@ -1,27 +1,19 @@
-!----------------------------------------------------------------------
-!
-!----------------------------------------------------------------------
-!
-!> MODULE: Vp_m
-!
-!> This module is used to perform Variatrional priciple methode in solving TDSE 
-!> .
-!----------------------------------------------------------------------------------
-module Vp_m
-  USE QDUtil_m
-  USE NDindex_m
-  USE op_m
-  USE Basis_m
-  USE psi_m
-  implicit none
+MODULE Sub_Vp_m
+   USE QDUtil_m
+   USE NDindex_m
+   USE op_m
+   USE Basis_m
+   USE psi_m
 
-  private
-  public :: Runge_Kutta_Vp_Func,Vp_test,test_func
+   IMPLICIT NONE
 
-contains
+   PRIVATE
+   PUBLIC ::Vp_test_temp,Vp_step_psi
 
 
-SUBROUTINE psiTOLambda(L,psi)
+   contains
+
+   SUBROUTINE psiTOLambda(L,psi)
    Implicit none
    complex(Kind=Rkind) ,intent(inout) :: L(:)
    TYPE(psi_t),intent(in)             :: psi
@@ -36,14 +28,15 @@ SUBROUTINE psiTOLambda(L,psi)
    
    
    
-   nb = psi%Basis%nb
+  
    ndim = size(psi%Basis%tab_basis)-1
    nsurf = psi%Basis%tab_basis(ndim+1)%nb
+    nb = psi%Basis%nb*nsurf
    allocate (Qt(ndim),Pt(ndim),At(ndim))
 
    IF (debug) THEN
     write (out_unit, *) 'psi in psiTOLambda:--------------------------------------------'
-    Do Ib = 1,nb*nsurf
+    Do Ib = 1,nb
        write (out_unit, *) Ib,psi%CVec(Ib)
     End Do
   End IF
@@ -56,14 +49,14 @@ SUBROUTINE psiTOLambda(L,psi)
     At(Ib) = psi%Basis%tab_basis(Ib)%alpha 
    End DO
 
-   L(1:nb*nsurf) = psi%CVec(1:nb*nsurf)
-   L(nb*nsurf+1:nb*nsurf+ndim) = At(1:ndim)
-   L(nb*nsurf+ndim+1:nb*nsurf+2*ndim) = Qt(1:ndim)
-   L(nb*nsurf+2*ndim+1:nb*nsurf+3*ndim) = Pt(1:ndim)
+   L(1:nb) = psi%CVec(1:nb)
+   L(nb+1:nb+ndim) = At(1:ndim)
+   L(nb+ndim+1:nb+2*ndim) = Qt(1:ndim)
+   L(nb+2*ndim+1:nb+3*ndim) = Pt(1:ndim)
    
     IF (debug) THEN
       write (out_unit, *) 'Lambda in psiTOLambda:----------------------------------------------------------'
-      Do Ib = 1,nb*nsurf+3*ndim
+      Do Ib = 1,nb+3*ndim
          write (out_unit, *) Ib,L(Ib)
       End Do
     End IF
@@ -85,25 +78,23 @@ SUBROUTINE LambdaTOpsi(psi,L)
    real(kind=Rkind), allocatable      :: SQt(:), Qt(:),Pt(:)
    complex(kind=Rkind), allocatable   :: At(:)
    
-   
-   
-   nb = psi%Basis%nb
    ndim = size(psi%Basis%tab_basis)-1
    nsurf = psi%Basis%tab_basis(ndim+1)%nb
+   nb = psi%Basis%nb*nsurf
    allocate (SQt(ndim),Qt(ndim),Pt(ndim),At(ndim))
 
    IF (debug) THEN
       write (out_unit, *) 'Lambda in LambdaTOpsi:-------------------------------------------------'
-      Do Ib = 1,nb*nsurf+3*ndim
+      Do Ib = 1,nb+3*ndim
          write (out_unit, *) Ib,L(Ib)
       End Do
     End IF
    psi%CVec(:) = CZERO
 
-    psi%CVec(1:nb*nsurf)= L(1:nb*nsurf) 
-    At(1:ndim) = L(nb*nsurf+1:nb*nsurf+ndim)
-    Qt(1:ndim) = L(nb*nsurf+ndim+1:nb*nsurf+2*ndim)
-    Pt(1:ndim) = L(nb*nsurf+2*ndim+1:nb*nsurf+3*ndim)
+    psi%CVec(1:nb)= L(1:nb) 
+    At(1:ndim) = L(nb+1:nb+ndim)
+    Qt(1:ndim) = L(nb+ndim+1:nb+2*ndim)
+    Pt(1:ndim) = L(nb+2*ndim+1:nb+3*ndim)
 
    Do Ib = 1,ndim
        psi%Basis%tab_basis(Ib)%Q0 =Qt(Ib) 
@@ -119,7 +110,7 @@ SUBROUTINE LambdaTOpsi(psi,L)
 
    IF (debug) THEN
       write (out_unit, *) 'psi in LambdaTOpsi:-----------------------------------------------------'
-      Do Ib =1, nb*nsurf 
+      Do Ib =1, nb 
          write (out_unit, *) Ib,psi%CVec(Ib)
       End Do
       flush(out_unit)
@@ -134,6 +125,7 @@ END SUBROUTINE
     TYPE(psi_t), intent(inout)          :: psi
 
     !> Locals variables ------------------------------------------------
+    TYPE(psi_t)                         :: psif
     complex(Kind=Rkind) ,allocatable    :: L(:)
      complex(Kind=Rkind),allocatable    :: Mat(:,:),V(:)
     integer                             :: Ib,Jb,nb,ndim,nsurf
@@ -142,6 +134,7 @@ END SUBROUTINE
     ndim = size(psi%Basis%tab_basis)-1
     nsurf = psi%Basis%tab_basis(ndim+1)%nb
     allocate (L(nb*nsurf+3*ndim))
+     call init_psi(psif, psi%Basis, cplx=.true., grid=.false.)
   
     print*,'----------------Debut du test sur LambdaTOpsi psiTOLambda----------'
     
@@ -152,9 +145,11 @@ END SUBROUTINE
     !    !call Calc_Saqp(Mat(ib,jb),psi,ib,jb)
     !  END Do
     !END Do
-     call Calc_GlobalOverlap_S(Mat,psi)
-      call Calc_V(V,psi)
+     !call Calc_GlobalOverlap_S(Mat,psi)
+     ! call Calc_V(V,psi)
+      call Runge_Kutta_Vp_Func(psif,psi)
       print*,'V',V(:)
+      deallocate(Mat,V,L)
      print*,'---------------- Fin du test sur LambdaTOpsi psiTOLambda------------'
 End SUBROUTINE
 
@@ -193,6 +188,8 @@ SUBROUTINE Find_I(Tab_Ib,I,Basis)
    ! write (out_unit, *) 'ib , Tab_Ib',ib,Tab_Ib
    End DO
 
+  call dealloc_NDindex(NDindex)
+  deallocate(NDend)
    IF (debug) THEN
      write (out_unit, *) 'I , Tab_Ib',I,Tab_Ib
      write (out_unit, *) 'Tab_Ib :-------------------------------------------------'
@@ -257,7 +254,7 @@ SUBROUTINE Calc_SIJ(S_IJ,I,J,Basis)
    flush(out_unit)   
    End IF
 
-deallocate(Tab_Ib,tab_iq,Tab_Jb)
+deallocate(Tab_Ib,Tab_iq,Tab_Jb)
 
 End SUBROUTINE
 
@@ -322,6 +319,8 @@ SUBROUTINE Calc_dapsi(dapsi, psi, Ib)
        dapsi_ggb(i1, :, i3) = dapsi_ggb(i1, :, i3)+matmul(dagg(:,:),psi_ggb(i1,:,i3))
      END DO
    END DO
+
+   deallocate(Iq1, Iq2, Iq3)
        
    IF (debug) THEN
               write(out_unit,*) 'END dapsi'
@@ -368,14 +367,14 @@ SUBROUTINE Calc_dqpsi(dqpsi, psi, Ib)
        dqpsi_ggb(i1, :, i3) = dqpsi_ggb(i1, :, i3)+matmul(dqgg(:,:),psi_ggb(i1,:,i3))
      END DO
    END DO
+
+    deallocate(Iq1, Iq2, Iq3)
        
    IF (debug) THEN
               write(out_unit,*) 'END dqpsi'
       flush (out_unit)
    END IF
 END SUBROUTINE 
-
-
 
 
 SUBROUTINE Calc_dppsi(dppsi, psi, Ib)
@@ -413,6 +412,8 @@ SUBROUTINE Calc_dppsi(dppsi, psi, Ib)
        dppsi_ggb(i1, :, i3) = dppsi_ggb(i1, :, i3)+matmul(dpgg(:,:),psi_ggb(i1,:,i3))
      END DO
    END DO
+
+    deallocate(Iq1, Iq2, Iq3)
        
    IF (debug) THEN
               write(out_unit,*) 'END dapsi'
@@ -472,7 +473,7 @@ SUBROUTINE Calc_daqppsi_IJ(dIpsi,dJpsi,psi0,I,J)
    flush(out_unit)   
    End IF
 
-deallocate(tab_Ip,Tab_Jp)
+deallocate(Tab_Ip,Tab_Jp)
 call dealloc_psi(psi)
 
 End SUBROUTINE
@@ -562,39 +563,33 @@ SUBROUTINE Calc_Saqp(S_aqp,psi0,I,J)
 
   IF (psi0%Grid) then
     psi%CVec(:) = psi0%CVec(:)
-   ! write (out_unit, *) 'psi0',psi0%CVec
-   ! write (out_unit, *) 'psi0',psi0%CVec
   ELSE
     call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
-    !write (out_unit, *) 'psi0',psi0%CVec
-    !write (out_unit, *) 'psi',psi%CVec
   END IF
    call Calc_daqppsi_IJ(dIpsi,dJpsi,psi0,I,J)
    psi_gb(1:nq,1:nsurf) => psi%CVec
    psi_gbI(1:nq,1:nsurf) => dIpsi%CVec
    psi_gbJ(1:nq,1:nsurf) => dJpsi%CVec
 
-
-   Call Init_tab_ind(Tab_Iq, psi0%Basis%NDindexq)
    Iq = 0
    S_aqp = CZERO
    S_aqpEl(:) = CZERO
 
    DO Isurf = 1,nsurf
+   Call Init_tab_ind(Tab_Iq, psi0%Basis%NDindexq)
    DO
    Iq = Iq +1
    CALL increase_NDindex(Tab_Iq, psi0%Basis%NDindexq, Endloop_q)
    IF (Endloop_q) exit
    w = ONE
-   DO Ib = 1, ndim- 1
-   w = w*psi%Basis%tab_basis(Ib)%w(tab_iq(Ib))
+   DO Ib = 1, ndim-1
+   w = w*psi%Basis%tab_basis(Ib)%w(Tab_iq(Ib))
    END DO
 
    N(Isurf) = N(Isurf) + conjg(psi_gb(Iq, Isurf))*psi_gb(Iq, Isurf)*w
    S_aqpEl(Isurf) = S_aqpEl(Isurf) + conjg(psi_gbI(Iq, Isurf))*psi_gbJ(Iq, Isurf)*w
 
  End DO
- ! write (out_unit, *) ' Isurf,S_aqp',Isurf,S_aqpEl(Isurf) ,N(Isurf)
  End DO
   
 S_aqp = sum(S_aqpEl)/(sum(N)**2)
@@ -604,7 +599,11 @@ S_aqp = sum(S_aqpEl)/(sum(N)**2)
    write (out_unit, *) 'I ,J ,S_aqp',I,J,S_aqp
    flush(out_unit)   
    End IF
+   
  deallocate(Tab_Iq,S_aqpEl,N)
+ call dealloc_psi(psi)
+ call dealloc_psi(dJpsi)
+ call dealloc_psi(dIpsi)
 
 End SUBROUTINE
 
@@ -674,11 +673,15 @@ SUBROUTINE Calc_SIaqp(S_Iaqp,psi0,I,J)
  End DO
 
 
+call dealloc_psi(psi)
+call dealloc_psi(dJpsi)
+deallocate(Tab_Iq,Tab_Ib)
+
   IF (debug) THEN
    write (out_unit, *) 'I ,J ,S_Iaqp',I,J,S_Iaqp
    flush(out_unit)   
    End IF
- deallocate(Tab_Iq,Tab_Ib)
+ 
 
 End SUBROUTINE
 
@@ -747,12 +750,15 @@ SUBROUTINE Calc_SaqpJ(S_aqpJ,psi0,I,J)
 
  End DO
 
+  deallocate(Tab_Iq,Tab_Jb)
+  call dealloc_psi(psi)
+  call dealloc_psi(dIpsi)
+
 
   IF (debug) THEN
    write (out_unit, *) 'I ,J ,S_aqpJ',I,J,S_aqpJ
    flush(out_unit)   
    End IF
- deallocate(Tab_Iq,Tab_Jb)
 
 End SUBROUTINE
 
@@ -810,6 +816,9 @@ SUBROUTINE Tab(Tab_Ip,I,Basis)
   CALL increase_NDindex(Tab_Ip, NDindex, Endloop)
   End DO
 
+  call dealloc_NDindex(NDindex)
+  deallocate(Ndend)
+  flush(out_unit)
   !write(out_unit,*) 'Tab_Ip',Tab_Ip
 
   End SUBROUTINE
@@ -922,7 +931,7 @@ End SUBROUTINE
  ndim =  size(psi0%Basis%tab_basis)
  nq = psi0%Basis%nq
  nsurf = psi0%Basis%tab_basis(ndim)%nb
- allocate(Tab_Iq(ndim-1),Tab_Ip(ndim),S_IEl(nsurf),N(nsurf)) 
+ allocate(Tab_Iq(ndim-1),S_IEl(nsurf),N(nsurf)) 
  call init_psi(psi, psi0%Basis,   cplx= .true., grid=.true.)
  call init_psi(dpsi, psi0%Basis,  cplx= .true., grid=.true.)
  call init_psi(Hpsi, psi0%Basis,  cplx= .true., grid=.false.)
@@ -946,6 +955,7 @@ End SUBROUTINE
   S_IEl(:) = CZERO
   S_I = CZERO
  DO Isurf = 1,nsurf
+  Tab_Iq = 0
   Call Init_tab_ind(Tab_Iq, psi0%Basis%NDindexq)
   Iq = 0
   DO
@@ -968,12 +978,12 @@ call dealloc_psi(Hpsi)
 call dealloc_psi(Hpsi_g)
 deallocate(Tab_Iq,Tab_Ip)
 call dealloc_psi(dpsi)
+deallocate(S_IEl,N)
 
  IF (debug) THEN
   write (out_unit, *) 'I ,S_I',I,S_I
   flush(out_unit)   
   End IF
-
 
 End SUBROUTINE
 
@@ -983,21 +993,22 @@ SUBROUTINE Calc_V(V,psi0)
   TYPE(psi_t), intent(in) ,target                  :: psi0
   complex(kind=Rkind),intent(inout),allocatable    :: V(:)
 
-  integer                                          ::  Ib,ndim,nsurf,nb
+  integer                                          ::  Ib,ndim,nsurf,nb,n
 
 
    ndim =  size(psi0%Basis%tab_basis)-1
    nsurf = psi0%Basis%tab_basis(ndim+1)%nb
-   nb = psi0%Basis%nb*nsurf+3*ndim
+   n =psi0%Basis%nb*nsurf
+   nb =n +3*ndim
 
    If(allocated(V)) deallocate(V)
    allocate(V(nb))
 
    Do Ib = 1,nb
-     If(Ib<= psi0%Basis%nb*nsurf) Then
+     If(Ib<= n) Then
        call Calc_SIHpsi(V(Ib),psi0,Ib)
      Else
-       call Calc_SaqpHpsi(V(Ib),psi0,Ib-psi0%Basis%nb*nsurf)
+       call Calc_SaqpHpsi(V(Ib),psi0,Ib-n)
      End If   
    End Do
    V(:) = -EYE*V(:)
@@ -1009,19 +1020,19 @@ SUBROUTINE Calc_GlobalOverlap_S(Mat,psi0)
 
   implicit none
   complex(kind=Rkind) ,intent(inout) ,allocatable    :: Mat(:,:)
+  TYPE(psi_t), intent(in) ,target                    :: psi0
 
   !> ---------------local variables--------------------------------------------
-  logical, parameter                                 :: debug = .true.
-  !logical, parameter                                 ::  debug = .false.
-  TYPE(psi_t), intent(in) ,target                    :: psi0
+  !logical, parameter                                 :: debug = .true.
+  logical, parameter                                 ::  debug = .false.
   integer                                            :: I,J,nb,nsurf
-  integer                                            :: ndim
-
-
+  integer                                            :: ndim,n
 
  ndim =  size(psi0%Basis%tab_basis)-1
  nsurf = psi0%Basis%tab_basis(ndim+1)%nb
- nb = psi0%Basis%nb*nsurf+3*ndim
+ n = psi0%Basis%nb*nsurf
+ nb = n+3*ndim
+
 
   If(allocated(Mat)) deallocate(Mat)
   allocate(Mat(nb,nb))
@@ -1029,20 +1040,20 @@ SUBROUTINE Calc_GlobalOverlap_S(Mat,psi0)
   Mat(:,:) = ZERO
 
 DO I=1,nb
-   If(I<=psi0%Basis%nb*nsurf) Then
+   If(I<=n) Then
    DO J=1,nb
-     If(J<= psi0%Basis%nb*nsurf) Then
+     If(J<= n) Then
        call Calc_SIJ(Mat(I,J),I,J,psi0%Basis)
      Else
-      call Calc_SIaqp(Mat(I,J),psi0,I,J-psi0%Basis%nb*nsurf) 
+      call Calc_SIaqp(Mat(I,J),psi0,I,J-n) 
      End If
    End DO
    Else
    DO J=1,nb
-     If(J<=psi0%Basis%nb*nsurf) Then
-       call Calc_SaqpJ(Mat(I,J),psi0,I-psi0%Basis%nb*nsurf,J)
+     If(J<=n) Then
+       call Calc_SaqpJ(Mat(I,J),psi0,I-n,J)
       Else
-       call Calc_Saqp(Mat(I,J),psi0,I-psi0%Basis%nb*nsurf,J-psi0%Basis%nb*nsurf)
+       call Calc_Saqp(Mat(I,J),psi0,I-n,J-n)
      End If
    End DO
    END If
@@ -1056,28 +1067,113 @@ DO I=1,nb
 
 End SUBROUTINE
 
+ SUBROUTINE Vp_test_temp(psi)
+    TYPE(psi_t), intent(inout)          :: psi
+
+    !> Locals variables ------------------------------------------------
+    TYPE(psi_t)                         :: psif
+    complex(Kind=Rkind) ,allocatable    :: L(:)
+     complex(Kind=Rkind),allocatable    :: Mat(:,:),V(:)
+    integer                             :: Ib,Jb,nb,ndim,nsurf
+
+    nb = psi%Basis%nb
+    ndim = size(psi%Basis%tab_basis)-1
+    nsurf = psi%Basis%tab_basis(ndim+1)%nb
+    allocate (L(nb*nsurf+3*ndim))
+     call init_psi(psif, psi%Basis, cplx=.true., grid=.false.)
+  
+    print*,'----------------Debut du test sur LambdaTOpsi psiTOLambda----------'
+    
+    !call psiTOLambda(L,psi)
+    !call LambdaTOpsi(psi,L)
+     call Calc_GlobalOverlap_S(Mat,psi)
+      call Calc_V(V,psi)
+      print*,'V',V(:)
+     print*,'---------------- Fin du test sur LambdaTOpsi psiTOLambda------------'
+End SUBROUTINE
 
 
-SUBROUTINE Runge_Kutta_Vp_Func(Lpsi,psi)
+
+
+ SUBROUTINE Vp_step_psi(psi, psi_dt,delta_t)
+    USE  QDUtil_m
+    USE op_m
+    USE psi_m
+    TYPE(psi_t), intent(inout)       :: psi_dt
+    TYPE(psi_t), intent(in)          :: psi
+    real(kind=Rkind),intent(in)      :: delta_t
+
+    !> ---------------local variables------------------------
+   !logical, parameter                :: debug = .true.
+   logical, parameter               ::  debug = .false.
+     TYPE(psi_t)                     :: psi_temp
+    complex(kind=Rkind),allocatable  :: Vec1(:), Vec2(:),Vec3(:),Vec4(:)
+    complex(kind=Rkind),allocatable  :: CL_t(:),CL_tdt(:),CL_temp(:)
+    integer                          :: ndim,nb,nsurf
+    
+
+    !  variables locales
+    ndim = size(psi%Basis%tab_basis)-1
+    nsurf = psi%Basis%tab_basis(ndim+1)%nb
+    nb =psi%Basis%nb*nsurf+3*ndim 
+
+    allocate(CL_t(nb),CL_tdt(nb),CL_temp(nb))
+    call init_psi(psi_temp, psi%basis, cplx=.true., grid=.false.)
+
+    call psiTOLambda(CL_tdt,psi) !> labda init
+    call Runge_Kutta_Vp_Func_cplx(Vec1,psi)
+    CL_temp(:) = CL_tdt(:) + (delta_t*HALF)*Vec1(:)
+    call LambdaTOpsi(psi_temp,CL_temp)
+    call Runge_Kutta_Vp_Func_cplx(Vec2,psi_temp)
+    CL_temp(:) = CL_tdt(:) + (delta_t*HALF)*Vec2(:)
+    call LambdaTOpsi(psi_temp,CL_temp)
+    call Runge_Kutta_Vp_Func_cplx(Vec3,psi_temp)
+    CL_temp(:) = CL_tdt(:) + delta_t*Vec3(:)
+    call LambdaTOpsi(psi_temp,CL_temp)
+    call Runge_Kutta_Vp_Func_cplx(Vec4,psi_temp)
+
+    CL_tdt(:) =CL_tdt(:) + (delta_t*SIXTH)*(Vec1(:) + TWO*Vec2(:) + TWO*Vec3(:) + Vec4(:))
+    call LambdaTOpsi(psi_dt,CL_tdt)
+
+    IF (debug) THEN
+      print*,'CL_tdt',CL_tdt
+      flush(out_unit)   
+    End IF
+
+    call dealloc_psi(psi_temp) 
+    deallocate(Vec1,Vec2,Vec3,Vec4) 
+    deallocate(CL_t,CL_tdt,CL_temp)  
+  
+ END SUBROUTINE 
+
+
+ SUBROUTINE Runge_Kutta_Vp_Func_cplx(CL,psi)
    USE  QDUtil_m
-    TYPE(psi_t),intent(in)                 :: psi
-    TYPE(psi_t),intent(inout)              :: Lpsi
+    TYPE(psi_t),intent(in)                          :: psi
+    complex(kind=Rkind),allocatable ,intent(inout)  :: CL(:)
+
      !> ---------------local variables------------------------
      logical, parameter                    :: debug = .true.
      !logical, parameter                   ::  debug = .false.
-     complex(kind=Rkind),allocatable       :: CL(:),CMat(:,:),CVec(:)
-     integer                               :: ndim,nb,nsurf
+     complex(kind=Rkind),allocatable       :: CMat(:,:),CVec(:),CMat_inv(:,:)
+     integer                               :: ndim,nb,nsurf,nb1
     
      ndim = size(psi%Basis%tab_basis)-1
-     nb = psi%Basis%nb 
-     allocate(CL(nb*nsurf+3*ndim))
+     nb1 = psi%Basis%nb
+     nsurf = psi%Basis%tab_basis(ndim+1)%nb
+     nb =nb1*nsurf+3*ndim 
+     If(allocated(CL)) deallocate(CL)
+     allocate(CL(nb))!,CMat_inv(nb*nsurf+3*ndim,nb*nsurf+3*ndim))
      call Calc_GlobalOverlap_S(CMat,psi)
      call Calc_V(CVec,psi)
+     !CMat_inv = inv_OF_Mat_TO(Cmat)
+     !call Write_VecMat(CMat_inv, out_unit, 8,  info='CMat_inv')
      CL = LinearSys_Solve(CMat,CVec)
-     call LambdaTOpsi(Lpsi,CL)
-     deallocate(CL,CMat,CVec)
+     !CL = matmul(CMat_inv,CVec)
+     !print*,'CL',CL
+     deallocate(CMat,CVec)
 
 END SUBROUTINE
+  
 
-
-   end module Vp_m
+END MODULE 

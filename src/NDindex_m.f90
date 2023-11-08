@@ -10,7 +10,7 @@ MODULE NDindex_m
   END TYPE NDindex_t
 
   PRIVATE
-  PUBLIC :: increase_NDindex,Init_tab_ind,Testindex,NDindex_t,Init_NDindex!,alloc_Tab
+  PUBLIC :: increase_NDindex,Init_tab_ind,Testindex,NDindex_t,Init_NDindex,dealloc_NDindex!,alloc_Tab
 
 CONTAINS
 
@@ -124,8 +124,6 @@ CONTAINS
         flush(out_unit)
       END IF
 
-      write(out_unit,*)'NDindex%Ndend=', NDindex%Ndend
-
       write(out_unit,*) 'NDindex%Ndim =',NDindex%Ndim
       write(out_unit,*)'NDindex%Ndend =', NDindex%Ndend
       write(out_unit,*)'NDindex%Tab0 =', NDindex%Tab0(:)
@@ -136,6 +134,26 @@ CONTAINS
       END IF
 
     END SUBROUTINE Write_NDindex
+
+
+  SUBROUTINE dealloc_NDindex(NDindex)
+   USE QDUtil_m
+   IMPLICIT NONE
+   TYPE(NDindex_t),  intent(inout) :: NDindex
+   !logical,    parameter      :: debug = .true.
+   logical,     parameter      :: debug = .false.
+   IF (debug) THEN
+     write(out_unit,*) 'BEGINNING dealloc_NDindex'
+     flush(out_unit)
+   END IF
+   If(allocated(NDindex%Ndend)) deallocate(NDindex%Ndend)
+   If(allocated(NDindex%Tab0)) deallocate(NDindex%Tab0)
+ 
+   IF (debug) THEN
+     write(out_unit,*) ' END dealloc_NDindex'
+     flush(out_unit)
+   END IF
+ END SUBROUTINE
 
   SUBROUTINE Testindex(NDindex)
     USE QDUtil_m

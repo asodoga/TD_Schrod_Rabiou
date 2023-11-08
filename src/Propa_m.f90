@@ -6,6 +6,7 @@ module Propa_m
    USE Ana_psi_m
    Use lanczos_m
    USE Auto_corr_m
+   USE Sub_Vp_m
 
    implicit none
 
@@ -37,18 +38,18 @@ contains
       real(kind=Rkind)                          :: Qt, sQt, Norm, Norm0
 
       select case (propa%propa_name2)
-      case ('rk4')
+      case ('rk4') ! rk4 : Runge-kutta time propagation
          CALL marh_RK4th(psi, psi_dt, t, propa)
-      case ('taylor')
+      case ('taylor') ! taylor : Taylor propagation
          CALL march_taylor(psi, psi_dt, t, propa)
-      case ('SIL')
+      case ('SIL') ! SIL: short iterative lanczos
         CALL march_SIL(psi, psi_dt, t, propa)
       case ('ITP') ! ITP : imaginary times propagation
          call Imaginary_time_propagation(psi, psi_dt, propa)
       case ('VP') ! VP : Variational principle times propagation
          call march_VP(psi, psi_dt, t, propa)   
       case default
-         write (out_unit, *) 'name is not in the list'
+         write (out_unit, *) ' March name is not in the list'
       end select      
 
    END SUBROUTINE
@@ -134,8 +135,8 @@ contains
 
          !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
 
-         if (mod(i, 1 ) == 0) then
-              call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
+         if (mod(i, 10 ) == 0) then
+              call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
                              , print_basis=.false., t=t, int_print=10, real_part=.false.)
                write(10,*)
 
@@ -333,7 +334,6 @@ contains
       CALL init_psi(Psi0, psi%basis, cplx=.TRUE., grid=.false.) ! to be changed
 
       write (out_unit, *) 'BEGINNIG march_taylor  ', t, propa%delta_t
-      !write(out_unit,*) 'psi',psi%CVec
       Rkk = ONE
       alpha = TEN**10
         !!--------------------------debut ordre 1-----------------------------------
@@ -425,6 +425,7 @@ contains
       real(kind=Rkind), intent(in)     :: t
       real(kind=Rkind)                 ::  Norm, Norm0
       integer                          :: iq
+
       !  variables locales
 
       call init_psi(K1, psi%basis, cplx=.true., grid=.false.)
@@ -432,20 +433,16 @@ contains
       call init_psi(K3, psi%basis, cplx=.true., grid=.false.)
       call init_psi(K4, psi%basis, cplx=.true., grid=.false.)
       call init_psi(psi_inter, psi%basis, cplx=.true., grid=.false.)
+
       write (out_unit, *) 'BEGINNIG march_RK4th', t, propa%delta_t
-      ! write(out_unit,*) 'psi'
       psi_dt%CVec(:) = psi%CVec(:)
       CALL mEyeHPsi(psi, K1)
 
       psi_inter%CVec = psi%CVec + (propa%delta_t*HALF)*K1%CVec
-      !CALL Write_psi_basis(psi_inter,t,10)
       CALL mEyeHPsi(psi_inter, K2)
       psi_inter%CVec = psi%CVec + (propa%delta_t*HALF)*K2%CVec
-      !CALL Write_psi_basis(psi_inter,t,11)
-      print *, 'cc'
       CALL mEyeHPsi(psi_inter, K3)
       psi_inter%CVec = psi%CVec + propa%delta_t*K3%CVec
-      !CALL Write_psi_basis(psi_inter,t,12)
       CALL mEyeHPsi(psi_inter, K4)
       psi_dt%CVec(:) = psi_dt%CVec(:) + (propa%delta_t*SIXTH)*(K1%CVec(:) + TWO*K2%CVec(:) + TWO*K3%CVec(:) + K4%CVec(:))
       CALL Calc_Norm_OF_Psi(Psi_dt, Norm)
@@ -453,11 +450,11 @@ contains
 
       write (out_unit, *) '<psi|psi> = ', Norm0, '<psi_dt|psi_dt> = ', Norm, 'abs(<psi|psi> - <psi_dt|psi_dt))=', ABS(Norm0 - Norm)
       write (out_unit, *) 'END marh_RK4th'
-      deallocate (k1%CVec)
-      deallocate (k2%CVec)
-      deallocate (k3%CVec)
-      deallocate (k4%CVec)
-      deallocate (psi_inter%CVec)
+      call dealloc_psi(K1)
+       call dealloc_psi(K2)
+       call dealloc_psi(K3)
+       call dealloc_psi(K4)
+       call dealloc_psi(psi_inter)
    END SUBROUTINE marh_RK4th
 
    SUBROUTINE march_ITP(psi, psi_dt, propa,plus)
@@ -660,7 +657,7 @@ contains
       CALL dealloc_psi(psi_b)
    End SUBROUTINE Calc_average_energy
 
-   subroutine diff()
+  SUBROUTINE diff()
       real(kind=Rkind), allocatable         :: df(:, :)
       real(kind=Rkind), allocatable         :: f1(:, :)
       real(kind=Rkind), allocatable         :: f2(:, :)
@@ -694,9 +691,9 @@ contains
          !print*,iq,df(iq,:)   ,   abs(f1(iq,3)-f2(iq,3))
          write (24, *) df(iq, :)
       end do
-   end subroutine diff
+    END SUBROUTINE
 
-   subroutine creat_file_unit(nio, name, propa)
+  SUBROUTINE  creat_file_unit(nio, name, propa)
       character(*), intent(in)    :: name
       type(propa_t), intent(in)   :: propa
       character(100)              :: name_tot
@@ -712,8 +709,7 @@ contains
 
       open (unit=nio, file=name_tot)
 
-   end subroutine
-
+    END SUBROUTINE
 
      SUBROUTINE march_VP(psi, psi_dt, t, propa)
       USE lanczos_m
@@ -727,53 +723,39 @@ contains
         ! variables locales -------------------------------------------------------------------------------
 
       real(kind=Rkind)                    :: Norm, Norm0,E 
-      logical, parameter                  :: debug=.false.
-      integer                             :: n,nb
+      logical, parameter                  :: debug=.false.      
 
-          nb = psi%Basis%nb
-          n = nb+3
-
-          IF (debug) THEN
-             !write(out_unit,*) 'psi_t',psi%CVec
-            flush(out_unit)
-          END IF
+      IF (debug) THEN
+         write(out_unit,*) 'psi_t',psi%CVec
+        flush(out_unit)
+      END IF
      
-           write (out_unit, *) 'BEGINNIG march VP ', t, propa%delta_t
-   
-   
-     
-      CALL Calc_Norm_OF_Psi(psi, Norm0)
-      CALL Calc_Norm_OF_Psi(psi_dt, Norm)
+      write (out_unit, *) 'BEGINNIG march VP ', t, propa%delta_t
+      call Vp_step_psi(psi, psi_dt,propa%delta_t)
+      call Calc_Norm_OF_Psi(psi, Norm0)
+      call Calc_Norm_OF_Psi(psi_dt, Norm)
       write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi|psi>)  =', abs(Norm0 - Norm)
       write (out_unit, *) 'END march VP'
-      
       
        IF (debug) THEN
          flush(out_unit)
       END IF
-   END SUBROUTINE 
 
+   END SUBROUTINE 
 
    SUBROUTINE H_test(psi,propa)
       TYPE(psi_t), intent(inout)      :: psi
       TYPE(psi_t)                     :: psi0
-      TYPE(propa_t), intent(in)       :: propa
-
-     
+      TYPE(propa_t), intent(in)       :: propa  
    
       call init_psi(psi0, psi%Basis, cplx=.TRUE., grid=.false.)
   
-
       print*,'-------------------------debut du test-------------------------------'
       
       call Hagedorn(psi0, psi,propa)
       
        print*,'-------------------------fin du test-------------------------------'
 
-
-      end SUBROUTINE
-
-
-
-
+      End SUBROUTINE
+      
 end module Propa_m
