@@ -16,7 +16,7 @@ module Vp_m
   implicit none
 
   private
-  public :: Runge_Kutta_Vp_Func,Vp_test
+  public :: Runge_Kutta_Vp_Func,Vp_test,test_func
 
 contains
 
