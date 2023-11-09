@@ -136,7 +136,7 @@ contains
          !write (11, '(F18.6,2X,F18.6,F18.6,2X,F18.6)') t, Qt
 
          if (mod(i, 10 ) == 0) then
-              call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
+              call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false. &
                              , print_basis=.false., t=t, int_print=10, real_part=.false.)
                write(10,*)
 

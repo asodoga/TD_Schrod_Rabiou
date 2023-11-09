@@ -22,7 +22,7 @@ PROGRAM TD_SCHROD
    logical :: adiabatic
    character(len=16)                  :: pot_name
 
-   ndim = 1
+   ndim = 2
    nsurf = 1
    pot_name = 'read_model'
    adiabatic = .false.
@@ -55,7 +55,7 @@ PROGRAM TD_SCHROD
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   !STOP 'calcul de H|psi> est fait'
+   STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)

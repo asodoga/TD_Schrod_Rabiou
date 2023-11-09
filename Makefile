@@ -31,7 +31,7 @@ $(info ************ $(OBJ_DIR)/files: $(OBJ))
 
 
 # libriries====================================================================================================================
-LIB =$(QMLDIR)/libQMLibFull_gfortran_opt1_omp1_lapack1.a  $(QDUDIR)/libQD_gfortran_opt1_omp1_lapack1_int4.a 
+LIB =$(QMLDIR)/libQMLibFull_gfortran_opt1_omp1_lapack1_int4.a  $(QDUDIR)/libQD_gfortran_opt1_omp1_lapack1_int4.a 
 # target and dependancy===========================================================================================================
 
 

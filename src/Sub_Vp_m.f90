@@ -21,8 +21,8 @@ MODULE Sub_Vp_m
    !> Locals variables ------------------------------------------------
    
    integer                            :: Ib,nb,ndim,nsurf
-   !logical, parameter                 :: debug = .true.
-   logical, parameter                 :: debug = .false.
+   logical, parameter                 :: debug = .true.
+   !logical, parameter                 :: debug = .false.
    real(kind=Rkind), allocatable      :: Qt(:),Pt(:)
    complex(kind=Rkind), allocatable   :: At(:)
    
@@ -73,8 +73,8 @@ SUBROUTINE LambdaTOpsi(psi,L)
    !> Locals variables ------------------------------------------------
    
    integer                            :: Ib,nb,ndim,nsurf
-   !logical, parameter                 :: debug = .true.
-   logical, parameter                 :: debug = .false.
+   logical, parameter                 :: debug = .true.
+   !logical, parameter                 :: debug = .false.
    real(kind=Rkind), allocatable      :: SQt(:), Qt(:),Pt(:)
    complex(kind=Rkind), allocatable   :: At(:)
    
@@ -121,7 +121,7 @@ END SUBROUTINE
 
 
 
- SUBROUTINE Vp_test(psi)
+ SUBROUTINE Vp_test_temp(psi)
     TYPE(psi_t), intent(inout)          :: psi
 
     !> Locals variables ------------------------------------------------
@@ -133,23 +133,26 @@ END SUBROUTINE
     nb = psi%Basis%nb
     ndim = size(psi%Basis%tab_basis)-1
     nsurf = psi%Basis%tab_basis(ndim+1)%nb
-    allocate (L(nb*nsurf+3*ndim))
-     call init_psi(psif, psi%Basis, cplx=.true., grid=.false.)
+    allocate (L(nb*nsurf+3*ndim),Mat(nb*nsurf,nb*nsurf))
+     call init_psi(psif, psi%Basis, cplx=.true., grid=.true.)
   
     print*,'----------------Debut du test sur LambdaTOpsi psiTOLambda----------'
     
-    !call psiTOLambda(L,psi)
-    !call LambdaTOpsi(psi,L)
-    !Do Ib =1,3
-    !   Do Jb =1,3
-    !    !call Calc_Saqp(Mat(ib,jb),psi,ib,jb)
-    !  END Do
-    !END Do
-     !call Calc_GlobalOverlap_S(Mat,psi)
-     ! call Calc_V(V,psi)
-      call Runge_Kutta_Vp_Func(psif,psi)
-      print*,'V',V(:)
-      deallocate(Mat,V,L)
+   ! call psiTOLambda(L,psi)
+   ! call LambdaTOpsi(psif,L)
+   ! print*,'nb',nb,nsurf
+
+     ! Do Ib =1,nb*nsurf
+     !    Do Jb =1,nb*nsurf
+     !  END Do
+     !END Do
+     !call Calc_dqpsi(psif, psi, 1)
+    
+     !call Write_VecMat(Mat, out_unit, 9,  info='Mat')
+     call Calc_GlobalOverlap_S(Mat,psi)
+      !call Calc_V(V,psi)
+      !print*,'V',V(:)
+      !deallocate(Mat,V,L)
      print*,'---------------- Fin du test sur LambdaTOpsi psiTOLambda------------'
 End SUBROUTINE
 
@@ -280,7 +283,7 @@ SUBROUTINE Calc_Overlap_S(Mat,Basis)
     End Do
   End Do
 
-!  call Write_VecMat(Mat, out_unit, 9,  info='Mat')
+  !call Write_VecMat(Mat, out_unit, 9,  info='Mat')
 
 End SUBROUTINE
 
@@ -534,7 +537,7 @@ SUBROUTINE Calc_Saqp(S_aqp,psi0,I,J)
 
   
   !> Locals variables ------------------------------------------------
- ! logical, parameter                   :: debug = .true.
+  !logical, parameter                   :: debug = .true.
   logical, parameter                   ::  debug = .false.
   TYPE(psi_t),target                   ::  psi,dJpsi,dIpsi
   complex(kind=Rkind), pointer         ::  psi_gb(:, :),psi_gbI(:, :),psi_gbJ(:, :)
@@ -1023,8 +1026,8 @@ SUBROUTINE Calc_GlobalOverlap_S(Mat,psi0)
   TYPE(psi_t), intent(in) ,target                    :: psi0
 
   !> ---------------local variables--------------------------------------------
-  !logical, parameter                                 :: debug = .true.
-  logical, parameter                                 ::  debug = .false.
+ ! logical, parameter                                 :: debug = .true.
+ logical, parameter                                 ::  debug = .false.
   integer                                            :: I,J,nb,nsurf
   integer                                            :: ndim,n
 
@@ -1065,31 +1068,6 @@ DO I=1,nb
   End IF
   
 
-End SUBROUTINE
-
- SUBROUTINE Vp_test_temp(psi)
-    TYPE(psi_t), intent(inout)          :: psi
-
-    !> Locals variables ------------------------------------------------
-    TYPE(psi_t)                         :: psif
-    complex(Kind=Rkind) ,allocatable    :: L(:)
-     complex(Kind=Rkind),allocatable    :: Mat(:,:),V(:)
-    integer                             :: Ib,Jb,nb,ndim,nsurf
-
-    nb = psi%Basis%nb
-    ndim = size(psi%Basis%tab_basis)-1
-    nsurf = psi%Basis%tab_basis(ndim+1)%nb
-    allocate (L(nb*nsurf+3*ndim))
-     call init_psi(psif, psi%Basis, cplx=.true., grid=.false.)
-  
-    print*,'----------------Debut du test sur LambdaTOpsi psiTOLambda----------'
-    
-    !call psiTOLambda(L,psi)
-    !call LambdaTOpsi(psi,L)
-     call Calc_GlobalOverlap_S(Mat,psi)
-      call Calc_V(V,psi)
-      print*,'V',V(:)
-     print*,'---------------- Fin du test sur LambdaTOpsi psiTOLambda------------'
 End SUBROUTINE
 
 
