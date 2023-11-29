@@ -282,7 +282,7 @@ contains
 
       complex(kind= Rkind), pointer                    :: BBB1(:, :, :), BBB2(:, :, :)
       complex(kind= Rkind), allocatable, target        :: B1(:), B2(:)
-      real(kind= Rkind)                                :: Norm0,E0,E
+      real(kind= Rkind)                                :: Norm0
 
       logical, parameter                               :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim

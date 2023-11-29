@@ -4,7 +4,6 @@ MODULE Sub_Vp_m
    USE op_m
    USE Basis_m
    USE psi_m
-
    IMPLICIT NONE
 
    PRIVATE
@@ -23,7 +22,7 @@ MODULE Sub_Vp_m
    integer                            :: Ib,nb,ndim,nsurf
    logical, parameter                 :: debug = .true.
    !logical, parameter                 :: debug = .false.
-   real(kind=Rkind), allocatable      :: Qt(:),Pt(:)
+   real(kind=Rkind), allocatable      :: Qt(:),Pt(:),SQt(:)
    complex(kind=Rkind), allocatable   :: At(:)
    
    
@@ -32,7 +31,7 @@ MODULE Sub_Vp_m
    ndim = size(psi%Basis%tab_basis)-1
    nsurf = psi%Basis%tab_basis(ndim+1)%nb
     nb = psi%Basis%nb*nsurf
-   allocate (Qt(ndim),Pt(ndim),At(ndim))
+   allocate (Qt(ndim),Pt(ndim),At(ndim),SQt(ndim))
 
    IF (debug) THEN
     write (out_unit, *) 'psi in psiTOLambda:--------------------------------------------'
@@ -42,13 +41,7 @@ MODULE Sub_Vp_m
   End IF
    
    L(:) = CZERO
-
-   Do Ib = 1,ndim
-    Qt(Ib) = psi%Basis%tab_basis(Ib)%Q0 
-    Pt(Ib) = psi%Basis%tab_basis(Ib)%Imp_k 
-    At(Ib) = psi%Basis%tab_basis(Ib)%alpha 
-   End DO
-
+   call Get_Basis_Parameters(psi%Basis,Qt,SQt,At,Pt)
    L(1:nb) = psi%CVec(1:nb)
    L(nb+1:nb+ndim) = At(1:ndim)
    L(nb+ndim+1:nb+2*ndim) = Qt(1:ndim)
@@ -60,8 +53,7 @@ MODULE Sub_Vp_m
          write (out_unit, *) Ib,L(Ib)
       End Do
     End IF
-   
-   deallocate (Qt,Pt,At)
+   deallocate (Qt,Pt,At,SQt)
 
 END SUBROUTINE
 
@@ -103,7 +95,7 @@ SUBROUTINE LambdaTOpsi(psi,L)
    End DO
 
    SQt(:) = ONE
-   call construct_primitive_basis(psi%Basis,Qt,Pt,At,SQt) 
+   call Construct_Hagedorn_Variational_Basis(psi%Basis,Qt,SQt,At,Pt)
    deallocate (SQt,Qt,Pt,At)
 
 
@@ -128,12 +120,13 @@ END SUBROUTINE
     TYPE(psi_t)                         :: psif
     complex(Kind=Rkind) ,allocatable    :: L(:)
      complex(Kind=Rkind),allocatable    :: Mat(:,:),V(:)
+     integer,allocatable                :: Tab_Ip(:)
     integer                             :: Ib,Jb,nb,ndim,nsurf
 
     nb = psi%Basis%nb
     ndim = size(psi%Basis%tab_basis)-1
     nsurf = psi%Basis%tab_basis(ndim+1)%nb
-    allocate (L(nb*nsurf+3*ndim),Mat(nb*nsurf,nb*nsurf))
+    allocate (L(nb*nsurf+3*ndim),Mat(nb*nsurf+3*ndim,nb*nsurf+3*ndim))
      call init_psi(psif, psi%Basis, cplx=.true., grid=.true.)
   
     print*,'----------------Debut du test sur LambdaTOpsi psiTOLambda----------'
@@ -142,14 +135,26 @@ END SUBROUTINE
    ! call LambdaTOpsi(psif,L)
    ! print*,'nb',nb,nsurf
 
-     ! Do Ib =1,nb*nsurf
-     !    Do Jb =1,nb*nsurf
-     !  END Do
-     !END Do
-     !call Calc_dqpsi(psif, psi, 1)
+    !  Do Ib =1,3
+    !     Do Jb =1,3
+    !     call  Calc_Saqp(Mat(Ib,Jb),psi,Ib,Jb)
+    !     print*,'Ib,Jb,S ',Mat(Ib,Jb)
+    !   END Do
+    ! END Do
     
-     !call Write_VecMat(Mat, out_unit, 9,  info='Mat')
+     !call Write_VecMat(Mat, out_unit, 3,  info='Mat')
      call Calc_GlobalOverlap_S(Mat,psi)
+  ! Do Ib =1,nb*nsurf+3*ndim
+  !  Do Jb =1,nb*nsurf+3*ndim
+  !     print*,'Ib,Jb,S ',Ib,Jb,Mat(Ib,Jb)
+  !  END Do
+  !END Do
+
+  DO ib =1,nb*nsurf+3*ndim
+     print*,'Ib,S ',Ib,Mat(ib,:)
+  End Do
+      !call Write_VecMat(Mat, out_unit, 10,  info='Mat')
+  ! call Tab(Tab_Ip,23-nb*nsurf,psi%Basis)
       !call Calc_V(V,psi)
       !print*,'V',V(:)
       !deallocate(Mat,V,L)
@@ -188,7 +193,7 @@ SUBROUTINE Find_I(Tab_Ib,I,Basis)
    call Init_tab_ind(Tab_Ib,NDindex)
    DO Ib = 1,I
     CALL increase_NDindex(Tab_Ib, NDindex, Endloop)
-   ! write (out_unit, *) 'ib , Tab_Ib',ib,Tab_Ib
+   ! write (out_unit, *) 'Ib , Tab_Ib',ib,Tab_Ib
    End DO
 
   call dealloc_NDindex(NDindex)
@@ -575,8 +580,8 @@ SUBROUTINE Calc_Saqp(S_aqp,psi0,I,J)
    psi_gbJ(1:nq,1:nsurf) => dJpsi%CVec
 
    Iq = 0
-   S_aqp = CZERO
    S_aqpEl(:) = CZERO
+   N(:) = ZERO
 
    DO Isurf = 1,nsurf
    Call Init_tab_ind(Tab_Iq, psi0%Basis%NDindexq)
@@ -594,7 +599,7 @@ SUBROUTINE Calc_Saqp(S_aqp,psi0,I,J)
 
  End DO
  End DO
-  
+S_aqp = CZERO
 S_aqp = sum(S_aqpEl)/(sum(N)**2)
 
 
@@ -658,6 +663,7 @@ SUBROUTINE Calc_SIaqp(S_Iaqp,psi0,I,J)
    Call Init_tab_ind(Tab_Iq, psi0%Basis%NDindexq)
    Iq = 0
    S_Iaqp = CZERO
+   N = ZERO
    Isurf = Tab_Ib(ndim)
    DO
    Iq = Iq +1
@@ -817,6 +823,7 @@ SUBROUTINE Tab(Tab_Ip,I,Basis)
 
   Do II = 1,I
   CALL increase_NDindex(Tab_Ip, NDindex, Endloop)
+  !write(out_unit,*) 'I,Tab_Ip',II,Tab_Ip
   End DO
 
   call dealloc_NDindex(NDindex)
@@ -877,6 +884,7 @@ SUBROUTINE Tab(Tab_Ip,I,Basis)
    Call Init_tab_ind(Tab_Iq, psi0%Basis%NDindexq)
    Iq = 0
    S_I = CZERO
+   N = ZERO
    Isurf = Tab_Ib(ndim)
    DO
    Iq = Iq +1
@@ -1012,6 +1020,7 @@ SUBROUTINE Calc_V(V,psi0)
        call Calc_SIHpsi(V(Ib),psi0,Ib)
      Else
        call Calc_SaqpHpsi(V(Ib),psi0,Ib-n)
+        !write (out_unit, *) 'Ib , nb,nsurf,Ib-nb*nsurf',Ib,psi0%Basis%nb,nsurf,Ib-psi0%Basis%nb*nsurf
      End If   
    End Do
    V(:) = -EYE*V(:)
@@ -1040,7 +1049,7 @@ SUBROUTINE Calc_GlobalOverlap_S(Mat,psi0)
   If(allocated(Mat)) deallocate(Mat)
   allocate(Mat(nb,nb))
 
-  Mat(:,:) = ZERO
+  Mat(:,:) = CZERO
 
 DO I=1,nb
    If(I<=n) Then
@@ -1057,6 +1066,8 @@ DO I=1,nb
        call Calc_SaqpJ(Mat(I,J),psi0,I-n,J)
       Else
        call Calc_Saqp(Mat(I,J),psi0,I-n,J-n)
+        !write (out_unit, *) 'Ib , nb,nsurf,Ib-nb*nsurf',i,psi0%Basis%nb,nsurf,i-psi0%Basis%nb*nsurf
+        !write (out_unit, *) 'Jb , nb,nsurf,Ib-nb*nsurf',j,psi0%Basis%nb,nsurf,j-psi0%Basis%nb*nsurf
      End If
    End DO
    END If
@@ -1094,6 +1105,7 @@ End SUBROUTINE
     ndim = size(psi%Basis%tab_basis)-1
     nsurf = psi%Basis%tab_basis(ndim+1)%nb
     nb =psi%Basis%nb*nsurf+3*ndim 
+    psi_dt%CVec = CZERO
 
     allocate(CL_t(nb),CL_tdt(nb),CL_temp(nb))
     call init_psi(psi_temp, psi%basis, cplx=.true., grid=.false.)

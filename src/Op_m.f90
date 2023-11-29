@@ -167,9 +167,8 @@ contains
       type(Basis_t), intent(in), target                  :: Basis
       complex(kind=Rkind), allocatable, target           ::VPsi_g(:), KPsi_g(:)
       complex(kind=Rkind), pointer                       :: VPsi_gb(:, :), Psi_gb(:, :)
-      complex(kind=Rkind), allocatable                   :: Ppsi_g(:)
       real(kind=Rkind), allocatable                      :: V(:, :, :), Q(:, :)
-      INTEGER                                            ::iq, i2, j2, i1, Ndim
+      INTEGER                                            ::iq, i2, j2, i1, Ndim,nsurf
       !open(11, file = 'Pot_Retinal11.dat')
       !open(12, file = 'Pot_Retinal22.dat')
       !open(13, file = 'Pot_Retinal12.dat')
@@ -181,12 +180,12 @@ contains
       Ndim = size(Basis%tab_basis)
       allocate (VPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
       allocate (KPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
-      allocate (Ppsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
       allocate (V(Basis%nq, Basis%tab_basis(Ndim)%nb, Basis%tab_basis(Ndim)%nb))
       V(:, :, :) = ZERO
       VPsi_g(:) = CZERO
       KPsi_g(:) = CZERO
       HPsi_g(:) = CZERO
+      !print*,'nsurf',Basis%tab_basis(Ndim)%nb
       call Calc_Q_grid(Q, Basis)
       Do iq = 1, Basis%nq
 
@@ -238,19 +237,19 @@ contains
       real(kind=Rkind), allocatable                   :: GGdef(:, :)
       logical, parameter                              :: debug = .true.
       integer                                         :: iq, i1, i3, inb, Ndim
-      integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:), Ib1(:), Ib2(:), Ib3(:)
+      integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:)
 
       IF (debug) THEN
          !write(out_unit,*) 'BEGINNING Kpsi'
          flush (out_unit)
       END IF
 
-      Ndim = size(Basis%tab_basis)
-      allocate (GGdef(Ndim - 1, Ndim - 1))
+      Ndim = size(Basis%tab_basis)-1
+      allocate (GGdef(Ndim , Ndim))
       CALL get_Qmodel_GGdef(GGdef)
-      call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
+      call Calc_index(Iq1=Iq1, Iq2=Iq2, Iq3=Iq3,Basis=Basis)
       Kpsi_g(:) = CZERO
-      DO inb = 1, Ndim - 1
+      DO inb = 1, Ndim 
          Kpsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Kpsi_g
          psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
          d2gg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
@@ -261,7 +260,7 @@ contains
             END DO
          END DO
       END DO
-      Deallocate (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3)
+      Deallocate (Iq1, Iq2, Iq3)
       IF (debug) THEN
          !        write(out_unit,*) 'END KPsi_nD'
          flush (out_unit)

@@ -21,8 +21,8 @@ contains
        USE QDUtil_m
        REAL(kind=Rkind), intent(inout)   :: Mat_V(:,:)
        REAL(kind=Rkind), intent(in)      :: Q(:)
-       INTEGER                           :: i,j,iq
-       integer , intent(in)              :: potential_type
+       INTEGER                        :: i,j,iq
+       integer , intent(in)           :: potential_type
 
 
         !IF (size(Q) /= 1) STOP 'wrong dimension'
@@ -31,7 +31,7 @@ contains
        SELECT CASE (potential_type)
    CASE (0)
 
-                Mat_V(:,:) = ZERO
+                Mat_V(:,:) = 0
             do i = 1, size(Mat_V(1,:))
                do iq = 1, size(Q)
                Mat_V(i,i) = Mat_V(i,i)+ HALF*(Q(iq)-0)**2
@@ -39,8 +39,7 @@ contains
                 do j = 1, size(Mat_V(:,1))
                     if (abs(i-j)== 1) then
 
-                         Mat_V(i,j) = 0.001_Rkind*Q(1) !ZERO
-                         !0.001_Rkind*Q(1)
+                         Mat_V(i,j) = 0.111803_Rkind*Q(1)
                     end if
                  end do
             end do

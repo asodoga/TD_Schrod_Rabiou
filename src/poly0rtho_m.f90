@@ -3,9 +3,9 @@
         USE QDUtil_m
         implicit none
         private
-     public:: poly_Hermite_exp,d0d1d2poly_Hermite_exp,d0d1d2poly_Hermite_exp_cplx,poly_Hermite
-     public:: hercom,herroot,herrec,d0d1d2box,d0d1d2fourier,poly_Hermite_exp_cplx
-     public:: d0d1d2_time_dependant_poly_Hermite_exp_cplx
+     public:: poly_Hermite_exp,d0d1d2poly_Hermite_exp,poly_Hermite
+     public:: hercom,herroot,herrec,d0d1d2box,d0d1d2fourier
+    
 
 
     contains
@@ -106,65 +106,6 @@
 !
 !
 !       end subroutine d0d1d2d3poly
-
-
-
-  SUBROUTINE d0d1d2_time_dependant_poly_Hermite_exp_cplx(Q,Pt,At,l,d0,d1,d2,deriv)
-    USE QDUtil_m
-    IMPLICIT NONE
-    complex(kind=Rkind),intent(inout) :: d0,d1,d2
-    real(kind=Rkind),intent(in)       :: Q,Pt
-    complex(kind=Rkind),intent(in)    :: At
-    logical ,intent(in)               :: deriv
-    integer,intent(in)                :: l
-
-
-    complex(kind=Rkind)               :: cst,cst1,cst2,alpha,pexp
-    real(kind=Rkind)                  :: SQeq,Peq
-
-
-
-    SQeq  =  sqrt(real(At,kind=Rkind)) 
-    alpha = complex( ONE, aimag(At)/(SQeq*SQeq) )
-    Peq   = Pt/SQeq
-   
-   cst = -HALF*alpha*Q*Q+EYE*Peq*Q
-   cst1 = -Q*alpha+EYE*Peq
-   cst2 = cst1*cst1-alpha
-   pexp = exp(cst)
-
-    IF (deriv) THEN
-
-      d0 = poly_Hermite(Q,l)
-      IF (l == 0) THEN
-        d1 = ZERO
-        d2 = ZERO
-      ELSE IF (l == 1) THEN
-        d1 = sqrt(TWO)*poly_Hermite(Q,0)
-        d2 = ZERO
-      ELSE IF (l == 2) THEN
-        d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(Q,l-1)
-        d2 = TWO*(Q*d1-d0*real(l,kind=Rkind))
-      ELSE
-        d1 = sqrt(real(2*l,kind=Rkind)) * poly_Hermite(Q,l-1)
-        d2 = TWO*(Q*d1-d0*real(l,kind=Rkind))
-      END IF
-      !on rajoute la partie exponentielle
-      !pour d0 d1 d2
-      d2 = (d2+TWO*cst1*d1+cst2*d0)*pexp
-      d1 = (d1+cst1*d0)*pexp
-      d0 = d0*pexp
-    ELSE
-      d0 = poly_Hermite(Q ,l)*pexp
-      d1 = ZERO
-      d2 = ZERO
-    END IF
-   !write(out_unit,*) 'l x,p,beta, d0 ,d1, d2 Hagedorn :',l,x,p,beta,d0,d1,
-    RETURN
-
- END SUBROUTINE
-
-
 
 !!================================================================
 !!    v26 serie de fourier
@@ -949,49 +890,19 @@
 !   pour un x ( -inf =< x =< inf )
 !
 !===================================================
-      FUNCTION poly_Hermite_exp(x,l)
+      FUNCTION poly_Hermite_exp(Q,Q0,SQ,l)
       USE QDUtil_m
       IMPLICIT NONE
-      real(kind=Rkind) :: poly_Hermite_exp
-
-      real(kind=Rkind) x
-      !real(kind=Rkind) poly_Hermite
-
+      complex(kind=Rkind) :: poly_Hermite_exp
+      real(kind=Rkind) Q,Q0,SQ,DQ
       integer l
-
-      poly_Hermite_exp = poly_Hermite(x,l) * exp(-x*x*HALF)
+       
+       Dq = SQ*(Q-Q0)
+      poly_Hermite_exp =sqrt(SQ)*poly_Hermite(Dq,l) * exp(-Dq*Dq*HALF)
 
 !      write(out_unit,*) x,poly_Hermite_exp
        RETURN
        end function poly_Hermite_exp
-
-       FUNCTION poly_Hermite_exp_cplx(x,p,l)
-        USE QDUtil_m
-        IMPLICIT NONE
-        complex(kind=Rkind) :: poly_Hermite_exp_cplx
-        real(kind=Rkind) x,p
-        integer l
-        poly_Hermite_exp_cplx = poly_Hermite(x,l)*exp(-x*x*HALF+EYE*p*x)
-         !write(out_unit,*) x,poly_Hermite_exp_cplx
-         RETURN
-         end function poly_Hermite_exp_cplx
-      
-
-
-        FUNCTION poly_Hagedorn_exp(x,p,beta,l)
-           USE QDUtil_m
-           IMPLICIT NONE
-           complex(kind=Rkind) :: poly_Hagedorn_exp,cst 
-           real(kind=Rkind) x,p,beta
-           integer l
-
-            cst = -HALF*x*x+HALF*EYE*Beta*x*x+EYE*p*x
-            poly_Hagedorn_exp = poly_Hermite(x,l)*exp(cst)
-            !write(out_unit,*) x,poly_Hermite_exp_cplx
-            RETURN
-        END FUNCTION poly_Hagedorn_exp
-      
- 
 
 
 !===================================================
@@ -1000,10 +911,10 @@
 !   pour un x ( -inf =< x =< inf )
 !
 !===================================================
-      FUNCTION poly_Hermite(x,l)
+    function poly_Hermite(x,l)
       USE QDUtil_m
       IMPLICIT NONE
-      real(kind=Rkind) :: poly_Hermite
+      complex(kind=Rkind) :: poly_Hermite
 
 
        real(kind=Rkind) x
@@ -1277,25 +1188,6 @@
          RETURN
          end subroutine d0d1d2poly_Hermite_exp_cplx
 
-
-
-
-
-
-       SUBROUTINE d0d1d2W(Q,Beta,P0,d0W,d1W,d2W)
-         USE QDUtil_m
-
-         real(kind=Rkind) Q,P0,Beta
-         complex(kind=Rkind) d0W,d1W,d2W
-  
-            d0W  = exp(HALF*EYE*Beta*Q*Q+EYE*P0*Q)
-
-            d1W = (Beta*EYE*Q+EYE*P0)*d0W
-
-            d2W = Beta*d0W+(Beta*EYE*Q+EYE*P0)*d1W
-            
-          RETURN
-       END SUBROUTINE   
 
 
 !-------------------------------------------------------------------------

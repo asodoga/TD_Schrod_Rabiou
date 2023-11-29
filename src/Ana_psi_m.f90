@@ -258,7 +258,7 @@ END SUBROUTINE
       type(psi_t), target                                 :: psi_b, ikpsi_b
       logical, parameter                                  :: debug = .true.
       complex(kind=Rkind), pointer                        :: GB(:,:,:)
-      complex(kind=Rkind), pointer                        ::d1gg(:,:,:)
+      complex(kind=Rkind), pointer                        :: d1gg(:,:,:)
       complex(kind=Rkind), pointer                        :: ikpsi0(:,:,:)
       Integer, allocatable                                :: Iq1(:), Iq2(:), Iq3(:)
       Integer, allocatable                                :: Ib1(:), Ib2(:), Ib3(:)
@@ -538,8 +538,6 @@ END SUBROUTINE
  END SUBROUTINE  
 
 
-
-
  SUBROUTINE Calc_VQP_nD(VQP,psi)
   TYPE(psi_t), intent(in)                        :: psi
   real(kind=Rkind) , intent(inout)               :: VQP(:)
@@ -557,8 +555,6 @@ END SUBROUTINE
     !write (out_unit, *) 'VQP',VQP
 
 END SUBROUTINE
-
-
 
 
 end module
