@@ -6,6 +6,7 @@ fort.*
 *.dat
 *.swap
 *.lua
+*.txt
 # Prerequisites
 *.d
 cplx-basis-test
