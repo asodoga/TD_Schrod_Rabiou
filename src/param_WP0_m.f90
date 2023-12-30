@@ -6,16 +6,17 @@
         TYPE GWP1D_t
 
         real (kind=Rkind)                  :: sigma = ONETENTH  ! width of WP0
+        real (kind=Rkind)                  :: Beta
         real (kind=Rkind)                  :: Q0    = ZERO      ! position of WP0
         real (kind=Rkind)                  :: imp_k = ZERO      ! impultion for WP0
-        real (kind=Rkind)                  :: phase = ZERO      ! phase for WP0
+        real (kind=Rkind)                  :: gamma = ZERO      ! phase for WP0
 
 
         END TYPE GWP1D_t
 
         TYPE GWP_t
           integer                     :: ndim           = 1
-          complex (kind=Rkind)           :: Coef           = CZERO
+          complex (kind=Rkind)        :: Coef           = CZERO
           integer                     ::    Elecindex   = 1
 
           TYPE (GWP1D_t), allocatable :: tab_GWP1D(:)
@@ -28,11 +29,11 @@
     TYPE (GWP1D_t), intent(inout)          :: GWP1D
 
     !------ initial WP definition -----------------------------
-    !     GWP(Q)=exp[-((Q-Qeq)/sigma)2+i*imp_k*(Q-Qeq)+i*phase]
-    real (kind=Rkind)                         :: sigma,imp_k,Qeq,phase
-    integer                                :: Rerr
+    !     GWP(Q)=exp[-((Q-Qeq)/sigma)2+i*imp_k*(Q-Qeq)+i*gamma]
+    real (kind=Rkind)                         :: sigma,Beta,imp_k,Qeq,gamma
+    integer                                   :: Rerr
 
-    NAMELIST /defWP0/ sigma,Qeq,imp_k,phase
+    NAMELIST /defWP0/ sigma,Beta,Qeq,imp_k,gamma
 
 
     !----- for debuging --------------------------------------------------
@@ -41,10 +42,11 @@
     !logical, parameter :: debug =.TRUE.
     !-----------------------------------------------------------
 
-    sigma    = ONETENTH
+    sigma    = sqrt(TWO)
+    Beta     = ZERO
     Qeq      = ZERO
     imp_k    = ZERO
-    phase    = ZERO
+    gamma    = ZERO
 
     read(in_unit,defWP0,iostat=Rerr)
     if (Rerr /= 0) THEN
@@ -53,7 +55,7 @@
       write(out_unit,defWP0)
       STOP 'ERROR in Read_GWP1D: problem while reading the namelist "defWP0"'
     end if
-          GWP1D = GWP1D_t(sigma,Qeq,imp_k,phase)
+          GWP1D = GWP1D_t(sigma,Beta,Qeq,imp_k,gamma)
        
 
   END SUBROUTINE Read_GWP1D
@@ -68,10 +70,10 @@
            !-----------------------------------------------------------
         
            IF (debug) write(out_unit,*) 'Q0,sigma,imp_k,phase',           &
-                  GWP1D%Q0,GWP1D%sigma,GWP1D%imp_k,GWP1D%phase
+                  GWP1D%Q0,GWP1D%sigma, GWP1D%Beta,GWP1D%imp_k,GWP1D%gamma
         
            write(out_unit,*)                                             &
-                'sigma=',GWP1D%sigma,'Qeq=',GWP1D%Q0 ,'imp_k =',GWP1D%imp_k,'phase=',GWP1D%phase
+                'sigma=',GWP1D%sigma, 'Beta=',GWP1D%Beta,'Qeq=',GWP1D%Q0 ,'imp_k =',GWP1D%imp_k,'gamma=',GWP1D%gamma
         
          END SUBROUTINE Write_GWP1D
 
@@ -88,7 +90,7 @@
            !-----------------------------------------------------------
            DQ = Q-GWP1D%Q0
            ze = (DQ/GWP1D%sigma)**2
-           zk = mod(DQ*GWP1D%imp_k + GWP1D%phase ,TWO*pi)
+           zk = mod(-DQ*DQ*GWP1D%Beta+DQ*GWP1D%imp_k+GWP1D%gamma ,TWO*pi)
         
            calc_GWP1D = exp(-ze + EYE*zk) / sqrt(sqrt(pi/TWO)*GWP1D%sigma)
         
@@ -167,7 +169,7 @@
         !-----------------------------------------------------------
       
         write(out_unit,*) 'ndim,Elecindex,Coef',GWP%ndim , GWP%Elecindex , GWP%Coef
-        write(out_unit,'(a)') ' Qeq         sigma       imp_k       phase'
+        write(out_unit,'(a)') ' Qeq    Beta     sigma       imp_k       phase'
         DO i=1,size(GWP%tab_GWP1D)
           CALL Write_GWP1D(GWP%tab_GWP1D(i))
         END DO

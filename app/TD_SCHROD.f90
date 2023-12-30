@@ -55,10 +55,13 @@ PROGRAM TD_SCHROD
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   !STOP 'calcul de H|psi> est fait'
+   call read_propa(propa)
+   call test_psi_temp(psi0,propa)
+   STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)
    call propagation(psif, psi0, propa)
+   !call test_psi_temp(psif,propa)
    print*, 'Fin de la propagationt'
    ! CALL Write_psi(psif)
    write (out_unit, *) 'deallocation'

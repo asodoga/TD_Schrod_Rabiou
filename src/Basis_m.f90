@@ -16,6 +16,7 @@ MODULE Basis_m
    PUBLIC :: Calc_reduced_Density_surf,Calc_reduced_density,Rdensity_Writing, REDUCED_DENSIRY_t
    PUBLIC :: Hagedorn_construction,Construct_Basis_Ho,Construct_Hagedorn_Variational_Basis
    PUBLIC :: Change_Basis_Parameters,Complete_Hagedorn_none_variationnal_Basis,Calc_d0d1d2W
+   PUBLIC :: Complete_Hagedorn_none_variationnal_Basis_temp,construct_primitive_basis_temp
 
    TYPE :: Basis_t
       integer                             :: nb_basis = ZERO
@@ -455,6 +456,42 @@ CONTAINS
       END IF
    END SUBROUTINE Read_Basis
 
+
+   RECURSIVE SUBROUTINE construct_primitive_basis_temp(Basis)
+   USE QDUtil_m
+   logical, parameter                     :: debug = .true.
+   !logical,             parameter        ::debug = .false.
+   TYPE(Basis_t), intent(inout)           :: Basis
+   integer                                :: ndim, ib
+    ndim = Basis%nb_basis 
+   IF (allocated(Basis%tab_basis)) THEN
+      DO ib = 1, ndim
+         CALL construct_primitive_basis_temp(Basis%tab_basis(ib))
+      END DO
+   ELSE
+      SELECT CASE (Basis%Basis_name)
+      CASE ('el')
+         write (6, *) 'Electronic basis. Electronic state number:', basis%nb
+         basis%nq = 0
+      CASE ('boxab')
+         call Construct_Basis_Sin(Basis)
+         Basis%Q0 = Basis%A
+         Basis%scaleQ = pi/(Basis%B - Basis%A)
+         call Hagedorn_construction(Basis)
+      CASE ('fourier')
+         call Construct_Basis_Fourier(Basis)
+         call Hagedorn_construction(Basis)
+      CASE ('herm', 'ho')
+         call Construct_Basis_Ho(Basis)
+         call Complet_scaling_Basis(Basis)
+      CASE default
+         STOP 'ERROR  Noting to construct'
+      END SELECT
+      !  this part wil not have sens for 'el' basis
+   END IF
+   ! write(out_unit,*) ' End  construct  primitive Basis '
+END SUBROUTINE 
+
    RECURSIVE SUBROUTINE construct_primitive_basis(Basis)
       USE QDUtil_m
       logical, parameter                     :: debug = .true.
@@ -465,45 +502,19 @@ CONTAINS
       integer                                :: ndim, ib
 
        ndim = Basis%nb_basis - 1
+       allocate (NDend_q(ndim))
+       allocate (NDend_b(ndim)) 
+       DO ib = 1, ndim
+          NDend_q(ib) = Basis%tab_basis(ib)%nq
+          NDend_b(ib) = Basis%tab_basis(ib)%nb
+       END DO 
+       call Init_NDindex(Basis%NDindexq, NDend_q, ndim)
+       call Init_NDindex(Basis%NDindexb, NDend_b, ndim)
 
-      IF (allocated(Basis%tab_basis)) THEN
-         allocate (NDend_q(ndim))
-         allocate (NDend_b(ndim)) 
-         DO ib = 1, ndim
-            NDend_q(ib) = Basis%tab_basis(ib)%nq
-            NDend_b(ib) = Basis%tab_basis(ib)%nb
-         END DO
+       call construct_primitive_basis_temp(Basis)
 
-         call Init_NDindex(Basis%NDindexq, NDend_q, ndim)
-         call Init_NDindex(Basis%NDindexb, NDend_b, ndim)
-
-         DO ib = 1, ndim+1
-            CALL construct_primitive_basis(Basis%tab_basis(ib))
-         END DO
-
-      ELSE
-         SELECT CASE (Basis%Basis_name)
-         CASE ('el')
-            write (6, *) 'Electronic basis. Electronic state number:', basis%nb
-            basis%nq = 0
-         CASE ('boxab')
-            call Construct_Basis_Sin(Basis)
-            Basis%Q0 = Basis%A
-            Basis%scaleQ = pi/(Basis%B - Basis%A)
-            call Hagedorn_construction(Basis)
-         CASE ('fourier')
-            call Construct_Basis_Fourier(Basis)
-            call Hagedorn_construction(Basis)
-         CASE ('herm', 'ho')
-            call Construct_Basis_Ho(Basis)
-            call Hagedorn_construction(Basis)
-         CASE default
-            STOP 'ERROR  Noting to construct'
-         END SELECT
-         !  this part wil not have sens for 'el' basis
-      END IF
-      ! write(out_unit,*) ' End  construct  primitive Basis '
-   END SUBROUTINE construct_primitive_basis
+        
+   END SUBROUTINE 
 
     SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
       USE QDUtil_m
@@ -511,6 +522,16 @@ CONTAINS
       TYPE(Basis_t), intent(inout)        :: Basis
       real(kind=Rkind)                    :: dx
       integer                             :: ib, iq, nb, nq
+
+
+      if (allocated(Basis%x)) deallocate (Basis%x)
+      if (allocated(Basis%w)) deallocate (Basis%w)
+      if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
+      if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
+      if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
+      if (allocated(Basis%dagb)) deallocate (Basis%dagb)
+      if (allocated(Basis%dp0gb)) deallocate (Basis%dp0gb)
+      if (allocated(Basis%dq0gb)) deallocate (Basis%dq0gb)
 
       nb = Basis%nb
       nq = Basis%nq
@@ -546,6 +567,18 @@ CONTAINS
       TYPE(Basis_t), intent(inout)        :: Basis
       real(kind=Rkind)                    :: dx
       integer                             :: ib, iq, nb, nq
+
+
+
+      if (allocated(Basis%x)) deallocate (Basis%x)
+      if (allocated(Basis%w)) deallocate (Basis%w)
+      if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
+      if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
+      if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
+      if (allocated(Basis%dagb)) deallocate (Basis%dagb)
+      if (allocated(Basis%dp0gb)) deallocate (Basis%dp0gb)
+      if (allocated(Basis%dq0gb)) deallocate (Basis%dq0gb)
+
 
       nb = Basis%nb
       nq = Basis%nq
@@ -662,14 +695,14 @@ CONTAINS
 
          IF (nderiv > 0) THEN
             write(out_unit,*)
-            S = matmul(Basis%d0bgw, Basis%d1gb(:, :, 1))
+            S = matmul(conjg(Basis%d0bgw), Basis%d1gb(:, :, 1))
             !call   Write_VecMat(S,out_unit,5, info='<d0b|d1b>',Rformat='e13.4')
             !call   Write_VecMat(S,out_unit,5, info='<d0b|d1b>')
          END IF
 
          IF (nderiv > 1) THEN
             write(out_unit,*)
-            S = matmul(Basis%d0bgw, Basis%d2gb(:, :, 1, 1))
+            S = matmul(conjg(Basis%d0bgw), Basis%d2gb(:, :, 1, 1))
              !call   Write_VecMat(S,out_unit,5, info='<d0b|d2b>',Rformat='e13.4')
              !call   Write_VecMat(S,out_unit,5, info='<d0b|d1b>')
          END IF
@@ -720,6 +753,18 @@ CONTAINS
         call CheckOrtho_Basis(Basis, nderiv=2)
 
    END SUBROUTINE
+
+    SUBROUTINE Complet_scaling_Basis(Basis)
+      USE QDUtil_m
+      TYPE(Basis_t), intent(inout)  :: Basis
+   
+       
+       call Scale_Basis(Basis,Basis%Q0,Basis%SCALEQ)
+       call Complete_Hagedorn_none_variationnal_Basis(Basis)
+       Call Calc_tranpose_d0gb(Basis)
+       Call Calc_dngg_grid_0(Basis)
+       call CheckOrtho_Basis(Basis, nderiv=2)
+  END SUBROUTINE
 
 
 
@@ -1746,6 +1791,32 @@ SUBROUTINE Construct_Hagedorn_Variational_Basis(Basis,Qt,SQt,At,Pt)
 End SUBROUTINE
 
 
+
+
+SUBROUTINE Calc_d0d1d2W_temp(Q,Qt,SQt,Bt,Pt,d0W,d1W,d2W,nderiv)
+  complex(kind=Rkind) , intent(inout)     :: d0W,d1W,d2W
+  real(kind=Rkind)  , intent(in)          :: Q,Qt,SQt,Bt,Pt
+  logical,intent(in)                      :: nderiv
+  complex(kind=Rkind)                     :: cst1,cst2,cst
+  real(kind=Rkind)                        ::DQ
+
+    DQ = Q-Qt
+    cst = -HALF*EYE*(Bt/SQt*SQt)*Q*Q+EYE*(Pt/SQt)*Q
+    cst1 = -EYE*(Bt/SQt*SQt)*Q+EYE*(Pt/SQt)
+    cst2 = -EYE*(Bt/SQt*SQt)+cst1*cst1
+  If(nderiv) then
+   d0W =exp(cst)
+   d1W = cst1*d0W
+   d2W =cst2*d0W
+  Else
+    d0W =exp(cst)
+    d1W = CZERO
+    d2W = CZERO
+  End If
+  !print*,'d0w, d1w,d2w',d0W,d1W,d2W
+End SUBROUTINE
+
+
 SUBROUTINE Calc_d0d1d2W(Q,Qt,SQt,Bt,Pt,d0W,d1W,d2W,nderiv)
   complex(kind=Rkind) , intent(inout)     :: d0W,d1W,d2W
   real(kind=Rkind)  , intent(in)          :: Q,Qt,SQt,Bt,Pt
@@ -1783,6 +1854,30 @@ SUBROUTINE Complete_Hagedorn_none_variationnal_Basis(Basis)
   DO ib = 1,nb
      DO iq = 1,nq
          call Calc_d0d1d2W(Basis%x(iq),Qt,SQt,Bt,Pt,d0W,d1W,d2W,.true.)
+         Basis%d2gb(iq, ib, 1, 1) =  Basis%d2gb(iq, ib, 1, 1)*d0W +TWO*Basis%d1gb(iq,ib,1)*d1W+Basis%d0gb(iq,ib)*d2W
+         Basis%d1gb(iq,ib,1) = Basis%d1gb(iq,ib,1)*d0W+Basis%d0gb(iq,ib)*d1W
+         Basis%d0gb(iq,ib) = Basis%d0gb(iq,ib)*d0W
+     END DO
+ END DO    
+End SUBROUTINE
+
+
+
+
+SUBROUTINE Complete_Hagedorn_none_variationnal_Basis_temp(Basis)
+   TYPE(Basis_t), intent(inout)            :: Basis
+   complex(kind=Rkind)                     :: d0W,d1W,d2W
+   real(kind=Rkind)                        :: Qt,SQt,Bt,Pt
+   integer                                 :: nb,nq,ib,iq
+   nb  = Basis%nb
+   nq  = Basis%nq
+   Qt  = Basis%Q0
+   SQt = Basis%SCALEQ
+   Pt  = Basis%Imp_k
+   Bt  = aimag(Basis%alpha)
+  DO ib = 1,nb
+     DO iq = 1,nq
+         call Calc_d0d1d2W_temp(Basis%x(iq),Qt,SQt,Bt,Pt,d0W,d1W,d2W,.true.)
          Basis%d2gb(iq, ib, 1, 1) =  Basis%d2gb(iq, ib, 1, 1)*d0W +TWO*Basis%d1gb(iq,ib,1)*d1W+Basis%d0gb(iq,ib)*d2W
          Basis%d1gb(iq,ib,1) = Basis%d1gb(iq,ib,1)*d0W+Basis%d0gb(iq,ib)*d1W
          Basis%d0gb(iq,ib) = Basis%d0gb(iq,ib)*d0W

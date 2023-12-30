@@ -231,7 +231,7 @@ contains
      Do Ib = 1, Ndim
       CA(Ib) = ONE/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
       CB(Ib) = (VQP(Ib)-TWO*VP(Ib)*VQ(Ib))/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
-      At(Ib) = complex(CA(Ib),CB(Ib))   
+      At(Ib) = complex(CA(Ib),-CB(Ib))   
      End do
      
      At(:) = TWO*At(:)

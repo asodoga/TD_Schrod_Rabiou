@@ -34,14 +34,13 @@ contains
                 Mat_V(:,:) = 0
             do i = 1, size(Mat_V(1,:))
                do iq = 1, size(Q)
-               Mat_V(i,i) = Mat_V(i,i)+ HALF*(Q(iq)-0)**2
-                   end do
-                do j = 1, size(Mat_V(:,1))
-                    if (abs(i-j)== 1) then
-
-                         Mat_V(i,j) = 0.111803_Rkind*Q(1)
-                    end if
-                 end do
+                Mat_V(i,i) = Mat_V(i,i)+ HALF*(Q(iq)-0)**2
+               end do
+                !do j = 1, size(Mat_V(:,1))
+                !    if (abs(i-j)== 1) then
+                !         Mat_V(i,j) = ZERO !0.111803_Rkind*Q(1)
+                !    end if
+                ! end do
             end do
 
    CASE (1) !QML

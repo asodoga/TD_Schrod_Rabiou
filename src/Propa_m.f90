@@ -74,7 +74,7 @@ contains
       ! call Rdensity_Writing(Rd,psi%Basis,nio=21,t=ZERO)
       !  STOP 'cc propa'
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
-      DO i = 1, nt
+      DO i = 0, nt
          t = i*propa%delta_t
          t_deltat = t + propa%delta_t
          write (out_unit, *) propa%propa_name2, i, t, t_deltat
@@ -92,7 +92,7 @@ contains
           write (14,FMT= "(F20.10,F20.10)") t, Norm
           !write (18,*) t, pop
           write (19,*) t, Pt
-          write (20,*) t, At(:)
+          write (20,*) t, sqrt(real(At(:),kind=Rkind)),aimag(At(:)),At(:)
 
          if (mod(i, 2 ) == 0) then
               call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
