@@ -17,10 +17,12 @@ MODULE Basis_m
    PUBLIC :: Hagedorn_construction,Construct_Basis_Ho,Construct_Hagedorn_Variational_Basis
    PUBLIC :: Change_Basis_Parameters,Complete_Hagedorn_none_variationnal_Basis,Calc_d0d1d2W
    PUBLIC :: Complete_Hagedorn_none_variationnal_Basis_temp,construct_primitive_basis_temp
+   PUBLIC :: Weight_D_smol,Calc_n_smol,Calc_nterm_compact,Testsmol,Calc_nterm
 
    TYPE :: Basis_t
       integer                             :: nb_basis = ZERO
       integer                             :: nb ,nq
+      integer                             :: A_smol, B_smol,LB,LG
       real(kind=Rkind)                    :: A , B ,imp_k , scaleQ,Q0
       complex(kind=Rkind)                 :: Alpha = CZERO
       character(len=:),    allocatable    :: Basis_name
@@ -41,7 +43,10 @@ MODULE Basis_m
       complex(kind=Rkind), allocatable    :: S(:, :)
       TYPE(NDindex_t)                     :: NDindexq
       TYPE(NDindex_t)                     :: NDindexb
-      TYPE(Basis_t), allocatable          :: tab_basis(:)     
+      TYPE(NDindex_t)                     :: NDindexlq
+      TYPE(NDindex_t)                     :: NDindexlb
+      TYPE(Basis_t),      allocatable     :: tab_basis(:)     
+      TYPE(Basis_t),      allocatable     :: tab_Smolyak(:)     
 
    END TYPE Basis_t
 
@@ -383,17 +388,22 @@ CONTAINS
       !logical,             parameter          ::debug = .false.
       TYPE(Basis_t), intent(inout)             :: Basis
       integer, intent(in)                      :: nio
-      integer                                  :: err_io, nb, nq, i, j, nb_basis, ib
+      integer                                  :: err_io,nb,nq,i,nb_basis,ib
       character(len=Name_len)                  :: name
-      real(kind=Rkind)                         :: A, B, scaleQ, Q0, d0, d2, X1, W1,Imp_k
+      real(kind=Rkind)                         :: A, B, scaleQ, Q0,Imp_k
+      integer                                  :: A_smol, B_smol,LB,LG
       complex(kind=Rkind)                      :: Alpha
 
-      NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0,Imp_k,Alpha
+      NAMELIST /basis_nD/ name, nb_basis, A_smol, B_smol,LB,LG ,nb, nq, A, B, scaleQ, Q0,Imp_k,Alpha
       nb_basis = 0
       nb = 0
       nq = 0
       A = ZERO
       B = ZERO
+      A_smol=0
+      B_smol=0
+      LB=0
+      LG=0
       Q0 = ZERO
       scaleQ = ONE
       name = '0'
@@ -421,20 +431,41 @@ CONTAINS
       END IF
 
       IF (nb_basis > 1) THEN
-         Basis%Basis_name = 'Dp'
+         Basis%Basis_name = name
          Basis%nb_basis = nb_basis
          call string_uppercase_TO_lowercase(Basis%Basis_name)
-         allocate (Basis%tab_basis(nb_basis))
-         DO i = 1, nb_basis
-            CALL Read_Basis(Basis%tab_basis(i), nio)
-         END DO
-         Basis%nb = 1
-         Basis%nq = 1
-         DO i = 1, nb_basis
-            if (Basis%tab_basis(i)%Basis_name == 'el') cycle
-            Basis%nb = Basis%nb*Basis%tab_basis(i)%nb
-            Basis%nq = Basis%nq*Basis%tab_basis(i)%nq
-         END DO
+         If(Basis%Basis_name == 'dp') then
+           allocate (Basis%tab_basis(nb_basis))
+           DO i = 1, nb_basis
+              CALL Read_Basis(Basis%tab_basis(i), nio)
+           END DO
+           Basis%NDindexb%sys_type = 'dp'
+           Basis%NDindexq%sys_type = 'dp'
+           Basis%nb = 1
+           Basis%nq = 1
+
+           DO i = 1, nb_basis
+              if (Basis%tab_basis(i)%Basis_name == 'el') cycle
+              Basis%nb = Basis%nb*Basis%tab_basis(i)%nb
+              Basis%nq = Basis%nq*Basis%tab_basis(i)%nq
+           END DO
+
+         else if(Basis%Basis_name == 'smolyak') then
+            Basis%NDindexlb%L = LB
+            Basis%NDindexlb%Ndim = nb_basis-1
+            Basis%NDindexlq%Ndim = nb_basis-1
+            allocate(Basis%NDindexlq%NDend(nb_basis-1))
+            allocate(Basis%NDindexlb%NDend(nb_basis-1))
+            Basis%NDindexlq%NDend(:) =LG
+            Basis%NDindexlb%NDend(:) =LB
+            Basis%NDindexlb%sys_type = 'smolyak'
+            Basis%NDindexlq%sys_type = 'smolyak'
+           allocate (Basis%tab_Smolyak(nb_basis))
+           DO i = 1, nb_basis
+           CALL Read_Basis(Basis%tab_Smolyak(i), nio)
+           END DO
+
+         end if
       ELSE
          Basis%nb_basis = nb_basis
          Basis%nb = nb
@@ -443,6 +474,10 @@ CONTAINS
          Basis%SCALEQ = SCALEQ
          Basis%A = A
          Basis%B = B
+         Basis%A_smol = A_smol
+         Basis%B_smol = B_smol
+         Basis%LB = LB
+         Basis%LG = LG
          Basis%Imp_k = Imp_k
          Basis%alpha = alpha
          Basis%Basis_name = trim(adjustl(name))
@@ -455,6 +490,78 @@ CONTAINS
          CALL string_uppercase_TO_lowercase(Basis%Basis_name)
       END IF
    END SUBROUTINE Read_Basis
+
+  FUNCTION Calc_n_smol(A_smol,B_smol,l)
+    Integer, intent(in)     :: A_smol
+    Integer, intent(in)     :: B_smol
+    Integer, intent(in)     :: l
+    Integer                 :: Calc_n_smol
+ 
+     Calc_n_smol = A_smol + B_smol*l
+
+  END FUNCTION 
+
+   SUBROUTINE Weight_D_smol ( D,L,Som_l,ndim)
+     IMPLICIT NONE
+     Integer,   intent(in)       :: ndim
+     Integer,   intent(in)       :: Som_l
+     Integer,   intent(in)       :: L
+     Integer,   intent(inout)    :: D
+ 
+     D = ((-1)**(L-Som_l))*binomial(L-Som_l,ndim-1)
+
+   END SUBROUTINE 
+
+
+   SUBROUTINE Calc_nterm_compact ( Ncomp,L,ndim)
+    IMPLICIT NONE
+    Integer,   intent(in)       :: ndim
+    Integer,   intent(in)       :: L
+    Integer,   intent(inout)    :: Ncomp
+
+      Ncomp = Factorial(L+ndim)/(Factorial(L)*Factorial(ndim))
+
+   END SUBROUTINE 
+
+
+ SUBROUTINE Calc_nterm ( Nterm,Basis)
+  IMPLICIT NONE
+  TYPE(Basis_t), intent(inout)   :: Basis
+  Integer,   intent(inout)       :: Nterm
+  integer                        :: I,sum_l
+  logical                        :: Endloop
+  Integer,allocatable            :: Tab_lb(:),D_lb(:)
+
+
+  Allocate(Tab_lb(Basis%NDindexlb%Ndim))
+  call Init_NDindex(Basis%NDindexlb, Basis%NDindexlb%NDend, Basis%NDindexlb%Ndim)
+  Call Init_tab_ind(Tab_lb,Basis%NDindexlb)
+I=0
+DO 
+  I=I+1
+  CALL increase_NDindex(Tab_lb,Basis%NDindexlb,Endloop)
+   write(out_unit,*) i, Tab_lb(:)
+    IF (Endloop) exit
+ 
+END DO
+Nterm = I
+print*,'I',I
+
+allocate(D_lb(Nterm))
+
+Call Init_tab_ind(Tab_lb,Basis%NDindexlb)
+I=0
+DO 
+  I=I+1
+  CALL increase_NDindex(Tab_lb,Basis%NDindexlb,Endloop)
+  sum_l = sum(Tab_lb)
+  !call Weight_D_smol ( D_lb(I),Basis%NDindexlb%L,Sum_l,Basis%NDindexlb%Ndim)
+   !write(out_unit,*) i, D_lb(:)
+   write(out_unit,*) i,Basis%NDindexlb%L-sum_l ,Basis%NDindexlb%Ndim-1
+    IF (Endloop) exit
+ 
+END DO
+ END SUBROUTINE 
 
 
    RECURSIVE SUBROUTINE construct_primitive_basis_temp(Basis)
@@ -492,6 +599,44 @@ CONTAINS
    ! write(out_unit,*) ' End  construct  primitive Basis '
 END SUBROUTINE 
 
+
+ SUBROUTINE Testsmol(NDindex)
+   USE QDUtil_m
+   IMPLICIT NONE
+   TYPE(NDindex_t),  intent(inout) :: NDindex
+   integer, allocatable         :: Tab_ind(:)
+   logical                      :: Endloop
+ !  integer,     intent(in)      :: nl
+   integer                      :: i
+   !logical,    parameter      :: debug = .true.
+   logical,     parameter      :: debug = .false.
+   IF (debug) THEN
+     write(out_unit,*) 'BEGINNING Testsmol'
+     flush(out_unit)
+   END IF
+   Allocate(Tab_ind(NDindex%Ndim))
+  ! write(out_unit,*) 'NDindex%NDim',NDindex%Ndim
+   ! write(out_unit,*) 'NDindex%NDend',NDindex%NDend
+   !STOP 'cc'
+   call Init_NDindex(NDindex, NDindex%NDend, NDindex%Ndim)
+   Call Init_tab_ind(Tab_ind,NDindex)
+   i=0
+  ! write(out_unit,*) i, tab_ind(:)
+   !STOP 'cc'
+   DO !i= 1,100
+     i=i+1
+     CALL increase_NDindex(Tab_ind,NDindex,Endloop)
+      write(out_unit,*) i, tab_ind(:),sum(tab_ind(:))
+       IF (Endloop) exit
+    
+   END DO
+   
+   IF (debug) THEN
+     write(out_unit,*) 'END Testsmol'
+     flush(out_unit)
+   END IF
+ END SUBROUTINE 
+
    RECURSIVE SUBROUTINE construct_primitive_basis(Basis)
       USE QDUtil_m
       logical, parameter                     :: debug = .true.
@@ -499,20 +644,47 @@ END SUBROUTINE
       TYPE(Basis_t), intent(inout)           :: Basis
       integer, allocatable                   :: NDend_q(:)
       integer, allocatable                   :: NDend_b(:)
+      integer, allocatable                   :: NDend_lb(:)
+      integer, allocatable                   :: NDend_lq(:)
       integer                                :: ndim, ib
 
        ndim = Basis%nb_basis - 1
-       allocate (NDend_q(ndim))
-       allocate (NDend_b(ndim)) 
-       DO ib = 1, ndim
-          NDend_q(ib) = Basis%tab_basis(ib)%nq
-          NDend_b(ib) = Basis%tab_basis(ib)%nb
-       END DO 
-       call Init_NDindex(Basis%NDindexq, NDend_q, ndim)
-       call Init_NDindex(Basis%NDindexb, NDend_b, ndim)
 
-       call construct_primitive_basis_temp(Basis)
+        SELECT CASE (Basis%Basis_name)
+        CASE ('dp')
+         allocate (NDend_q(ndim))
+         allocate (NDend_b(ndim)) 
+          DO ib = 1, ndim
+            NDend_q(ib) = Basis%tab_basis(ib)%nq
+            NDend_b(ib) = Basis%tab_basis(ib)%nb
+          END DO 
 
+         CASE ('smolyak')
+         allocate (NDend_lb(ndim))
+         allocate (NDend_lq(ndim))
+          DO ib = 1, ndim
+             NDend_lq(ib) = Basis%LG
+             NDend_lb(ib) = Basis%LB
+         END DO 
+
+        END SELECT
+
+      SELECT CASE (Basis%Basis_name)
+        CASE ('dp')
+
+         call Init_NDindex(Basis%NDindexq, NDend_q, ndim)
+         call Init_NDindex(Basis%NDindexb, NDend_b, ndim)
+
+        CASE('smolyak')
+
+           Basis%NDindexlq%L  = Basis%LG
+           Basis%NDindexlb%L  = Basis%LB
+           call Init_NDindex(Basis%NDindexlq, NDend_lq, ndim)
+           call Init_NDindex(Basis%NDindexlb, NDend_lb, ndim)
+
+       End SELECT
+
+       !call construct_primitive_basis_temp(Basis)
         
    END SUBROUTINE 
 

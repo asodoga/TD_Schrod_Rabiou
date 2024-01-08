@@ -5,6 +5,7 @@ PROGRAM TD_SCHROD
    USE op_m
    USE Param_WP0_m
    USE Propa_m
+   USE NDindex_m
    USE Ana_psi_m
    USE lanczos_m
    USE Sub_Vp_m
@@ -15,6 +16,7 @@ PROGRAM TD_SCHROD
    TYPE(propa_t)                     :: propa
    TYPE(GWP_t), allocatable          :: tab_GWP(:)
    real(Kind=Rkind)                  :: E, Norm 
+   integer                           :: Nterm
  
 !-------------------------------------------------------------------------------
 ! for QML
@@ -35,28 +37,36 @@ PROGRAM TD_SCHROD
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unit)
-   call construct_primitive_basis(Basis)
+   !print*,'L', Basis%NDindexlq%L
+   !print*,'L', Basis%NDindexlb%L
+   !print*,'ndim', Basis%NDindexlb%NDend
+   
+   !print*,'B', Basis%NDindexlb%sys_type
+   !print*,'Q', Basis%NDindexlq%sys_type
+  ! call construct_primitive_basis(Basis)
+   !call Testsmol(Basis%NDindexlb)
+   call Calc_nterm ( Nterm,Basis)
    !call Write_Basis(Basis) 
 !-------------------------------------------------------------------------------------------
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
-   write (out_unit, *) "------------------- Initialization of  psi0 ---------------------"
+   !write (out_unit, *) "------------------- Initialization of  psi0 ---------------------"
 
-   call init_psi(psi0, Basis, cplx=.true., grid=.false.)
-   call init_psi(psif, Basis, cplx=.true., grid=.false.)
-   call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
-   !call test_basitogridgridtobasis(Basis)
-   call psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
-   call Calc_average_energy(psi0, E)
-   call Calc_Norm_OF_Psi(psi0,Norm)
-   write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
-   write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
+   !call init_psi(psi0, Basis, cplx=.true., grid=.false.)
+   !call init_psi(psif, Basis, cplx=.true., grid=.false.)
+   !call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
+   !!call test_basitogridgridtobasis(Basis)
+   !call psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
+   !call Calc_average_energy(psi0, E)
+   !call Calc_Norm_OF_Psi(psi0,Norm)
+   !write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
+   !write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
    !call H_test(psi0)
    !call Vp_test_temp(psi0)
    !call Set_Op(H,Basis)
    ! call Make_Mat_OP(H)
    !call  write_Op(H)
-   call read_propa(propa)
-   call test_psi_temp(psi0,propa)
+   !call read_propa(propa)
+   !call test_psi_temp(psi0,propa)
    STOP 'calcul de H|psi> est fait'
 
    call read_propa(propa)

@@ -10,7 +10,7 @@ make
 mkdir -p ../results
 #./TD_SCHROD.x <DAT_files/dat_vp.lua> resultat.lua
 #./TD_SCHROD.x <DAT_files/dat_retinal_non_Hagedorn.lua> resultat.lua
-./TD_SCHROD.x </home/rabiou_issa/rabiou.issa/TD_Schrod_Rabiou/DAT_files/dat_Hagedorn_phase.lua> resultat.lua
+./TD_SCHROD.x </home/rabiou_issa/rabiou.issa/TD_Schrod_Rabiou/DAT_files/data_smo.lua> resultat.lua
 #./TD_SCHROD.x </home/rabiou_issa/rabiou.issa/TD_Schrod_Rabiou/DAT_files/dat_Hagedorn_phase2D.lua> resultat.lua
 #./TD_SCHROD.x <DAT_files/dat_Hagedorn2d> resultat
 

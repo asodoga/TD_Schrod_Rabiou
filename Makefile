@@ -1,7 +1,7 @@
 FC=gfortran
 #FC=ifort
-FFLAGS=-O3 -Wall -Wextra -fopenmp -J$(MOD_DIR)
-#FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
+#FFLAGS=-O3 -Wall -Wextra -fopenmp -J$(MOD_DIR)
+FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
 OBJ_DIR=obj
 MOD_DIR=obj
 SRC_DIR=src
