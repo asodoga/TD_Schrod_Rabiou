@@ -1,0 +1,1 @@
+splot "<  psi_dt_on_basis0_non_hagedorn_taylor.txt psi_dt_on_basis0_hagedorn_taylor.txt"  u 1:2:($3-$3) w pm3d 

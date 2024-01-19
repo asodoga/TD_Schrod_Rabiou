@@ -70,7 +70,7 @@ $(OBJ_DIR)/psi_m.o: $(OBJ_DIR)/Basis_m.o $(OBJ_DIR)/param_WP0_m.o
 
 $(OBJ_DIR)/Ana_psi_m.o: $(OBJ_DIR)/psi_m.o
 
-$(OBJ_DIR)/Auto_corr_m.o: $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/poly0rtho_m.o
+$(OBJ_DIR)/Auto_corr_m.o: $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/Hagedorn_m.o $(OBJ_DIR)/Basis_m.o
 
 $(OBJ_DIR)/Op_m.o: $(OBJ_DIR)/Molec_m.o $(OBJ_DIR)/Basis_m.o $(OBJ_DIR)/psi_m.o
 
@@ -79,7 +79,7 @@ $(OBJ_DIR)/lanczos_m.o: $(OBJ_DIR)/Op_m.o $(OBJ_DIR)/psi_m.o
 $(OBJ_DIR)/Propa_m.o:  $(OBJ_DIR)/sub_propa_m.o $(OBJ_DIR)/Auto_corr_m.o $(OBJ_DIR)/lanczos_m.o $(OBJ_DIR)/Op_m.o \
  $(OBJ_DIR)/Ana_psi_m.o $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/Hagedorn_m.o $(OBJ_DIR)/Basis_m.o
  
-$(OBJ_DIR)/sub_propa_m.o:  $(OBJ_DIR)/Sub_Vp_m.o  $(OBJ_DIR)/lanczos_m.o $(OBJ_DIR)/Op_m.o  $(OBJ_DIR)/psi_m.o $(OBJ_DIR)/lanczos_m.o \
+$(OBJ_DIR)/sub_propa_m.o:  $(OBJ_DIR)/Sub_Vp_m.o  $(OBJ_DIR)/lanczos_m.o $(OBJ_DIR)/Op_m.o  $(OBJ_DIR)/psi_m.o \
   $(OBJ_DIR)/Ana_psi_m.o $(OBJ_DIR)/Basis_m.o
 
 

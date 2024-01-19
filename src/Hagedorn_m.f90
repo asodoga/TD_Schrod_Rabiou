@@ -8,6 +8,7 @@ module Hagedorn_m
    implicit none
    PRIVATE
    PUBLIC :: Projection_temp,test_psi_temp, Calc_Basis_parameters,march_Hagedorn,march_Global
+   PUBLIC :: Hagedorn_Inv,Hagedorn_Inv1,Hagedorn_inv2
 
 CONTAINS
 
@@ -107,7 +108,7 @@ IMPLICIT NONE
  integer                                        :: ib,iq,jb
  real(kind=Rkind)                               :: SQeq,Qeq
  real(kind=Rkind)           , allocatable       :: Q(:),W(:)
-  real(kind=Rkind)                              :: Bt,B0
+ real(kind=Rkind)                              :: Bt,B0
  complex(kind=Rkind),allocatable                :: d0gb(:,:),d0bgw(:,:)
 
  SQeq = sqrt(SQ0*SQ0 + SQt*SQt)/sqrt(TWO)
@@ -256,10 +257,9 @@ subroutine test_psi_temp(psi,propa)
        do ib = 1,size(psi%CVec)
            write(out_unit,*) ib,abs(psi2%CVec(ib))**2
       end Do 
-
        write(out_unit,*)  'E0,E' ,E0,E 
 
-       call  Hagedorn_Inv(psi1, psi2)
+       call  Hagedorn_inv2(psi1, psi2)!,propa)
 
         do ib = 1,size(psi%CVec)
          write(out_unit,*) ib,abs(psi%CVec(ib))**2,abs(psi1%CVec(ib))**2,abs(psi%CVec(ib))**2-abs(psi1%CVec(ib))**2
@@ -303,6 +303,30 @@ TYPE(propa_t), intent(in)               :: propa
  end subroutine
 
 
+
+
+ SUBROUTINE Hagedorn_inv2(psi0, psi_dt)!,propa)
+USE psi_m
+type(psi_t),  intent(inout)             :: psi0
+type(psi_t),  intent(inout)             :: psi_dt
+!TYPE(propa_t), intent(in)               :: propa
+ complex(kind=Rkind),allocatable        :: A0(:)
+ real(kind=Rkind)   ,allocatable        :: Q0(:),SQ0(:),P0(:)
+  real(kind= Rkind)                     :: Norm0,norm
+  integer                               :: ndim
+  ndim = size(psi0%Basis%tab_basis) - 1
+ allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
+call Get_Basis_Parameters(psi0%Basis,Q0,SQ0,A0,P0)
+ !call  Calc_Basis_parameters_temp(psi0,Q0,SQ0,A0,P0,propa)
+ call Construct_Hagedorn_none_Variational_Basis_temp(psi_dt%Basis,Q0,SQ0,A0,P0)
+ call Calc_Norm_OF_psi(psi_dt,Norm0)
+ call Projection(psi0,psi_dt)
+ call Calc_Norm_OF_psi(psi0,Norm)
+ write(out_unit,*)  abs(Norm0-Norm), Norm0,Norm
+ deallocate(Q0,SQ0,A0,P0)
+ end subroutine
+
+
 SUBROUTINE Hagedorn_Inv(psi1, psi2)
   USE psi_m
   type(psi_t),  intent(inout)   ,target     :: psi1
@@ -338,12 +362,44 @@ SUBROUTINE Hagedorn_Inv(psi1, psi2)
        B2(:) = B1(:)
        deallocate(S)
     END DO
-   call Calc_Norm_OF_psi(psi2,Norm0)
-   call Projection(psi1,psi2)
-   call Calc_Norm_OF_psi(psi1,Norm)
+
+    psi1%CVec(:)=  B1(:)
+  ! call Calc_Norm_OF_psi(psi2,Norm0)
+  ! call Projection(psi1,psi2)
+  ! call Calc_Norm_OF_psi(psi1,Norm)
 
    deallocate(Qt,SQt,At,Pt)
    deallocate(Q0,SQ0,A0,P0)
+END SUBROUTINE
+
+
+
+SUBROUTINE Hagedorn_Inv1(psi0, psi_dt)
+  USE psi_m
+  type(psi_t),  intent(inout)   ,target     :: psi0
+  type(psi_t),  intent(in),target           :: psi_dt
+  complex(kind=Rkind),allocatable           :: At(:),A0(:)
+  real(kind=Rkind)   ,allocatable           :: Qt(:),SQt(:),Pt(:)
+  real(kind=Rkind)   ,allocatable           :: Q0(:),SQ0(:),P0(:)
+  integer                                   :: ndim,nb,nq,ib
+   
+  ndim = size(psi0%Basis%tab_basis) - 1
+  allocate(Qt(ndim), SQt(ndim),Pt(ndim),At(ndim))
+  allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
+  call Get_Basis_Parameters(psi0%Basis,Q0,SQ0,A0,P0)
+  call Get_Basis_Parameters(psi_dt%Basis,Qt,SQt,At,Pt)
+
+    DO ib = 1,ndim
+      nb = psi0%Basis%tab_basis(ib)%nb
+      nq = psi0%Basis%tab_basis(ib)%nq
+      call Calc_S(psi_dt%Basis%tab_basis(ib)%S,nb,nq,Qt(ib),SQt(ib),At(ib),Pt(ib),Q0(ib),SQ0(ib),A0(ib),P0(ib))
+    END DO
+  
+   call Projection1(psi0,psi_dt)
+
+   deallocate(Qt,SQt,At,Pt)
+   deallocate(Q0,SQ0,A0,P0)
+
 END SUBROUTINE
 
  
@@ -365,16 +421,16 @@ END SUBROUTINE
 
    If (propa%propa_name == 'hagedorn') Then
     call  march(psi, psi_dt, t, propa)
-     call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
-     , print_basis=.false., t=t, int_print=23, real_part=.false.)
-     write(23,*)
-     call  Calc_average_energy(psi_dt, E0)
-     call Calc_Norm_OF_psi(psi_dt,Norm0)
+    ! call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
+    ! , print_basis=.false., t=t, int_print=23, real_part=.false.)
+    ! write(23,*)
+     !call  Calc_average_energy(psi_dt, E0)
+     !call Calc_Norm_OF_psi(psi_dt,Norm0)
      call Hagedorn_temp(psi, psi_dt,propa)
-     call  Calc_average_energy(psi, E)
-     call Calc_Norm_OF_psi(psi,Norm)
-     write(25,*) t, abs(E0-E), t,E0,E
-    write(24,*) t, abs(Norm0-Norm),t, Norm0,Norm
+     !all  Calc_average_energy(psi, E)
+     !all Calc_Norm_OF_psi(psi,Norm)
+    !write(25,*) t, abs(E0-E), t,E0,E
+    !write(24,*) t, abs(Norm0-Norm),t, Norm0,Norm
    Else
      call  march(psi, psi_dt, t, propa)
      psi%CVec(:) = psi_dt%CVec(:)

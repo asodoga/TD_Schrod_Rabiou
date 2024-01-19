@@ -22,7 +22,7 @@ module psi_m
 
    public :: psi_t, write_psi, init_psi, dealloc_psi, write_psi_grid
    public :: write_psi_basis, Calc_Norm_OF_PsiBasis, Calc_Norm_OF_PsiGrid, Calc_Norm_OF_Psi
-   public:: Projection,psi_init_GWP
+   public:: Projection,Projection1,psi_init_GWP
 contains
 
 
@@ -365,6 +365,63 @@ contains
       !write (out_unit, *) 'out',psi_dt_2%CVec
 
    END SUBROUTINE Projection
+
+
+   SUBROUTINE Projection1(psi_dt_2, psi_dt_1)
+   TYPE(psi_t), intent(in), target                  :: psi_dt_1
+   TYPE(psi_t), intent(inout), target               :: psi_dt_2
+   complex(kind= Rkind), pointer                    :: BBB1(:, :, :), BBB2(:, :, :)
+   complex(kind= Rkind), allocatable, target        :: B1(:), B2(:)
+   real(kind= Rkind)                                :: Norm0
+   logical, parameter                               :: debug = .true.
+   integer                                          :: inb, i1, i3, Ndim
+   Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
+   call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
+   Ndim = size(psi_dt_1%Basis%tab_basis) - 1
+   call Calc_Norm_OF_psi(psi_dt_1,Norm0)
+   write (out_unit, *) 'Begin Hagedorn projection <psi|psi>=',Norm0
+   !write (out_unit, *) 'out',psi_dt_2%CVec
+   !call  Write_VecMat(psi_dt_1%Basis%tab_basis(1)%S, out_unit, 5,  info='S')
+   If (Ndim == 1) then
+      BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
+      BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
+      psi_dt_2%CVec(:) = CZERO
+      DO i3 = 1, ubound(BBB1, dim=3)
+      DO i1 = 1, ubound(BBB1, dim=1)
+         BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
+      END DO
+      END DO
+   else
+      allocate (B1(Ib1(1)*Ib2(1)*Ib3(1)))
+      BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
+      BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B1
+      DO i3 = 1, ubound(BBB1, dim=3)
+      DO i1 = 1, ubound(BBB1, dim=1)
+         BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
+      END DO
+      END DO
+      Do inb = 2, Ndim
+         allocate (B2(Ib1(inb)*Ib2(inb)*Ib3(inb)))
+         BBB1(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B1
+         BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
+         DO i3 = 1, ubound(BBB1, dim=3)
+         DO i1 = 1, ubound(BBB1, dim=1)
+            BBB2(i1, :, i3) = matmul( psi_dt_1%Basis%tab_basis(inb)%S,BBB1(i1, :, i3))
+         END DO
+         END DO
+         B1 = B2
+         B2 = CZERO
+         deallocate (B2)
+         if (inb == Ndim) psi_dt_2%CVec = B1
+      END DO
+   END IF
+     call Calc_Norm_OF_psi(psi_dt_2,Norm0)
+     deallocate(Ib1, Ib2, Ib3)
+     if(allocated(B1)) deallocate(B1)
+     if(allocated(B2)) deallocate(B2)
+   write (out_unit, *) 'END Hagedorn projection <psi|psi>=',Norm0
+   !write (out_unit, *) 'out',psi_dt_2%CVec
+END SUBROUTINE 
 
 
    SUBROUTINE Calc_Norm_OF_Psi(psi, Norm)

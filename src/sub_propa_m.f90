@@ -4,7 +4,6 @@ module sub_propa_m
    USE Op_m
    USE Ana_psi_m
    Use lanczos_m
-   USE Auto_corr_m
    USE Sub_Vp_m
 
    implicit none
@@ -22,7 +21,7 @@ module sub_propa_m
    END TYPE propa_t
 
    public :: march_taylor, marh_RK4th,March,march_ITP,march_SIL,march_VP
-   public :: mEyeHPsi, write_propa, Analyse, creat_file_unit, read_propa
+   public :: mEyeHPsi, write_propa, Analyse, creat_file_unit, read_propa,diff2
 
 contains
 
@@ -434,6 +433,29 @@ contains
       CALL dealloc_psi(Hpsi)
       CALL dealloc_psi(psi_b)
    End SUBROUTINE Calc_average_energy
+
+
+   SUBROUTINE diff2()
+    complex(kind=Rkind), allocatable         :: df(:, :)
+    complex(kind=Rkind), allocatable         :: f1(:, :)
+    complex(kind=Rkind), allocatable         :: f2(:, :)
+    integer                             :: iostat, iq = 1, n = 6001, m = 784
+    open (200, file='psi_dt_on_basis0_non_hagedorn_taylor.txt', status="old")
+    open (201, file='psi_dt_on_basis0_hagedorn_taylor.txt', status="old")
+    open (202, file='psi_dt_on_basis_diff.txt')
+    allocate (f1(n, m), f2(n, m), df(n, m))
+    do while (iq < n)
+       read (200, *, IOSTAT=iostat) f1(iq, :)
+       read (201, *, IOSTAT=iostat) f2(iq, :)
+       iq = iq + 1
+    end do
+    df(:, :) = ZERO
+    !df(:, :) = f1(:, :) - f2(:, :)
+    do iq = 1, n
+       df(iq,:) = f1(iq,:)-f2(iq,:)
+       write (202, *)  iq,sqrt(real(dot_product(df(iq, :), df(iq, :)), kind= Rkind))
+    end do
+  END SUBROUTINE
 
   SUBROUTINE diff()
       real(kind=Rkind), allocatable         :: df(:, :)
