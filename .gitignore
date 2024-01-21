@@ -5,7 +5,6 @@ fort.*
 *.pdf
 *.dat
 *.swap
-*.lua
 *.txt
 *.png
 # Prerequisites

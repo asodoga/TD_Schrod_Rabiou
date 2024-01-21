@@ -189,7 +189,7 @@ contains
       call Calc_Q_grid(Q, Basis)
       Do iq = 1, Basis%nq
 
-         CALL sub_pot(V(iq, :, :), Q(iq, :), 1)
+         CALL sub_pot(V(iq, :, :), Q(iq, :), 0)
          ! if(mod(iq,1000)==0)then
          !     Write(11,*) "  "
          !     Write(12,*) "  "

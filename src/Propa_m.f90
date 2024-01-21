@@ -91,7 +91,7 @@ contains
          End if
           call Calc_average_energy(psi, E)
           call Calc_Norm_OF_psi(psi, Norm)
-          call  Calc_Auto_corr(psi_t0, psi, aut_func, aut_func_arg, propa%propa_name,it=i+1)
+          call  Calc_Auto_corr(psi_t0, psi, aut_func, aut_func_arg, propa%propa_name,it =i)
 
           write (11,*) t, Qt
           write (12,FMT= "(F20.10,F20.10)") t, E

@@ -24,6 +24,7 @@ contains
       TYPE(psi_t)                                :: psi,psi_t0
       TYPE(Basis_t)                              ::  Basis0,Basis_dt
       real(kind=Rkind)                           :: X, Y
+      integer                                    :: ib
 
       write (out_unit, *) 'Beging Calc_Auto_corr'
 
@@ -49,7 +50,8 @@ contains
              write(27,*)
          end if
 
-          if(present(it)) write(27,*) psi%CVec(:)
+          if(present(it)) call test_write(psi,ib=27)    
+           if(present(it)) write(27,*)     
 
          call dealloc_psi(psi)
          call dealloc_psi(psi_t0)
@@ -65,7 +67,8 @@ contains
            , print_basis=.false., t=t, int_print=27, real_part=.false.)
             write(27,*)
          end if
-         if(present(it)) write(27,*) psi_dt%CVec(:)
+         if(present(it)) call test_write(psi_dt,ib=27)
+         if(present(it)) write(27,*)
       end if
       !write (out_unit, *) 'corre_coeff =', corre_coeff, 'arg_corre_coeff=', arg_corre_coeff
 
@@ -99,5 +102,21 @@ contains
       END DO !omega
    END SUBROUTINE
 
+
+
+   SUBROUTINE test_write(psi,ib)
+
+   implicit none
+
+   TYPE(psi_t), intent(in)                    :: psi
+   integer,intent(in)                          :: ib
+  integer                                     :: i
+
+  !do i =1,size(psi%CVec)
+
+  write(ib,*) psi%CVec(:)
+ ! end do
+
+   END SUBROUTINE
 end module Auto_corr_m
 
