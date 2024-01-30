@@ -58,7 +58,7 @@ PROGRAM TD_SCHROD
    !call  write_Op(H)
    call read_propa(propa)
    !call test_psi_temp(psi0,propa)
-  !STOP 'calcul de H|psi> est fait'
+   !STOP 'calcul de H|psi> est fait'
    call propagation(psif, psi0, propa)
    !call diff2()
    !call test_psi_temp(psif,propa)
