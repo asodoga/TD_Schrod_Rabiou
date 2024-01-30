@@ -11,6 +11,11 @@ fort.*
 *.d
 cplx-basis-test
 EXT_Lib
+results_H_nb70
+results_H_nb70dt01
+results_std_nb70dt01
+results_std_nb50dt01
+results_std_nb100dt01
 
 
 # Compiled Object files
