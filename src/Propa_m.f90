@@ -97,7 +97,7 @@ contains
           write (12,FMT= "(F20.10,F20.10)") t, E
           write (13,*) t, SQt
           write (14,FMT= "(F20.10,F20.10)") t, Norm
-          write (26,FMT= "(F20.10,F20.10)") t, abs(aut_func)!,real(aut_func,kind=Rkind),aimag(aut_func),aut_func_arg
+          write (26,*) t,aut_func
           !write (18,*) t, pop
           write (19,*) t, Pt
           write (20,*) t, sqrt(real(At(:),kind=Rkind)),At(:)

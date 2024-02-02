@@ -165,31 +165,44 @@ contains
       complex(kind=Rkind), intent(in), target            :: Psi_g(:)
       complex(kind=Rkind), intent(inout)                 :: HPsi_g(:)
       type(Basis_t), intent(in), target                  :: Basis
-      complex(kind=Rkind), allocatable, target           ::VPsi_g(:), KPsi_g(:)
+      complex(kind=Rkind), allocatable, target           :: VPsi_g(:), KPsi_g(:)
       complex(kind=Rkind), pointer                       :: VPsi_gb(:, :), Psi_gb(:, :)
-      real(kind=Rkind), allocatable                      :: V(:, :, :), Q(:, :)
-      INTEGER                                            ::iq, i2, j2, i1, Ndim,nsurf
+      real(kind=Rkind), allocatable                      :: V(:, :, :), Q(:)
+      integer,allocatable                                :: Tab_Iq(:)
+      logical                                            :: Endloop_q
+      INTEGER                                            :: iq, inb,i2, j2, ndim,nsurf
+
       !open(11, file = 'Pot_Retinal11.dat')
       !open(12, file = 'Pot_Retinal22.dat')
       !open(13, file = 'Pot_Retinal12.dat')
       !open(14, file = 'Pot_Retinal21.dat')
+
       IF (.not. allocated(Basis%tab_basis)) THEN
          STOP 'ERROR in Set_Op: the Basis%tab_bais is not initialized'
       END IF
+
       ! action potential V|Psi_g>
       Ndim = size(Basis%tab_basis)
-      allocate (VPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
-      allocate (KPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
-      allocate (V(Basis%nq, Basis%tab_basis(Ndim)%nb, Basis%tab_basis(Ndim)%nb))
+      allocate(Tab_Iq(ndim-1),Q(ndim-1)) 
+      allocate(VPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
+      allocate(KPsi_g(Basis%nq*Basis%tab_basis(Ndim)%nb))
+      allocate(V(Basis%nq, Basis%tab_basis(Ndim)%nb, Basis%tab_basis(Ndim)%nb))
       V(:, :, :) = ZERO
       VPsi_g(:) = CZERO
       KPsi_g(:) = CZERO
       HPsi_g(:) = CZERO
       !print*,'nsurf',Basis%tab_basis(Ndim)%nb
-      call Calc_Q_grid(Q, Basis)
-      Do iq = 1, Basis%nq
-
-         CALL sub_pot(V(iq, :, :), Q(iq, :), 0)
+     ! call Calc_Q_grid(Q, Basis)
+      Call Init_tab_ind(Tab_Iq,Basis%NDindexq)
+      iq =0
+      Do !iq = 1, Basis%nq
+         iq = iq + 1
+           CALL increase_NDindex(Tab_Iq, Basis%NDindexq, Endloop_q)
+           IF (Endloop_q) exit
+           do inb = 1, ndim-1
+              Q(inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
+           end do
+           CALL sub_pot(V(iq, :, :), Q(:), 1)
          ! if(mod(iq,1000)==0)then
          !     Write(11,*) "  "
          !     Write(12,*) "  "
@@ -236,31 +249,55 @@ contains
       complex(kind=Rkind), pointer                    :: Kpsi_ggb(:, :, :)
       real(kind=Rkind), allocatable                   :: GGdef(:, :)
       logical, parameter                              :: debug = .true.
-      integer                                         :: iq, i1, i3, inb, Ndim
-      integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:)
+      integer                                         :: iq, i1, i3, inb, ndim
+      integer, allocatable                            :: Iq1, Iq2, Iq3
+      !integer, allocatable                            :: Iq1(:), Iq2(:), Iq3(:)
 
       IF (debug) THEN
          !write(out_unit,*) 'BEGINNING Kpsi'
          flush (out_unit)
       END IF
 
-      Ndim = size(Basis%tab_basis)-1
-      allocate (GGdef(Ndim , Ndim))
+      ndim = size(Basis%tab_basis)-1
+      allocate (GGdef(ndim , ndim))
       CALL get_Qmodel_GGdef(GGdef)
-      call Calc_index(Iq1=Iq1, Iq2=Iq2, Iq3=Iq3,Basis=Basis)
+      !allocate(Iq1(ndim), Iq2(ndim), Iq3(ndim))
+     ! call Calc_index(Iq1=Iq1, Iq2=Iq2, Iq3=Iq3,Basis=Basis)
+
       Kpsi_g(:) = CZERO
-      DO inb = 1, Ndim 
-         Kpsi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => Kpsi_g
-         psi_ggb(1:Iq1(inb), 1:Iq2(inb), 1:Iq3(inb)) => psi_g
-         d2gg(1:Iq2(inb), 1:Iq2(inb)) => Basis%tab_basis(inb)%d2gg
+      DO inb = 1, ndim 
+         
+      IF (inb == 1) THEN
+      
+          Iq1 = 1
+          Iq2 = Basis%tab_basis(1)%nq
+          Iq3 = Product(Basis%tab_basis(2:ndim)%nq)*Basis%tab_basis(ndim + 1)%nb
+
+      ELSE IF (inb == ndim) THEN
+
+         Iq1  = Product(Basis%tab_basis(1:ndim - 1)%nq)
+         Iq2  = Basis%tab_basis(ndim)%nq
+         Iq3  = Basis%tab_basis(ndim + 1)%nb
+
+      ELSE
+          Iq1 = Product(Basis%tab_basis(1:inb - 1)%nq)
+          Iq2 = Basis%tab_basis(inb)%nq
+          Iq3 = Product(Basis%tab_basis(inb + 1:ndim)%nq)*Basis%tab_basis(ndim + 1)%nb
+      END IF
+
+         Kpsi_ggb(1:Iq1, 1:Iq2, 1:Iq3) => Kpsi_g
+         psi_ggb(1:Iq1, 1:Iq2, 1:Iq3) => psi_g
+         d2gg(1:Iq2, 1:Iq2) => Basis%tab_basis(inb)%d2gg
+
          DO i3 = 1, ubound(psi_ggb, dim=3)
             DO i1 = 1, ubound(psi_ggb, dim=1)
                KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, psi_ggb(i1, :, i3))
                !Kpsi_ggb(i1, :, i3) = Kpsi_ggb(i1, :, i3) - HALF*matmul(d2gg, psi_ggb(i1, :, i3))
             END DO
          END DO
+
       END DO
-      Deallocate (Iq1, Iq2, Iq3)
+      deallocate (Iq1, Iq2, Iq3)
       IF (debug) THEN
          !        write(out_unit,*) 'END KPsi_nD'
          flush (out_unit)

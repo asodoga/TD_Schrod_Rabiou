@@ -971,10 +971,10 @@ END SUBROUTINE
       B1(:) = CONE
       G1(:) = CONE
       G2(:) = CZERO
-      print *, 'G in', G1
+      !print *, 'G in', G1
       Call GridTOBasis_nD_cplx(B, G1, Basis)
       Call BasisTOGrid_nD_cplx(G2, B, Basis)
-      print *, 'G out', G2
+      !print *, 'G out', G2
 
       print *, '---------------------------------------------------------------------'
 
@@ -987,10 +987,10 @@ END SUBROUTINE
       G2(:) = CZERO
       B2(:) = CZERO
       B1(:) = CONE
-      print *, 'B in', B1
+      !print *, 'B in', B1
       Call BasisTOGrid_nD_cplx(G2, B1, Basis)
       Call GridTOBasis_nD_cplx(B2, G2, Basis)
-      print *, 'B out', B2
+      !print *, 'B out', B2
       diff_b(:) = ABS(B2(:) - B1(:))
       print *, '---------------------------------------------------------------------'
       Write (out_unit, *) 'maxval(diff_b(:))=', maxval(diff_b(:))
@@ -1064,7 +1064,7 @@ END SUBROUTINE
       integer                                        :: Ndim
       integer                                        :: inb
 
-      Ndim = size(Basis%tab_basis) - 1
+      ndim = size(Basis%tab_basis) - 1
 
       if (present(Ib3)) allocate (Ib3(Ndim))
       if (present(Ib2)) allocate (Ib2(Ndim))
@@ -1075,7 +1075,7 @@ END SUBROUTINE
       if (present(Iq1)) allocate (Iq1(Ndim))
 
 
-      DO inb = 1, Ndim
+      DO inb = 1, ndim
 
          IF (inb == 1) THEN
 
@@ -1115,186 +1115,220 @@ END SUBROUTINE
 
    END SUBROUTINE
 
-   SUBROUTINE BasisTOGrid_nD_cplx(G, B, Basis)
-      USE QDUtil_m
-      USE NDindex_m
-      !Logical,           parameter                 :: debug = .true.
-      Logical, parameter                            :: debug = .false.
-      TYPE(Basis_t), intent(in)                     :: Basis
-      complex(kind=Rkind), intent(in), target          :: B(:) !Vector on base,
-      complex(kind=Rkind), intent(inout), target       :: G(:) !Vector on the grid, out
-      complex(kind=Rkind), pointer                     :: BBG(:, :, :)
-      complex(kind=Rkind), pointer                     :: BBB(:, :, :), GGB(:, :, :)
-      integer, allocatable                             :: Ib3(:), Iq1(:), Iq2(:), ib1(:), ib2(:), iq3(:)
-      complex(kind=Rkind), pointer                     :: GBB(:, :, :)
-      complex(kind=Rkind), allocatable, target         :: GBB1(:), GGB2(:)
+SUBROUTINE BasisTOGrid_nD_cplx(G, B, Basis)
+    USE QDUtil_m
+    USE NDindex_m
+    !Logical,           parameter                 :: debug = .true.
+    Logical, parameter                            :: debug = .false.
+    TYPE(Basis_t), intent(in)                     :: Basis
+    complex(kind=Rkind), intent(in), target       :: B(:) 
+    complex(kind=Rkind), intent(inout), target    :: G(:) 
+    complex(kind=Rkind), pointer                  :: BBG(:, :, :)
+    complex(kind=Rkind), pointer                  :: BBB(:, :, :), GGB(:, :, :)
+    integer, allocatable                          :: Ib3, Iq1, Iq2, Ib1, Ib2, Iq3
+    complex(kind=Rkind), pointer                  :: GBB(:, :, :)
+    complex(kind=Rkind), allocatable, target      :: GBB1(:), GGB2(:)
+    Integer                                       :: Ib, Iq, nq, nb, inb, ndim
+    Integer                                       :: jb, jb1, jb2
 
-      Integer                                       :: ib, iq, nq, nb, inb, Ndim
-      Integer                                       :: jb, jb1, jb2
+    IF (debug) THEN
+       write (out_unit, *) 'BEGINNING BasisTOGrid_nD_cplx'
+       write (out_unit, *) 'intent(in) :: B(:)', B
+       Call Write_Basis(Basis)
+       flush (out_unit)
+    END IF
 
-      IF (debug) THEN
-         write (out_unit, *) 'BEGINNING BasisTOGrid_nD_cplx'
-         write (out_unit, *) 'intent(in) :: B(:)', B
-         Call Write_Basis(Basis)
-         flush (out_unit)
-      END IF
+    IF (.NOT. Basis_IS_Allocated(Basis)) THEN
+       write (out_unit, *) ' ERROR in BasisTOGrid_Basis'
+       write (out_unit, *) " the basis is not Allocated."
+       STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
+    END IF
+    IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
+       write (out_unit, *) ' ERROR in BasisTOGrid_Basis'
+       write (out_unit, *) ' the size of B is different from nb.'
+       write (out_unit, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
+       STOP 'ERROR in BasisTOGrid_Basis: wrong B size.'
+    END IF
+    IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
+       write (out_unit, *) ' ERROR in GridTOBasis_Basis'
+       write (out_unit, *) ' the size of G is different from nq.'
+       write (out_unit, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
+       STOP 'ERROR in BasisTOGrid_Basis: wrong G size..'
+    END IF
 
-      IF (.NOT. Basis_IS_Allocated(Basis)) THEN
-         write (out_unit, *) ' ERROR in BasisTOGrid_Basis'
-         write (out_unit, *) " the basis is not Allocated."
-         STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
-      END IF
+    ndim = size(Basis%tab_basis) - 1
+    IF (ndim == 1) THEN
+      Iq1 = 1
+      Iq2 = Basis%tab_basis(1)%nq
+      Iq3 = Basis%tab_basis(ndim + 1)%nb
+      
+      Ib1 = 1
+      Ib2 = Basis%tab_basis(1)%nb
+      Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
+      
+       BBB(1:Ib1, 1:Ib2, 1:Ib3) => B
+       GGB(1:Iq1, 1:Iq2, 1:Iq3) => G
+       G = CZERO
+       Call BasisTOGrid_1D_cplx(GGB, BBB, Basis%tab_basis(1))
+       
+    ELSE
+       
+       Iq1 = 1
+       Iq2 = Basis%tab_basis(1)%nq
+       Iq3 = Basis%tab_basis(ndim+1)%nb
 
-      IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-         write (out_unit, *) ' ERROR in BasisTOGrid_Basis'
-         write (out_unit, *) ' the size of B is different from nb.'
-         write (out_unit, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
-         STOP 'ERROR in BasisTOGrid_Basis: wrong B size.'
-      END IF
+       Ib1 = 1
+       Ib2 = Basis%tab_basis(1)%nb
+       Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
 
-      IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-         write (out_unit, *) ' ERROR in GridTOBasis_Basis'
-         write (out_unit, *) ' the size of G is different from nq.'
-         write (out_unit, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
-         STOP 'ERROR in BasisTOGrid_Basis: wrong G size..'
-      END IF
+       Allocate (GBB1(Iq1*Iq2*Ib3))
+       BBB(1:Iq1, 1:Ib2, 1:Ib3) => B
+       GBB(1:Iq1, 1:Iq2, 1:Ib3) => GBB1
+       GBB1 = CZERO
+       Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(1))
 
-      Ndim = size(Basis%tab_basis) - 1
-      Call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
-      if (Ndim == 1) then
-         BBB(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B
-         GGB(1:Iq1(1), 1:Iq2(1), 1:Iq3(1)) => G
-         G = CZERO
-         Call BasisTOGrid_1D_cplx(GGB, BBB, Basis%tab_basis(1))
-      else
+    DO inb = 2, ndim - 1
 
-         Allocate (GBB1(iq1(1)*iq2(1)*ib3(1)))
-         BBB(1:iq1(1), 1:ib2(1), 1:ib3(1)) => B
-         GBB(1:iq1(1), 1:iq2(1), 1:ib3(1)) => GBB1
-         GBB1 = CZERO
+       Iq1 = Product(Basis%tab_basis(1:inb - 1)%nq)
+       Ib1 = Product(Basis%tab_basis(1:inb - 1)%nb)
+       Iq2 = Basis%tab_basis(inb)%nq
+       Ib2 = Basis%tab_basis(inb)%nb
+       Ib3 = Product(Basis%tab_basis(inb + 1:ndim + 1)%nb)
+       Iq3 = Product(Basis%tab_basis(inb + 1:ndim)%nq)*Basis%tab_basis(ndim + 1)%nb  
 
-         Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(1))
+       Allocate (GGB2(Iq1*Iq2*Ib3))
 
-         DO inb = 2, Ndim - 1
+       BBB(1:Iq1, 1:Ib2, 1:Ib3) => GBB1
+       GBB(1:Iq1, 1:Iq2, 1:Ib3) => GGB2
+       Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(inb))
+       GBB1 = GGB2
+       Deallocate (GGB2)
 
-            Allocate (GGB2(iq1(inb)*iq2(inb)*ib3(inb)))
+    END DO
+     
+       Iq1 = Product(Basis%tab_basis(1:ndim - 1)%nq)
+       Ib1 = Product(Basis%tab_basis(1:ndim - 1)%nb)
+       Ib2 = Basis%tab_basis(ndim)%nb
+       Iq2 = Basis%tab_basis(ndim)%nq
+       Ib3 = Basis%tab_basis(ndim + 1)%nb
+       Iq3 = Basis%tab_basis(ndim + 1)%nb
+       BBB(1:Iq1, 1:Ib2, 1:Ib3) => GBB1
+       GBB(1:Iq1, 1:Iq2, 1:Ib3) => G
+       Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(ndim))
+    END IF
 
-            BBB(1:iq1(Inb), 1:ib2(inb), 1:ib3(inb)) => GBB1
+    IF (debug) THEN
+       write (out_unit, *) 'intent(INOUT) :: G(:)', G
+       write (out_unit, *) 'END BasisTOGrid_nD_cplx'
+       flush (out_unit)
+    END IF
 
-            GBB(1:iq1(inb), 1:iq2(inb), 1:ib3(inb)) => GGB2
+ END SUBROUTINE
 
-            Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(inb))
 
-            GBB1 = GGB2
 
-            Deallocate (GGB2)
+ SUBROUTINE GridTOBasis_nD_cplx(B, G, Basis)
+   USE QDUtil_m
+   !Logical,          parameter                     :: debug = .true.
+   Logical, parameter                               :: debug = .false.
+   TYPE(Basis_t), intent(in), target                :: Basis
+   complex(kind=Rkind), intent(in), target          :: G(:)
+   complex(kind=Rkind), intent(inout), target       :: B(:)
+   complex(kind=Rkind), pointer                     :: BBB(:, :, :), GGB(:, :, :)
+   complex(kind=Rkind), allocatable, target         :: BGG1(:), BGG2(:)
+   complex(kind=Rkind), pointer                     :: GGG(:, :, :)
+   Integer                                          :: ib, i1, i3, inb, Ndim, iq
+   Integer                                          :: Ib1, Ib2, Iq3, Iq1, Iq2, Ib3
+   IF (debug) THEN
+      write (out_unit, *) 'BEGINNING GridTOBasis_nD_cplx'
+      write (out_unit, *) 'intent(in) :: G(:)', G
+      !Call Write_Basis(Basis)
+      flush (out_unit)
+   END IF
+   IF (.NOT. Basis_IS_Allocated(Basis)) THEN
+      write (out_unit, *) ' ERROR in BasisTOGrid_nD_cplx'
+      write (out_unit, *) " the basis is not Allocated."
+      STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
+   END IF
+   IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
+      write (out_unit, *) ' ERROR in BasisTOGrid_nD_cplx'
+      write (out_unit, *) ' the size of G is different from nb.'
+      write (out_unit, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
+      STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
+   END IF
+   IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
+      write (out_unit, *) ' ERROR in GridTOBasis_Basis'
+      write (out_unit, *) ' the size of G is different from nq.'
+      write (out_unit, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
+      STOP 'ERROR in GridTOBasis_Basis: wrong G size'
+   END IF
+   ndim = size(Basis%tab_basis) - 1
 
-         END DO
 
-         BBB(1:iq1(Ndim), 1:ib2(Ndim), 1:ib3(Ndim)) => GBB1
+   If (ndim == 1) then
+      Iq1 = 1
+      Iq2 = Basis%tab_basis(1)%nq
+      Iq3 = Basis%tab_basis(ndim+1)%nb
+      Ib1 = 1
+      Ib2 = Basis%tab_basis(1)%nb
+      Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
+      B = CZERO
+      GGB(1:Iq1, 1:Iq2, 1:Iq3) => G
+      BBB(1:Ib1, 1:Ib2, 1:Ib3) => B
+      Call GridTOBasis_1D_cplx(BBB, GGB, Basis%tab_basis(1))
+      
+   else
+     Iq1 = 1
+     Iq2 = Basis%tab_basis(1)%nq
+     Iq3 = Product(Basis%tab_basis(2:ndim)%nq)*Basis%tab_basis(ndim+1)%nb
+     Ib1 = 1
+     Ib2 = Basis%tab_basis(1)%nb
+     Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
 
-         GBB(1:iq1(Ndim), 1:iq2(Ndim), 1:ib3(Ndim)) => G
+      allocate (BGG1(Ib1*Ib2*Iq3))
+      BGG1 = CZERO
+      GGG(1:Ib1, 1:Iq2, 1:Iq3) => G
+      GGB(1:Ib1, 1:Ib2, 1:Iq3) => BGG1
+      Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(1))
 
-         Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(Ndim))
-         Deallocate (Ib1, Iq1, Iq2, Ib2, Ib3, Iq3)
+      DO inb = 2, ndim - 1
 
-      END IF
+          Iq1 = Product(Basis%tab_basis(1:inb - 1)%nq)
+          Ib1 = Product(Basis%tab_basis(1:inb - 1)%nb)
+          Iq2 = Basis%tab_basis(inb)%nq
+          Ib2 = Basis%tab_basis(inb)%nb
+          Ib3 = Product(Basis%tab_basis(inb + 1:ndim + 1)%nb)
+          Iq3 = Product(Basis%tab_basis(inb + 1:ndim)%nq)*Basis%tab_basis(ndim + 1)%nb 
 
-      IF (debug) THEN
-         write (out_unit, *) 'intent(INOUT) :: G(:)', G
-         write (out_unit, *) 'END BasisTOGrid_nD_cplx'
-         flush (out_unit)
-      END IF
-   END SUBROUTINE
+         allocate (BGG2(Ib1*Ib2*Iq3))
+         BGG2 = CZERO
+         GGG(1:Ib1, 1:Iq2, 1:Iq3) => BGG1
+         GGB(1:Ib1, 1:Ib2, 1:Iq3) => BGG2
+         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(inb))
+         BGG1 = BGG2
+         deallocate (BGG2)
 
-   SUBROUTINE GridTOBasis_nD_cplx(B, G, Basis)
-      USE QDUtil_m
-      !Logical,          parameter                     :: debug = .true.
-      Logical, parameter                               :: debug = .false.
-      TYPE(Basis_t), intent(in), target                :: Basis
-      complex(kind=Rkind), intent(in), target             :: G(:)
-      complex(kind=Rkind), intent(inout), target          :: B(:)
-      complex(kind=Rkind), pointer                        :: BBB(:, :, :), GGB(:, :, :)
-      complex(kind=Rkind), allocatable, target            :: BGG1(:), BGG2(:)
-      complex(kind=Rkind), pointer                        :: GGG(:, :, :)
-      Integer                                          :: ib, i1, i3, inb, Ndim, iq
-      Integer, allocatable                             :: Ib1(:), Ib2(:), Iq3(:), Iq1(:), Iq2(:), Ib3(:)
+      END DO
 
-      IF (debug) THEN
-         write (out_unit, *) 'BEGINNING GridTOBasis_nD_cplx'
-         write (out_unit, *) 'intent(in) :: G(:)', G
-         !Call Write_Basis(Basis)
-         flush (out_unit)
-      END IF
+      B(:) = CZERO
 
-      IF (.NOT. Basis_IS_Allocated(Basis)) THEN
-         write (out_unit, *) ' ERROR in BasisTOGrid_nD_cplx'
-         write (out_unit, *) " the basis is not Allocated."
-         STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
-      END IF
+        Iq1 = Product(Basis%tab_basis(1:ndim - 1)%nq)
+        Ib1 = Product(Basis%tab_basis(1:ndim - 1)%nb)
+        Ib2 = Basis%tab_basis(ndim)%nb
+        Iq2 = Basis%tab_basis(ndim)%nq
+        Ib3 = Basis%tab_basis(ndim + 1)%nb
+        Iq3 = Basis%tab_basis(ndim + 1)%nb
 
-      IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-         write (out_unit, *) ' ERROR in BasisTOGrid_nD_cplx'
-         write (out_unit, *) ' the size of G is different from nb.'
-         write (out_unit, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
-         STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
-      END IF
+      GGG(1:Ib1, 1:Iq2, 1:Iq3) => BGG1
+      GGB(1:Ib1, 1:Ib2, 1:Iq3) => B
+      Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(ndim))
+   END IF
 
-      IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-         write (out_unit, *) ' ERROR in GridTOBasis_Basis'
-         write (out_unit, *) ' the size of G is different from nq.'
-         write (out_unit, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
-         STOP 'ERROR in GridTOBasis_Basis: wrong G size'
-      END IF
-
-      Ndim = size(Basis%tab_basis) - 1
-
-      Call Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
-      If (Ndim == 1) then
-         B = CZERO
-         GGB(1:Iq1(1), 1:Iq2(1), 1:Iq3(1)) => G
-         BBB(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B
-         Call GridTOBasis_1D_cplx(BBB, GGB, Basis%tab_basis(1))
-      else
-
-         Allocate (BGG1(Ib1(1)*Ib2(1)*Iq3(1)))
-         BGG1 = CZERO
-         GGG(1:Ib1(1), 1:Iq2(1), 1:Iq3(1)) => G
-         GGB(1:Ib1(1), 1:Ib2(1), 1:Iq3(1)) => BGG1
-
-         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(1))
-
-         DO inb = 2, Ndim - 1
-
-            Allocate (BGG2(Ib1(inb)*Ib2(inb)*Iq3(inb)))
-
-            BGG2 = CZERO
-
-            GGG(1:Ib1(inb), 1:Iq2(inb), 1:Iq3(inb)) => BGG1
-            GGB(1:Ib1(inb), 1:Ib2(inb), 1:Iq3(inb)) => BGG2
-
-            Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(inb))
-
-            BGG1 = BGG2
-
-            deallocate (BGG2)
-         END DO
-
-         B(:) = CZERO
-
-         GGG(1:Ib1(Ndim), 1:Iq2(Ndim), 1:Iq3(Ndim)) => BGG1
-         GGB(1:Ib1(Ndim), 1:Ib2(Ndim), 1:Iq3(Ndim)) => B
-
-         Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(Ndim))
-
-         Deallocate (Iq1, Iq2, Iq3, Ib1, Ib2, Ib3)
-      END IF
-      IF (debug) THEN
-         write (out_unit, *) 'END GridTOBasis_nD_cplx'
-         flush (out_unit)
-      END IF
-   END SUBROUTINE
-
+   IF (debug) THEN
+      write (out_unit, *) 'END GridTOBasis_nD_cplx'
+      flush (out_unit)
+   END IF
+END SUBROUTINE
    SUBROUTINE Calc_Q_grid(Q, Basis)
 
       implicit none
@@ -1318,10 +1352,6 @@ END SUBROUTINE
       END DO
       deallocate(Tab_iq)
    END SUBROUTINE Calc_Q_grid
-
-
-
-
 
  SUBROUTINE Hermite_double_product_func(Hf, x, B1,B2,j, i)
 
