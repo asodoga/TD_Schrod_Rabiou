@@ -124,8 +124,8 @@ IMPLICIT NONE
  allocate (d0gb(nq, nb))
  allocate (d0bgw(nb, nq))
 
-  print*,'Q0,A0,P0',Q0,A0,P0
-  print*,'Qt,At,Pt',Qt,At,Pt
+  !print*,'Q0,A0,P0',Q0,A0,P0
+  !print*,'Qt,At,Pt',Qt,At,Pt
   !print*,'SQeq,Qeq',SQeq,Qeq
 
  DO iq = 1, nq
@@ -137,7 +137,7 @@ IMPLICIT NONE
 END DO
   S = matmul(conjg(d0bgw),d0gb)
 
- call  Write_VecMat(S, out_unit, 5,  info='S')
+ !call  Write_VecMat(S, out_unit, 5,  info='S')
  deallocate(d0gb,d0bgw,w,Q)
 
 End SUBROUTINE
@@ -219,8 +219,8 @@ END SUBROUTINE
      deallocate(B1)
      deallocate(B2)
     call Calc_Norm_OF_psi(psi,Norm)
-    write(25,*) E0,E
-     write(24,*) Norm0,Norm
+   ! write(25,*) E0,E
+   !  write(24,*) Norm0,Norm
     write (out_unit, *) 'Begin Hagedorn projection  E0,Norm0',E0,Norm0
     write (out_unit, *) 'END Hagedorn projection E,Norm ',E,Norm
 END SUBROUTINE 
