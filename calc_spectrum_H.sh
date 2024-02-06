@@ -11,4 +11,4 @@ cd results_H_nb$nb
 
 mv file_spectrum.txt ../file_spectrum_Hnb$nb.txt
 cd ..
-gnuplot plot_spectrum_H.gp
+#gnuplot plot_spectrum_H.gp
