@@ -2,13 +2,14 @@ module Hagedorn_m
    USE QDUtil_m
    Use Basis_m
    Use Psi_m
+   Use Op_m
    USE Ana_psi_m
    USE polyortho_m
    USE sub_propa_m
    implicit none
    PRIVATE
    PUBLIC :: Projection_temp,test_psi_temp, Calc_Basis_parameters,march_Hagedorn,march_Global
-   PUBLIC :: Hagedorn_Inv,Hagedorn_Inv1,Hagedorn_inv2
+   PUBLIC :: Hagedorn_inv,Hagedorn_temp
 
 CONTAINS
 
@@ -22,7 +23,7 @@ SUBROUTINE Construct_Hagedorn_none_Variational_Basis(Basis,Qt,SQt,At,Pt)
   real(kind=Rkind)           , allocatable        :: Q(:),W(:)
   real(kind=Rkind) ,allocatable                   :: Q0(:), SQ0(:),P0(:)
   complex(kind=Rkind),allocatable                 :: A0(:)
-  integer                                         :: ndim,ib,nb,nq
+  integer                                         :: ndim,ib,nb,nq,i
 
   ndim = size(Basis%tab_basis)-1
   allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
@@ -37,7 +38,15 @@ SUBROUTINE Construct_Hagedorn_none_Variational_Basis(Basis,Qt,SQt,At,Pt)
    nq = Basis%tab_basis(ib)%nq
    call  Calc_S(Basis%tab_basis(ib)%S,nb,nq,Q0(ib),SQ0(ib),A0(ib),&
    &P0(ib),Qt(ib),SQt(ib),At(ib),Pt(ib)) 
-  
+   Else
+
+    Basis%tab_basis(ib)%S(:,:) = CZERO
+    nb = Basis%tab_basis(ib)%nb
+
+    Do i = 1,nb
+      Basis%tab_basis(ib)%S(i,i) =CONE
+    END DO 
+       
    End If  
   End Do
 
@@ -78,7 +87,10 @@ SUBROUTINE Calc_Basis_parameters(psi,Qt,SQt,At,Pt)
   TYPE(psi_t),intent(in)                   :: psi
   real(kind=Rkind),intent(inout)           :: Qt(:), SQt(:),Pt(:)
   complex(kind=Rkind), intent(inout)       :: At(:)
-   call Calc_AVQ_nD(psi0=psi, AVQ=Qt, SQ=SQt)
+  integer, allocatable                     :: Tab_Iq(:, :)
+
+   call Calc_tab_Iq0(Tab_Iq,psi%Basis)
+   call Calc_AVQ_SQ_nD(psi, Qt, SQt,Tab_Iq)
    call Calc_Av_imp_k_nD(psi,Pt)
    call  Calc_Avg_A_nD(psi, At)
 End SUBROUTINE
@@ -89,9 +101,12 @@ SUBROUTINE Calc_Basis_parameters_temp(psi,Qt,SQt,At,Pt,propa)
    type(propa_t),intent(in)                :: propa
   real(kind=Rkind),intent(inout)           :: Qt(:), SQt(:),Pt(:)
   complex(kind=Rkind), intent(inout)       :: At(:)
+  integer, allocatable                     :: Tab_Iq(:, :)
+
+  call Calc_tab_Iq0(Tab_Iq,psi%Basis)
 
    Pt(:) = ZERO
-   call Calc_AVQ_nD(psi0=psi, AVQ=Qt, SQ=SQt)
+   call Calc_AVQ_SQ_nD(psi, Qt,SQt,Tab_Iq)
    At(:) = SQt(:)*SQt(:)
   If(propa%P)  call Calc_Av_imp_k_nD(psi,Pt)
   If(propa%Beta) call  Calc_Avg_A_nD(psi, At)
@@ -259,7 +274,7 @@ subroutine test_psi_temp(psi,propa)
       end Do 
        write(out_unit,*)  'E0,E' ,E0,E 
 
-       call  Hagedorn_inv2(psi1, psi2)!,propa)
+       !call  Hagedorn_inv(psi1, psi2)
 
         do ib = 1,size(psi%CVec)
          write(out_unit,*) ib,abs(psi%CVec(ib))**2,abs(psi1%CVec(ib))**2,abs(psi%CVec(ib))**2-abs(psi1%CVec(ib))**2
@@ -297,121 +312,58 @@ TYPE(propa_t), intent(in)               :: propa
  call Construct_Hagedorn_none_Variational_Basis_temp(psi_dt%Basis,Qt,SQt,At,Pt)
  call Calc_Norm_OF_psi(psi_dt,Norm0)
  call Projection(psi,psi_dt)
+
+ if ( propa%renorm ) then
+  call Calc_Norm_OF_psi(psi,Norm)
+  psi%CVec(:) = psi%CVec(:)/Norm
+ end if
+ 
  call Calc_Norm_OF_psi(psi,Norm)
  write(out_unit,*)  abs(Norm0-Norm), Norm0,Norm
-    deallocate(Qt,SQt,At,Pt)
+ deallocate(Qt,SQt,At,Pt)
+
  end subroutine
 
 
+ SUBROUTINE Hagedorn_inv(psi0, psi_dt,renorm)
+   USE psi_m
+   type(psi_t),  intent(inout)             :: psi0
+   type(psi_t),  intent(in)                :: psi_dt
+   logical, intent(in)                     :: renorm
+    complex(kind=Rkind),allocatable        :: A0(:)
+    real(kind=Rkind)   ,allocatable        :: Q0(:),SQ0(:),P0(:)
+     real(kind= Rkind)                     :: Norm0,norm
+     integer                               :: ndim
 
+     ndim = size(psi0%Basis%tab_basis) - 1
+    allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
+   call Get_Basis_Parameters(psi0%Basis,Q0,SQ0,A0,P0)
+    !call  Calc_Basis_parameters_temp(psi0,Q0,SQ0,A0,P0,propa)
+    call Construct_Hagedorn_none_Variational_Basis_temp(psi_dt%Basis,Q0,SQ0,A0,P0)
+    call Calc_Norm_OF_psi(psi_dt,Norm0)
+    call Projection(psi0,psi_dt)
+    if ( renorm ) then
+      call Calc_Norm_OF_psi(psi0,Norm)
+      psi0%CVec(:) = psi0%CVec(:)/Norm
+     end if
 
- SUBROUTINE Hagedorn_inv2(psi0, psi_dt)!,propa)
-USE psi_m
-type(psi_t),  intent(inout)             :: psi0
-type(psi_t),  intent(inout)             :: psi_dt
-!TYPE(propa_t), intent(in)               :: propa
- complex(kind=Rkind),allocatable        :: A0(:)
- real(kind=Rkind)   ,allocatable        :: Q0(:),SQ0(:),P0(:)
-  real(kind= Rkind)                     :: Norm0,norm
-  integer                               :: ndim
-  ndim = size(psi0%Basis%tab_basis) - 1
- allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
-call Get_Basis_Parameters(psi0%Basis,Q0,SQ0,A0,P0)
- !call  Calc_Basis_parameters_temp(psi0,Q0,SQ0,A0,P0,propa)
- call Construct_Hagedorn_none_Variational_Basis_temp(psi_dt%Basis,Q0,SQ0,A0,P0)
- call Calc_Norm_OF_psi(psi_dt,Norm0)
- call Projection(psi0,psi_dt)
- call Calc_Norm_OF_psi(psi0,Norm)
- write(out_unit,*)  abs(Norm0-Norm), Norm0,Norm
- deallocate(Q0,SQ0,A0,P0)
- end subroutine
-
-
-SUBROUTINE Hagedorn_Inv(psi1, psi2)
-  USE psi_m
-  type(psi_t),  intent(inout)   ,target     :: psi1
-  type(psi_t),  intent(in),target           :: psi2
-  complex(kind=Rkind),allocatable           :: At(:),A0(:),S(:,:)
-  real(kind=Rkind)   ,allocatable           :: Qt(:),SQt(:),Pt(:)
-  real(kind=Rkind)   ,allocatable           :: Q0(:),SQ0(:),P0(:)
-  Integer, allocatable                      :: Ib1(:), Ib2(:), Ib3(:)
-  complex(kind= Rkind), pointer             :: BBB1(:, :, :), BBB2(:, :, :)
-  complex(kind= Rkind), allocatable, target :: B1(:), B2(:)
-  real(kind= Rkind)                         :: Norm0,norm
-  integer                                   :: ndim,nb,nq,ib
-
-
-  call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi1%Basis)
-  allocate (B1(Ib1(1)*Ib2(1)*Ib3(1)))
-  allocate (B2(Ib1(1)*Ib2(1)*Ib3(1)))
-  ndim = size(psi1%Basis%tab_basis) - 1
-  allocate(Qt(ndim), SQt(ndim),Pt(ndim),At(ndim))
-  allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
-    call Get_Basis_Parameters(psi1%Basis,Q0,SQ0,A0,P0)
-    call Get_Basis_Parameters(psi2%Basis,Qt,SQt,At,Pt)
-     B2(:) = psi2%CVec(:)
-     B1(:) = CZERO
-     DO ib = 1,ndim
-      nb = psi1%Basis%tab_basis(ib)%nb
-      nq = psi1%Basis%tab_basis(ib)%nq
-      allocate(S(nb,nb))
-      call Calc_S(S,nb,nq,Qt(ib),SQt(ib),At(ib),Pt(ib),Q0(ib),SQ0(ib),A0(ib),P0(ib))
-       BBB1(1:Ib1(ib), 1:Ib2(ib), 1:Ib3(ib)) => B1
-       BBB2(1:Ib1(ib), 1:Ib2(ib), 1:Ib3(ib)) => B2
-       call projection_1D_temp(BBB1, BBB2, S)
-       B2(:) = B1(:)
-       deallocate(S)
-    END DO
-
-    psi1%CVec(:)=  B1(:)
-  ! call Calc_Norm_OF_psi(psi2,Norm0)
-  ! call Projection(psi1,psi2)
-  ! call Calc_Norm_OF_psi(psi1,Norm)
-
-   deallocate(Qt,SQt,At,Pt)
-   deallocate(Q0,SQ0,A0,P0)
-END SUBROUTINE
-
-
-
-SUBROUTINE Hagedorn_Inv1(psi0, psi_dt)
-  USE psi_m
-  type(psi_t),  intent(inout)   ,target     :: psi0
-  type(psi_t),  intent(in),target           :: psi_dt
-  complex(kind=Rkind),allocatable           :: At(:),A0(:)
-  real(kind=Rkind)   ,allocatable           :: Qt(:),SQt(:),Pt(:)
-  real(kind=Rkind)   ,allocatable           :: Q0(:),SQ0(:),P0(:)
-  integer                                   :: ndim,nb,nq,ib
-   
-  ndim = size(psi0%Basis%tab_basis) - 1
-  allocate(Qt(ndim), SQt(ndim),Pt(ndim),At(ndim))
-  allocate(Q0(ndim), SQ0(ndim),P0(ndim),A0(ndim))
-  call Get_Basis_Parameters(psi0%Basis,Q0,SQ0,A0,P0)
-  call Get_Basis_Parameters(psi_dt%Basis,Qt,SQt,At,Pt)
-
-    DO ib = 1,ndim
-      nb = psi0%Basis%tab_basis(ib)%nb
-      nq = psi0%Basis%tab_basis(ib)%nq
-      call Calc_S(psi_dt%Basis%tab_basis(ib)%S,nb,nq,Qt(ib),SQt(ib),At(ib),Pt(ib),Q0(ib),SQ0(ib),A0(ib),P0(ib))
-    END DO
+    call Calc_Norm_OF_psi(psi0,Norm)
+    write(out_unit,*)  abs(Norm0-Norm), Norm0,Norm
+    deallocate(Q0,SQ0,A0,P0)
   
-   call Projection1(psi0,psi_dt)
-
-   deallocate(Qt,SQt,At,Pt)
-   deallocate(Q0,SQ0,A0,P0)
-
-END SUBROUTINE
-
+ END SUBROUTINE
  
-  SUBROUTINE march_Global(psi, psi_dt, t, propa)
+  SUBROUTINE march_Global(psi, psi_dt, t, propa,H)
   USE psi_m
   type(propa_t),intent(IN)                :: propa
   type(psi_t),  intent(inout)             :: psi
   type(psi_t),  intent(INOUT)             :: psi_dt
   real(kind=Rkind), intent(IN)            :: t
+  TYPE(Op_t),intent(inout)                :: H
 
    complex(kind=Rkind),allocatable        :: At(:)
    real(kind=Rkind)   ,allocatable        :: Qt(:),SQt(:),Pt(:)
+   integer, allocatable                   :: Tab_iq(:, :)
     real(kind= Rkind)                     :: Norm0,norm,E,E0
     integer                               :: ndim
 
@@ -420,19 +372,19 @@ END SUBROUTINE
     Qt(:)=ZERO; SQt(:)=ONE;Pt(:)=ZERO;At(:)=ONE
 
    If (propa%propa_name == 'hagedorn') Then
-    call  march(psi, psi_dt, t, propa)
-    ! call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
-    ! , print_basis=.false., t=t, int_print=23, real_part=.false.)
-    ! write(23,*)
-     !call  Calc_average_energy(psi_dt, E0)
-     !call Calc_Norm_OF_psi(psi_dt,Norm0)
+    call  march_temp(psi, psi_dt, t, propa,H)
+     call  Calc_Av_E(E0,psi_dt,H)
+     call Calc_Norm_OF_psi(psi_dt,Norm0)
      call Hagedorn_temp(psi, psi_dt,propa)
-     !all  Calc_average_energy(psi, E)
-     !all Calc_Norm_OF_psi(psi,Norm)
-    !write(25,*) t, abs(E0-E), t,E0,E
-    !write(24,*) t, abs(Norm0-Norm),t, Norm0,Norm
+     deallocate(H%Scal_pot)
+     call Calc_tab_Iq(Tab_Iq,psi%Basis)
+     call Set_Op(H, psi%Basis,Tab_iq)
+     call  Calc_Av_E(E,psi,H)
+     call Calc_Norm_OF_psi(psi,Norm)
+    write(25,*) t,abs(E0-E),E0,E
+    write(24,*) t,abs(Norm0-Norm), Norm0,Norm
    Else
-     call  march(psi, psi_dt, t, propa)
+     call  march_temp(psi, psi_dt, t, propa,H)
      psi%CVec(:) = psi_dt%CVec(:)
    End If  
   

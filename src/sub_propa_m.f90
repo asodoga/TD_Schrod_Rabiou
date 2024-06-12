@@ -17,13 +17,44 @@ module sub_propa_m
       character(len=:), allocatable  :: propa_name
       character(len=:), allocatable  :: propa_name2
       logical                        :: Beta 
-      logical                        :: P 
+      logical                        :: P
+      logical                        :: renorm
    END TYPE propa_t
 
    public :: march_taylor, marh_RK4th,March,march_ITP,march_SIL,march_VP
    public :: mEyeHPsi, write_propa, Analyse, creat_file_unit, read_propa,diff2
 
 contains
+
+
+SUBROUTINE march_temp(psi, psi_dt, t, propa,H)
+   USE psi_m
+   TYPE(propa_t), intent(in)                :: propa
+   TYPE(psi_t), intent(in)                  :: psi
+   TYPE(psi_t), intent(inout)               :: psi_dt
+   TYPE(Op_t), intent(in)                   :: H
+   real(kind=Rkind), intent(in)             :: t
+
+   character(len=Name_len)                  :: name
+
+    name = propa%propa_name2 
+   call string_uppercase_TO_lowercase(name)
+   select case (name)
+   case ('rk4') ! rk4 : Runge-kutta time propagation
+      CALL marh_RK4th(psi, psi_dt, t, propa)
+   case ('taylor') ! taylor : Taylor propagation
+      CALL march_taylor_temp(psi, psi_dt, t, propa,H)
+   case ('sil') ! SIL: short iterative lanczos
+     CALL march_SIL(psi, psi_dt, t, propa)
+   case ('itp') ! ITP : imaginary times propagation
+      call Imaginary_time_propagation(psi, psi_dt, propa)
+   case ('vp') ! VP : Variational principle times propagation
+      call march_VP(psi, psi_dt, t, propa)   
+   case default
+      write (out_unit, *) ' March name is not in the list'
+   end select      
+END SUBROUTINE
+
 
    SUBROUTINE march(psi, psi_dt, t, propa)
       USE psi_m
@@ -67,8 +98,8 @@ contains
     Ndim = size(psi1%Basis%tab_basis) - 1
     allocate(At(Ndim),SQt(Ndim),Pt(Ndim),Qt(Ndim))
      Qt(:) = ZERO; SQt(:) = ONE; Pt(:) = ZERO;At = CONE
-
-      call Calc_AVQ_nD(psi0=psi1, AVQ=Qt, SQ=SQt)
+       stop 'att copie imp sub-propa ligne 102'
+      !call Calc_AVQ_SQ_nD(psi1, Qt, SQt)
       call Calc_Av_imp_k_nD(psi1,Pt)
       call  Calc_Avg_A_nD(psi1, At)
    
@@ -143,7 +174,7 @@ contains
             stop "wrong choice of delta_t"
          elseif (Norm <= propa%eps) Then
 
-            print *, 'Taylor condition is fulfild after', kk, 'iteration'
+            write (out_unit, *) 'Taylor condition is fulfild after', kk, 'iteration'
             exit
          End if
       End do
@@ -154,6 +185,68 @@ contains
       CALL dealloc_psi(psi0)
       CALL dealloc_psi(Hpsi)
    END SUBROUTINE march_taylor
+
+
+
+   SUBROUTINE march_taylor_temp(psi, psi_dt, t, propa,H)
+      USE op_m
+      USE psi_m
+      USE Basis_m
+      TYPE(psi_t), intent(inout)       :: psi_dt
+      TYPE(psi_t), intent(in)          :: psi
+      TYPE(propa_t), intent(in)        :: propa
+      TYPE(Op_t), intent(in)           :: H
+      real(kind=Rkind), intent(in)     :: t
+
+      TYPE(psi_t)                      :: psi0
+      TYPE(psi_t)                      :: Hpsi
+      real(kind=Rkind)                 :: alpha
+
+      ! variables locales-------------------------------------------------------------------------------
+
+      real(kind=Rkind)                 :: Rkk, Norm, Norm0
+      integer                          :: kk
+
+      CALL init_psi(Hpsi, psi%basis, cplx=.true., grid=.false.) 
+      CALL init_psi(Psi0, psi%basis, cplx=.true., grid=.false.) 
+
+      write (out_unit, *) 'BEGINNIG march_taylor  ', t, propa%delta_t
+
+      Rkk = ONE
+      alpha = TEN**10
+      Psi_dt%CVec = Psi%CVec
+      Psi0%CVec = Psi%CVec
+
+      Do kk = 1, propa%max_iter, 1
+
+         call  mEyeHPsi_temp(psi0, Hpsi,H)
+          psi0%CVec(:) = Hpsi%CVec(:)*(propa%delta_t/kk)
+          psi_dt%CVec(:) = psi_dt%CVec(:) + psi0%CVec(:)
+          Hpsi%CVec(:) = CZERO
+         call Calc_Norm_OF_Psi(psi0, Norm)
+         write (out_unit, *) 'sqrt(<Hpsi|Hpsi>) = ', kk, Norm
+
+         if (Norm >= alpha) then
+
+            stop "wrong choice of delta_t"
+
+         elseif (Norm <= propa%eps) Then
+
+            write (out_unit, *) 'Taylor condition is fulfild after', kk, 'iteration'
+            exit
+
+         End if
+
+      End do
+
+      CALL Calc_Norm_OF_Psi(Psi, Norm0)
+      CALL Calc_Norm_OF_Psi(Psi_dt, Norm)
+      write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =', abs(Norm0 - Norm)
+      write (out_unit, *) 'END march_taylor'
+      CALL dealloc_psi(psi0)
+      CALL dealloc_psi(Hpsi)
+
+   END SUBROUTINE 
 
 
  SUBROUTINE march_SIL(psi, psi_dt, t, propa)
@@ -341,9 +434,9 @@ contains
       real(kind=Rkind)               :: t0, tf, delta_t, eps
       character(len=40)              :: propa_name, propa_name2
       integer                        :: max_iter
-      logical                        :: Beta,P
+      logical                        :: Beta,P,renorm
 
-      namelist /prop/ t0, tf, delta_t,max_iter,eps,propa_name, propa_name2 , Beta,P
+      namelist /prop/ t0, tf, delta_t,max_iter,eps,propa_name, propa_name2 , Beta,P,renorm
       t0 = ZERO
       tf = TEN
       delta_t = ONETENTH**3
@@ -353,6 +446,7 @@ contains
       propa_name2 = 'rk4'
       Beta        = .true.
       P           = .true.
+      renorm      = .true.
 
       read (*, nml=prop)
 
@@ -365,8 +459,9 @@ contains
       propa%propa_name2 = propa_name2
       propa%Beta =   Beta
       propa%P = P 
-       call string_uppercase_TO_lowercase( propa%propa_name)
-       call string_uppercase_TO_lowercase( propa%propa_name2)
+      propa%renorm =renorm
+      call string_uppercase_TO_lowercase( propa%propa_name)
+      call string_uppercase_TO_lowercase( propa%propa_name2)
 
    END SUBROUTINE read_propa
 
@@ -377,9 +472,22 @@ contains
       TYPE(psi_t), intent(in)       :: psi
       TYPE(psi_t), intent(inout)    :: Hpsi
       TYPE(Op_t)                    :: H
-      CALL calc_OpPsi(H, psi, Hpsi)
+      stop 'verifie mEyeHPsi '
+      !CALL calc_OpPsi(H, psi, Hpsi)
 
       Hpsi%CVec(:) = -EYE*Hpsi%CVec(:)
+   END SUBROUTINE 
+
+   SUBROUTINE mEyeHPsi_temp(psi, Hpsi,H) !calcul de -iHpsi
+      USE op_m
+      USE psi_m
+      TYPE(psi_t), intent(in)       :: psi
+      TYPE(psi_t), intent(inout)    :: Hpsi
+      TYPE(Op_t) ,intent(in)        :: H
+
+      call calc_OpPsi(H, psi, Hpsi)
+      Hpsi%CVec(:) = -EYE*Hpsi%CVec(:)
+
    END SUBROUTINE 
 
    SUBROUTINE write_propa(propa)
@@ -396,6 +504,7 @@ contains
       write (out_unit, *) 'propa_name2 = ', propa%propa_name2
        write (out_unit, *) 'Beta = ', propa%Beta
       write (out_unit, *) 'P = ', propa%P
+      write (out_unit, *) 'renorm = ', propa%renorm
 
    END SUBROUTINE write_propa
 
@@ -416,13 +525,15 @@ contains
          CALL init_psi(psi_b, psi%Basis, cplx=.TRUE., grid=.false.)
          call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
          CALL init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.false.)
-         call calc_OpPsi(H, psi_b, Hpsi)
+         !call calc_OpPsi(H, psi_b, Hpsi)
+         stop 'verifie le calcul d E'
          E = real(dot_product(Hpsi%CVec, psi_b%CVec), kind=Rkind)
 
       else
          !Print*,"psi is on basis"
          CALL init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.false.)
-         call calc_OpPsi(H, psi, Hpsi)
+         !call calc_OpPsi(H, psi, Hpsi)
+         stop 'verifie le calcul d E'
          E = real(dot_product(Hpsi%CVec, psi%CVec), kind=Rkind)
 
       end if
@@ -433,6 +544,42 @@ contains
       CALL dealloc_psi(Hpsi)
       CALL dealloc_psi(psi_b)
    End SUBROUTINE Calc_average_energy
+
+
+   SUBROUTINE Calc_Av_E(E,psi,H)
+      !>-------------------------------------------------------
+      !>     E = <Psi | H | Psi>
+      !>--------------------------------------------------------
+      USE QDUtil_m
+      USE psi_m
+      REAL(kind=Rkind), intent(inout)                :: E
+      TYPE(psi_t), intent(in)                        :: psi
+      TYPE(Op_t) ,intent(in)                         :: H
+
+      TYPE(psi_t)                                    :: Hpsi, psi_b
+      REAL(kind=Rkind)                               :: Norm
+
+      if (psi%Grid) then
+
+         CALL init_psi(psi_b, psi%Basis, cplx=.true., grid=.false.)
+         call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
+         CALL init_psi(Hpsi, psi%Basis, cplx=.true., grid=.false.)
+         call calc_OpPsi(H, psi_b, Hpsi)
+         E = real(dot_product(Hpsi%CVec, psi_b%CVec), kind=Rkind)
+
+      else
+         call init_psi(Hpsi, psi%Basis, cplx=.true., grid=.false.)
+         call calc_OpPsi(H, psi, Hpsi)
+         E = real(dot_product(Hpsi%CVec, psi%CVec), kind=Rkind)
+
+      end if
+
+      call Calc_Norm_OF_Psi(psi, Norm)
+      E = E/Norm**2
+      print *, "<psi|H|psi> = ", E, "<psi|psi> =", Norm
+      call dealloc_psi(Hpsi)
+      call dealloc_psi(psi_b)
+   End SUBROUTINE 
 
 
    SUBROUTINE diff2()
@@ -505,7 +652,7 @@ contains
 
       write (dt, fmt) propa%delta_t
       name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.txt'
-      name_tot = trim(name_tot)
+     ! name_tot = 'file'//'_'//trim(name)!trim(name_tot)
 
       open (unit=nio, file=name_tot)
 
@@ -540,6 +687,43 @@ contains
          flush(out_unit)
       END IF
 
+   END SUBROUTINE 
+
+
+
+   SUBROUTINE GWP0(G0, Basis)
+      USE  QDUtil_m
+      USE Basis_m
+      TYPE(Basis_t), intent(in), target                :: Basis
+      complex(kind=Rkind) ,intent(inout)               :: G0(:)
+   
+      integer, allocatable                             :: Tab_iq(:)
+      integer                                          :: inb, ndim, iq,nq,i
+      real(Kind=Rkind)               , allocatable     :: Q(:)
+      real(Kind=Rkind)                                 :: Q1,Q2,S1,S2
+      logical                                          :: Endloop
+   
+      ndim = size(Basis%tab_basis) - 1
+      nq =Basis%nq
+      Q1=TWO; Q2=ZERO
+      S1=1.29; S2=sqrt(TWO)
+   
+       allocate (Q(ndim),Tab_iq(ndim))
+   
+      Call Init_tab_ind(Tab_iq, Basis%NDindexq)
+      Iq = 0
+      DO
+         Iq = Iq + 1
+         CALL increase_NDindex(Tab_iq, Basis%NDindexq, Endloop)
+         IF (Endloop) exit
+         do inb = 1, ndim
+             Q(inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
+         end do
+        G0(Iq) = exp(-((Q(1)-Q1)/S1)**2+((Q(2)-Q2)/S2)**2) /(sqrt(sqrt(pi/TWO)*S1)*sqrt(sqrt(pi/TWO)*S2))
+      END DO
+       G0 = G0/(sqrt(sum(abs(G0(:))**2)))
+       print*,"NG=",sqrt(sum(abs(G0(:))**2))
+      deallocate(Tab_iq,Q)
    END SUBROUTINE 
 
       

@@ -10,10 +10,11 @@ PROGRAM TD_SCHROD
    USE Sub_Vp_m
    IMPLICIT NONE
    TYPE(Basis_t), target             :: Basis
-   !TYPE(Op_t)                       :: H
+   TYPE(Op_t)                        :: H
    TYPE(psi_t)                       :: psi0, psif
    TYPE(propa_t)                     :: propa
    TYPE(GWP_t), allocatable          :: tab_GWP(:)
+   integer, allocatable              :: Tab_iq(:, :)
    real(Kind=Rkind)                  :: E, Norm 
  
 !-------------------------------------------------------------------------------
@@ -45,23 +46,22 @@ PROGRAM TD_SCHROD
    call init_psi(psif, Basis, cplx=.true., grid=.false.)
    call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
    !call test_basitogridgridtobasis(Basis)
+   call Calc_tab_Iq0(Tab_Iq,psi0%Basis)
+   call Set_Op(H, psi0%Basis,Tab_Iq)
    call psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
-   call Calc_average_energy(psi0, E)
-   call Calc_Norm_OF_Psi(psi0,Norm)
-   write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
-   write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
-   write (out_unit, *) '-------------End  Initialization of  psi0 ---------------------'
-   !call H_test(psi0)
-   !call Vp_test_temp(psi0)
-   !call Set_Op(H,Basis)
-   ! call Make_Mat_OP(H)
-   !call  write_Op(H)
-   call read_propa(propa)
-   !call test_psi_temp(psi0,propa)
+   !psi0%CVec=CZERO
+   !psi0%CVec(1) =CONE
+   call Calc_Av_E(E,psi0,H)
+   !call Calc_Norm_OF_Psi(psi0,Norm)
+   !write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
+   !write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
+   !write (out_unit, *) '-------------End  Initialization of  psi0 ---------------------'
+    !call test_op(Basis,psi0)
+   ! call Make_Mat_H(H)
+
+    call read_propa(propa)
    !STOP 'calcul de H|psi> est fait'
    call propagation(psif, psi0, propa)
-   !call diff2()
-   !call test_psi_temp(psif,propa)
    print*, 'Fin de la propagationt'
    ! CALL Write_psi(psif)
    write (out_unit, *) 'deallocation'

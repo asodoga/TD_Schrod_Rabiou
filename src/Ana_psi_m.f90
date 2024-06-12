@@ -5,152 +5,55 @@ module Ana_psi_m
    implicit none
    private
    public:: Population, Qpop
-   public::  Calc_AVQ_nD, Calc_Av_imp_k_nD
-   public :: Calc_Avg_A_nD
+   public::  Calc_Av_imp_k_nD
+   public :: Calc_Avg_A_nD,test_analyse_psi,Calc_AVQ_SQ_nD
 
 contains
 
-   SUBROUTINE Calc_AVQ_1D(psi_in, AVQ1, AVQel1, SQ1, SQel1, ib)
-      USE QDUtil_m
-      logical, parameter                            :: debug = .false.
-      TYPE(Psi_t), intent(in)                       :: psi_in
-      TYPE(Psi_t)                                   :: psi
-      complex(kind=Rkind), allocatable              :: psi_gb(:, :)
-      logical                                       :: Endloop_q
-      real(kind=Rkind), intent(inout), optional     :: AVQ1, SQ1
-      real(kind=Rkind), intent(inout), optional     :: AVQel1(:), SQel1(:)
 
-      real(kind=Rkind), allocatable                 :: AVQel(:), SQel(:)
-      real(kind=Rkind)                              :: AVQ, SQ
-      integer, intent(in)                           :: ib
-      real(kind=Rkind)                              :: WnD, X
-      real(kind=Rkind), allocatable                 :: N(:)
-      integer, allocatable                          :: Tab_iq(:)
-      integer                                       :: iq, inbe, inb
-      IF (debug) THEN
-         write (out_unit, *) 'Beging AVQ'
-         flush (out_unit)
-      END IF
-      allocate (N(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-      allocate (AVQel(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-      allocate (SQel(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-      CALL init_psi(psi, psi_in%Basis, cplx=.TRUE., grid=.true.)
+   SUBROUTINE test_analyse_psi(psi)
+      USE  QDUtil_m
+      USE Basis_m
+      type(psi_t)    ,intent(in)                    :: psi
 
-      IF (psi_in%Grid) then
-         psi%CVec(:) = psi_in%CVec(:)
-      ELSE
-         CALL BasisTOGrid_nD_cplx(psi%CVec, psi_in%CVec, psi_in%Basis)
-      END IF
+      real(kind=Rkind), allocatable                 :: V(:, :, :)
+      integer, allocatable                          :: Tab_Iq(:, :)
+      real(kind=Rkind) ,allocatable                 :: SQt(:),Qt(:)
+      complex(kind=Rkind) ,allocatable              :: At(:)
+      integer                                       :: ndim 
+     
 
-      Allocate (Psi_gb(psi%Basis%nq, psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb))
-      Allocate (Tab_iq(size(Psi%Basis%tab_basis) - 1))
-      psi_gb(:, :) = reshape(psi%CVec, shape=[psi%Basis%nq, psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb])
+      ndim = size(psi%Basis%tab_basis) - 1
+      allocate(Qt(ndim), SQt(ndim),At(ndim))
+   
+      call Calc_tab_Iq0(Tab_Iq,psi%Basis)
+      call Calc_Avg_A_nD(psi, At)
 
-      X = ZERO
-      N(:) = ZERO
-
-      DO inbe = 1, psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb !electronic state
-
-         AVQel(inbe) = ZERO
-         Call Init_tab_ind(Tab_iq, psi%Basis%NDindexq)
-         Iq = 0
-         DO
-            Iq = Iq + 1
-            CALL increase_NDindex(Tab_iq, psi%Basis%NDindexq, Endloop_q)
-            IF (Endloop_q) exit
-            WnD = ONE
-            DO inb = 1, size(psi%Basis%tab_basis) - 1
-               WnD = WnD*psi%Basis%tab_basis(inb)%w(tab_iq(inb))
-            END DO
-            X = psi%Basis%tab_basis(ib)%x(tab_iq(ib))
-            N(inbe) = N(inbe) + conjg(psi_gb(iq, inbe))*psi_gb(iq, inbe)*WnD
-            AVQel(inbe) = AVQel(inbe) + conjg(psi_gb(iq, inbe))*(X*WnD)*psi_gb(iq, inbe)
-            SQel(inbe) = SQel(inbe) + conjg(psi_gb(iq, inbe))*(X*X*WnD)*psi_gb(iq, inbe)
-         END DO
-      END DO
-       !write (out_unit, *) 'Ib,VQQ',Ib,SQel,Sum(N)**2
-      AVQ = sum(AVQel)/(Sum(N)**2)
-      SQ = sum(SQel)/(Sum(N)**2)
-      SQ = sqrt(SQ - AVQ*AVQ)
-      SQ = ONE/(SQ*sqrt(TWO))
-      DO inbe = 1, psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb !electronic state
-         if (N(inbe) /= ZERO) AVQel(inbe) = AVQel(inbe)/(N(inbe)**2)
-      END DO
-      if (present(AVQ1)) AVQ1 = AVQ
-      if (present(AVQel1)) AVQel1 = AVQel
-      if (present(SQ1)) SQ1 = SQ
-      if (present(AVQel1)) SQel1 = SQel
-
-      ! if(present(AVQ1))  print*,   'AVQ1=',    AVQ1
-      ! if(present(AVQel1)) print*,  'AVQel1=',  AVQel1
-      ! if(present(SQ1))    print*,  'SQ1=',     SQ1
-
-      Deallocate (Tab_iq)
-      Deallocate (Psi_gb)
-      CALL dealloc_psi(psi)
-      IF (debug) THEN
-         write (out_unit, *) 'END AVQ'
-         flush (out_unit)
-      END IF
-   END SUBROUTINE
-
-   SUBROUTINE Calc_AVQ_nD(psi0, AVQ, AVQel, SQ, SQel)
-      USE QDUtil_m
-      type(psi_t), intent(in), target                         :: psi0
-      type(psi_t), target                                     :: psi
-      real(kind=Rkind), intent(inout), optional                  :: AVQ(:), SQ(:)
-      real(kind=Rkind), intent(inout), optional                  :: AVQel(:, :), SQel(:, :)
-      logical, parameter                                      :: debug = .true.
-      integer                                                 :: Inb, Ndim
-
-      IF (debug) THEN
-         flush (out_unit)
-      END IF
-
-      Ndim = size(psi0%Basis%tab_basis)
-      call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
-
-      IF (psi0%Grid) then
-         psi%CVec(:) = psi0%CVec(:)
-      ELSE
-         call BasisTOGrid_nD_cplx(psi%CVec, psi0%CVec, psi0%Basis)
-      END IF
-
-      DO Inb = 1, Ndim - 1
-
-         if (present(AVQel)) call Calc_AVQ_1D(psi_in=psi, AVQel1=AVQel(Inb, :), ib=Inb)
-         if (present(AVQ)) call Calc_AVQ_1D(psi_in=psi, AVQ1=AVQ(Inb), ib=Inb)
-
-         if (present(SQel)) call Calc_AVQ_1D(psi_in=psi, SQel1=SQel(Inb, :), ib=Inb)
-         if (present(SQ)) call Calc_AVQ_1D(psi_in=psi, SQ1=SQ(Inb), ib=Inb)
-
-      END DO
-
-      write (out_unit, *) '<psi/Q/psi> =', AVQ
-      write (out_unit, *) 'SQ =', SQ
-      IF (debug) THEN
-         flush (out_unit)
-      END IF
-      CALL dealloc_psi(psi)
-   END SUBROUTINE
-
-
+        write(out_unit,*) 'At',At
+        write(out_unit,*) '=============================================================================='
+   
+   END SUBROUTINE 
+   
    subroutine Population(Psi, Pop)
       implicit none
       type(Psi_t), intent(in), target                 :: Psi
-      complex(kind=Rkind), pointer                       :: Psi_bb(:, :)
-      real(Kind=Rkind), intent(inout), allocatable       ::Pop(:)
-      integer                                         :: inb
-      real(Kind=Rkind)                                   :: Norm
+      complex(kind=Rkind), pointer                    :: Psi_bb(:, :)
+      real(Kind=Rkind), intent(inout), allocatable    ::Pop(:)
+      integer                                         :: inb,nsurf,ndim,nb
+      real(Kind=Rkind)                                :: Norm
 
-      Psi_bb(1:Psi%Basis%nb, 1:Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb) => Psi%CVec
+
+      ndim = size(Psi%Basis%tab_basis)-1
+      nb = Psi%Basis%nb
+      nsurf = Psi%Basis%tab_basis(ndim+1)%nb
+      Psi_bb(1:nb, 1:nsurf) => Psi%CVec
       call Calc_Norm_OF_Psi(Psi, Norm)
 
-      do inb = 1, Psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb
+      do inb = 1, nsurf
          Pop(inb) = dot_product(Psi_bb(:, inb), Psi_bb(:, inb))/Norm
       end do
 
-   end subroutine Population
+   end subroutine 
 
    SUBROUTINE Qpop(Psi, Qp)
       USE Basis_m
@@ -192,59 +95,60 @@ contains
    END SUBROUTINE Qpop
 
 
+SUBROUTINE Calc_Avg_A_nD(psi, At)
+   USE QDUtil_m
+   type(psi_t), intent(in)                                 :: psi
+   complex(kind=Rkind), intent(inout)                      :: At(:)
+   
+   !locals variables---------------------------------------------------
+   
+   real(kind=Rkind), allocatable                           :: VQ(:),VP(:),VQQ(:),VQP(:),SQt(:)
+   real(kind=Rkind), allocatable                           :: CA(:),CB(:)
+   integer, allocatable                                    :: Tab_Iq(:, :)
+   logical, parameter                                      :: debug = .true.
+   integer                                                 :: Ndim, Ib
+   
+   !debuging----------------------------------------------------------------
+   
+   IF (debug) THEN
+   
+      flush (out_unit)
+      
+   END IF
+   
+   Ndim = size(psi%Basis%tab_basis) - 1 
+   call Calc_tab_Iq0(Tab_Iq,psi%Basis)
+   
 
-   SUBROUTINE Calc_Avg_A_nD(psi, At)
-     USE QDUtil_m
-     type(psi_t), intent(in)                                 :: psi
-     complex(kind=Rkind), intent(inout)                      :: At(:)
-     
-     !locals variables---------------------------------------------------
-     
-     real(kind=Rkind), allocatable                           :: VQ(:),VP(:),VQQ(:),VQP(:),SQt(:)
-     real(kind=Rkind), allocatable                           :: CA(:),CB(:)
-     logical, parameter                                      :: debug = .true.
-     integer                                                 :: Ndim, Ib
-     
-     !debuging----------------------------------------------------------------
-     
-     IF (debug) THEN
-     
-        flush (out_unit)
-        
-     END IF
-     
-     Ndim = size(psi%Basis%tab_basis) - 1 
+  allocate (VQ(Ndim), VQQ(Ndim),VP(Ndim),VQP(Ndim),SQt(Ndim))
+  allocate (CA(Ndim), CB(Ndim))
+  VQ(:) = ZERO; VP(:) = ZERO;VQQ(:) = ZERO; VQP(:) = ZERO;SQt(:) = ONE
 
-    allocate (VQ(Ndim), VQQ(Ndim),VP(Ndim),VQP(Ndim),SQt(Ndim))
-    allocate (CA(Ndim), CB(Ndim))
-    VQ(:) = ZERO; VP(:) = ZERO;VQQ(:) = ZERO; VQP(:) = ZERO;SQt(:) = ONE
+  call Calc_AVQ_SQ_nD_scd(psi, VQ, SQt, VQQ, Tab_Iq)
+  call Calc_Av_imp_k_nD(psi, VP)
+  call Calc_VQP_nD(VQP, psi)
 
-    call Calc_AVQ_nD(psi0=psi, AVQ=VQ, SQ=SQt)
-    call Calc_Av_imp_k_nD(psi,VP)
-    call Calc_VQQ_nD(VQQ,psi) 
-    call Calc_VQP_nD(VQP,psi)
+  At(:) = CZERO 
+  CB(:) = ZERO
+  CA(:) = ZERO
+   
+   Do Ib = 1, Ndim
+    CA(Ib) = ONE/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
+    CB(Ib) = (VQP(Ib)-TWO*VP(Ib)*VQ(Ib))/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
+    At(Ib) = complex(CA(Ib),-CB(Ib))   
+   End do
+   
+   At(:) = TWO*At(:)
+   write (out_unit, *) 'At = ', At
+   
+   IF (debug) THEN
+   
+      flush (out_unit)
+      
+   END IF
 
-    At(:) = CZERO 
-    CB(:) = ZERO
-    CA(:) = ZERO
-     
-     Do Ib = 1, Ndim
-      CA(Ib) = ONE/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
-      CB(Ib) = (VQP(Ib)-TWO*VP(Ib)*VQ(Ib))/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
-      At(Ib) = complex(CA(Ib),-CB(Ib))   
-     End do
-     
-     At(:) = TWO*At(:)
-     write (out_unit, *) 'At = ', At
-     
-     IF (debug) THEN
-     
-        flush (out_unit)
-        
-     END IF
-
-   deallocate(VQQ,VQP,CB,CA,VQ,VP,SQt)   
-     
+ deallocate(VQQ,VQP,CB,CA,VQ,VP,SQt)   
+   
 END SUBROUTINE
 
 
@@ -270,10 +174,10 @@ END SUBROUTINE
       END IF
       
       Ndim = size(psi0%Basis%tab_basis)
-      call init_psi(psi, psi0%Basis, cplx=.TRUE., grid=.true.)
-      call init_psi(ikpsi, psi0%Basis, cplx=.TRUE., grid=.true.)
-      call init_psi(psi_b, psi0%Basis, cplx=.TRUE., grid=.false.)
-      call init_psi(ikpsi_b, psi0%Basis, cplx=.TRUE., grid=.false.)
+      call init_psi(psi, psi0%Basis, cplx=.true., grid=.true.)
+      call init_psi(ikpsi, psi0%Basis, cplx=.true., grid=.true.)
+      call init_psi(psi_b, psi0%Basis, cplx=.true., grid=.false.)
+      call init_psi(ikpsi_b, psi0%Basis, cplx=.true., grid=.false.)
       Call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3,Iq1=Iq1, Iq2=Iq2,&
        & Iq3=Iq3, Basis=psi0%Basis)
       psi%CVec = CZERO
@@ -349,98 +253,6 @@ END SUBROUTINE
       CALL dealloc_psi(psi)
 
    END SUBROUTINE
-
-
-    SUBROUTINE Calc_VQQ_1D(VQQ,psi_in,Ib)
-      USE QDUtil_m
-      logical, parameter                            :: debug = .false.
-      TYPE(Psi_t), intent(in)                       :: psi_in
-      TYPE(Psi_t)                                   :: psi
-      complex(kind=Rkind), allocatable              :: psi_gb(:, :)
-      logical                                       :: Endloop_q
-      real(kind=Rkind), intent(inout)               :: VQQ
-      real(kind=Rkind), allocatable                 :: VQQel(:)
-      integer, intent(in)                           :: ib
-      real(kind=Rkind)                              :: WnD, X
-      real(kind=Rkind), allocatable                 :: N(:)
-      integer, allocatable                          :: Tab_iq(:)
-      integer                                       :: iq, inbe, inb
-
-      IF (debug) THEN
-         write (out_unit, *) 'Beging AVQ'
-         flush (out_unit)
-      END IF
-
-      allocate (N(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-      allocate (VQQel(psi_in%Basis%tab_basis(size(psi_in%Basis%tab_basis))%nb))
-      CALL init_psi(psi, psi_in%Basis, cplx=.true., grid=.true.)
-
-      IF (psi_in%Grid) then
-         psi%CVec(:) = psi_in%CVec(:)
-      ELSE
-         CALL BasisTOGrid_nD_cplx(psi%CVec, psi_in%CVec, psi_in%Basis)
-      END IF
-      Allocate (Psi_gb(psi%Basis%nq, psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb))
-      Allocate (Tab_iq(size(Psi%Basis%tab_basis) - 1))
-      psi_gb(:, :) =reshape(psi%CVec, shape=[psi%Basis%nq, psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb])
-      X = ZERO
-      N(:) = ZERO
-      DO inbe = 1, psi%Basis%tab_basis(size(psi%Basis%tab_basis))%nb !electronic state
-         VQQel(inbe) = ZERO
-         Call Init_tab_ind(Tab_iq, psi%Basis%NDindexq)
-         Iq = 0
-         DO
-            Iq = Iq + 1
-            CALL increase_NDindex(Tab_iq, psi%Basis%NDindexq, Endloop_q)
-            IF (Endloop_q) exit
-            WnD = ONE
-            DO inb = 1, size(psi%Basis%tab_basis) - 1
-               WnD = WnD*psi%Basis%tab_basis(inb)%w(tab_iq(inb))
-            END DO
-            X = psi%Basis%tab_basis(ib)%x(tab_iq(ib))
-            N(inbe) = N(inbe) + conjg(psi_gb(iq, inbe))*psi_gb(iq, inbe)*WnD
-            VQQel(inbe) = VQQel(inbe) + conjg(psi_gb(iq, inbe))*(X*X*WnD)*psi_gb(iq, inbe)
-         END DO
-      END DO
-      VQQ = sum(VQQel)/(Sum(N)**2)
-   
-       DO inbe = 1, psi%Basis%tab_basis(size(Psi%Basis%tab_basis))%nb !electronic state
-         if (N(inbe) /= ZERO) VQQel(inbe) = VQQel(inbe)/(N(inbe)**2)
-      END DO
-
-      Deallocate (Tab_iq,N)
-      Deallocate (psi_gb)
-      CALL dealloc_psi(psi)
-
-      IF (debug) THEN
-         write (out_unit, *) 'END AVQ'
-         flush (out_unit)
-      END IF
-
-   END SUBROUTINE
-
-
-   SUBROUTINE Calc_VQQ_nD(VQQ,psi)
-      TYPE(psi_t), intent(in)                                :: psi
-      real(kind=Rkind) , intent(inout)                       :: VQQ(:)
-     
-      !Locals variabls ----------------------------------------------------------
-     
-      integer                                                :: Ib,ndim
-     
-        ndim  = size(psi%Basis%tab_basis) - 1
-     
-     
-        Do Ib = 1,ndim
-          call Calc_VQQ_1D(VQQ(Ib),psi,Ib)
-        End do
-
-        
-       ! write (out_unit, *) 'VQQ',VQQ
-
-  END SUBROUTINE
-
-
 
  SUBROUTINE Calc_VQP_1D(psi0, VQP, Ib)
     USE QDUtil_m
@@ -554,6 +366,153 @@ END SUBROUTINE
     
     !write (out_unit, *) 'VQP',VQP
 
+END SUBROUTINE
+
+SUBROUTINE Calc_AVQ_SQ_nD(psi_in, AVQ, SQ,Tab_Iq)
+   USE QDUtil_m
+   TYPE(Psi_t), intent(in)                       :: psi_in
+   integer,intent(in)                            :: Tab_Iq(:, :)
+   real(kind=Rkind), intent(inout)               :: AVQ(:), SQ(:)
+
+   logical, parameter                            :: debug = .false.
+   TYPE(Psi_t)                                   :: psi
+   complex(kind=Rkind), allocatable              :: psi_gb(:, :)
+   real(kind=Rkind), allocatable                 :: AVQel(:, :), SQel(:, :),Q(:)
+   real(kind=Rkind)                              :: W
+   real(kind=Rkind), allocatable                 :: N(:)
+   integer                                       :: iq, inbe, inb,nsurf,nq,ndim,Ib
+
+
+   IF (debug) THEN
+      write (out_unit, *) 'Beging AVQ'
+      flush (out_unit)
+   END IF
+
+   ndim = size(psi_in%Basis%tab_basis) - 1
+   nq =psi_in%Basis%nq
+   nsurf=psi_in%Basis%tab_basis(ndim+1)%nb
+   allocate (N(nsurf),AVQel(ndim, nsurf),SQel(ndim, nsurf),Q(ndim),psi_gb(nq, nsurf))
+   CALL init_psi(psi, psi_in%Basis, cplx=.true., grid=.true.)
+
+   IF (psi_in%Grid) then
+      psi%CVec(:) = psi_in%CVec(:)
+   ELSE
+      CALL BasisTOGrid_nD_cplx(psi%CVec, psi_in%CVec, psi_in%Basis)
+   END IF
+
+   psi_gb(:, :) = reshape(psi%CVec, shape=[nq, nsurf])
+   N(:) = ZERO
+   AVQel(:, :) = ZERO
+   SQel(:, :)  = ZERO
+
+   DO inbe = 1, nsurf 
+
+      DO Iq =  1,nq
+         w = ONE
+         Q(:)=ZERO
+
+         DO inb = 1, ndim
+            w = w*psi%Basis%tab_basis(inb)%w(Tab_Iq(inb,Iq))
+            Q(inb)= psi%Basis%tab_basis(inb)%x(Tab_Iq(inb,Iq))
+         END DO
+         
+           N(inbe) = N(inbe) + conjg(psi_gb(iq, inbe))*psi_gb(iq, inbe)*W
+           AVQel(:, inbe) = AVQel(:, inbe) + conjg(psi_gb(iq, inbe))*(Q(:)*w)*psi_gb(iq, inbe)
+           SQel(:, inbe) = SQel(:, inbe) + conjg(psi_gb(iq, inbe))*(Q(:)*Q(:)*w)*psi_gb(iq, inbe)
+
+      END DO
+
+
+   END DO
+
+   DO inb = 1, ndim
+      AVQ(inb) = sum(AVQel(inb,:))/(Sum(N)**2)
+      SQ(inb) = sum(SQel(inb, :))/(Sum(N)**2)
+      SQ(inb) = sqrt(SQ(inb) - AVQ(inb)*AVQ(inb))
+      SQ(inb) = ONE/(SQ(inb)*sqrt(TWO))
+   
+   END DO   
+
+   Deallocate (Psi_gb,N,AVQel,SQel,Q)
+   CALL dealloc_psi(psi)
+   IF (debug) THEN
+      write (out_unit, *) 'END AVQ'
+      flush (out_unit)
+   END IF
+END SUBROUTINE
+
+SUBROUTINE Calc_AVQ_SQ_nD_scd(psi_in, AVQ, SQ,VQQ,Tab_Iq)
+   USE QDUtil_m
+   TYPE(Psi_t), intent(in)                       :: psi_in
+   integer, intent(in)                           :: Tab_Iq(:, :)
+   real(kind=Rkind), intent(inout)               :: AVQ(:), SQ(:),VQQ(:)
+
+   logical, parameter                            :: debug = .false.
+   TYPE(Psi_t)                                   :: psi
+   complex(kind=Rkind), allocatable              :: psi_gb(:, :)
+   real(kind=Rkind), allocatable                 :: AVQel(:, :), SQel(:, :),Q(:)
+   real(kind=Rkind)                              :: W
+   real(kind=Rkind), allocatable                 :: N(:)
+   integer                                       :: iq, inbe, inb,nsurf,nq,ndim,Ib
+
+
+   IF (debug) THEN
+      write (out_unit, *) 'Beging AVQ'
+      flush (out_unit)
+   END IF
+
+   ndim = size(psi_in%Basis%tab_basis) - 1
+   nq =psi_in%Basis%nq
+   nsurf=psi_in%Basis%tab_basis(ndim+1)%nb
+   allocate (N(nsurf),AVQel(ndim, nsurf),SQel(ndim, nsurf),Q(ndim),psi_gb(nq, nsurf))
+   CALL init_psi(psi, psi_in%Basis, cplx=.true., grid=.true.)
+
+   IF (psi_in%Grid) then
+      psi%CVec(:) = psi_in%CVec(:)
+   ELSE
+      CALL BasisTOGrid_nD_cplx(psi%CVec, psi_in%CVec, psi_in%Basis)
+   END IF
+
+   psi_gb(:, :) = reshape(psi%CVec, shape=[nq, nsurf])
+   N(:) = ZERO
+   AVQel(:, :) = ZERO
+   SQel(:, :)  = ZERO
+
+   DO inbe = 1, nsurf 
+
+      DO Iq =  1,nq
+         w = ONE
+         Q(:)=ZERO
+
+         DO inb = 1, ndim
+            w = w*psi%Basis%tab_basis(inb)%w(Tab_Iq(inb,Iq))
+            Q(inb)= psi%Basis%tab_basis(inb)%x(Tab_Iq(inb,Iq))
+         END DO
+         
+           N(inbe) = N(inbe) + conjg(psi_gb(iq, inbe))*psi_gb(iq, inbe)*W
+           AVQel(:, inbe) = AVQel(:, inbe) + conjg(psi_gb(iq, inbe))*(Q(:)*w)*psi_gb(iq, inbe)
+           SQel(:, inbe) = SQel(:, inbe) + conjg(psi_gb(iq, inbe))*(Q(:)*Q(:)*w)*psi_gb(iq, inbe)
+
+      END DO
+
+
+   END DO
+
+   DO inb = 1, ndim
+      AVQ(inb) = sum(AVQel(inb,:))/(Sum(N)**2)
+      VQQ(inb) = sum(SQel(inb,:))/(Sum(N)**2)
+      SQ(inb) = sum(SQel(inb, :))/(Sum(N)**2)
+      SQ(inb) = sqrt(SQ(inb) - AVQ(inb)*AVQ(inb))
+      SQ(inb) = ONE/(SQ(inb)*sqrt(TWO))
+   
+   END DO   
+
+   Deallocate (Psi_gb,N,AVQel,SQel,Q)
+   CALL dealloc_psi(psi)
+   IF (debug) THEN
+      write (out_unit, *) 'END AVQ'
+      flush (out_unit)
+   END IF
 END SUBROUTINE
 
 

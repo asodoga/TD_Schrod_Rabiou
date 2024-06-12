@@ -16,7 +16,7 @@ module psi_m
 
       PRIVATE
       PROCEDURE, PASS         :: Copy_psi    ! Copy content from other psi1 to psi2 instance,
-      GENERIC, PUBLIC          :: ASSIGNMENT(=) => Copy_psi
+      GENERIC, PUBLIC         :: ASSIGNMENT(=) => Copy_psi
 
    END TYPE psi_t
 
@@ -880,8 +880,8 @@ END SUBROUTINE
       END DO
       !------------------transformation Grid to Basis-------------------------
       call Calc_Norm_OF_Psi(psi0, NormG)
-      psi0%CVec(:) = psi0%CVec(:)/NormG
-      call Calc_Norm_OF_Psi(psi0, NormG)
+      !psi0%CVec(:) = psi0%CVec(:)/NormG
+      !call Calc_Norm_OF_Psi(psi0, NormG)
       write (out_unit, *)'------------------- Begining Norm Checking---------------------------------------'
       write (out_unit, *)
       write (out_unit, *) 'NormG = ', NormG
@@ -889,13 +889,13 @@ END SUBROUTINE
       call GridTOBasis_nD_cplx(psi%CVec, psi0%CVec, psi%Basis)
 
       call Calc_Norm_OF_Psi(psi, NormB)
-      psi%CVec(:) = psi%CVec(:)/NormB
-      call Calc_Norm_OF_Psi(psi, NormB)
+      !psi%CVec(:) = psi%CVec(:)/NormB
+      !call Calc_Norm_OF_Psi(psi, NormB)
 
       print *, 'NormB = ', NormB
 
-      psi%CVec(:) = psi%CVec(:)/NormB
-      call Calc_Norm_OF_Psi(psi, NormB)
+      !psi%CVec(:) = psi%CVec(:)/NormB
+      !call Calc_Norm_OF_Psi(psi, NormB)
 
       print *, 'NormB (renormed)= ', NormB
       write (out_unit, *)'------------------------------End Norm Checking---------------------------------'

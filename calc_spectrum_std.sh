@@ -5,10 +5,9 @@ echo $nb
 cd results_std_nb$nb
 
 ../spectrum_std.x << ** > spect_std.txt
-&param Emin=0. Emax=5. file_auto='auto_cor_non_hagedorn_taylor.txt' option=2 dE=0.01 /
+&param  dE=0.01 Emin=0.0 Emax=8.0 file_auto='auto_cor_non_hagedorn_taylor.txt' option=2  /
 
 **
-
 mv file_spectrum.txt ../file_spectrum_stdnb$nb.txt
 cd ..
 #gnuplot plot_spectrum_std.gp

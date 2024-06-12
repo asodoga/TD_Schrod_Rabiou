@@ -17,6 +17,7 @@ MODULE Basis_m
    PUBLIC :: Hagedorn_construction,Construct_Basis_Ho,Construct_Hagedorn_Variational_Basis
    PUBLIC :: Change_Basis_Parameters,Complete_Hagedorn_none_variationnal_Basis,Calc_d0d1d2W
    PUBLIC :: Complete_Hagedorn_none_variationnal_Basis_temp,construct_primitive_basis_temp
+   public :: calc_tab_Iq0 
 
    TYPE :: Basis_t
       integer                             :: nb_basis = ZERO
@@ -457,6 +458,34 @@ CONTAINS
    END SUBROUTINE Read_Basis
 
 
+   SUBROUTINE Calc_tab_Iq0(Tab_Iq,Basis)
+      USE  QDUtil_m
+      TYPE(Basis_t), intent(in), target             :: Basis
+      integer, allocatable ,intent(inout)           :: Tab_iq(:, :)
+   
+      integer, allocatable                          :: Tab_iq0(:)
+      integer                                       :: ndim, iq,nq
+      logical                                       :: Endloop
+   
+      ndim = size(Basis%tab_basis) - 1
+      nq =Basis%nq
+      !print*,ndim,nq
+   
+       allocate (Tab_iq(ndim,nq),Tab_iq0(ndim))
+      Call Init_tab_ind(Tab_iq0, Basis%NDindexq)
+      Iq = 0
+      DO
+         Iq = Iq + 1
+         CALL increase_NDindex(Tab_Iq0, Basis%NDindexq, Endloop)
+         IF (Endloop) exit
+         Tab_iq(:,Iq) = Tab_Iq0
+          !print*,iq,Tab_Iq(:,Iq)
+      END DO
+      deallocate(Tab_Iq0)
+   END SUBROUTINE 
+   
+
+
    RECURSIVE SUBROUTINE construct_primitive_basis_temp(Basis)
    USE QDUtil_m
    logical, parameter                     :: debug = .true.
@@ -479,6 +508,8 @@ CONTAINS
          Basis%scaleQ = pi/(Basis%B - Basis%A)
          call Hagedorn_construction(Basis)
       CASE ('fourier')
+         Basis%Q0 = ZERO
+         Basis%scaleQ = ONE
          call Construct_Basis_Fourier(Basis)
          call Hagedorn_construction(Basis)
       CASE ('herm', 'ho')
@@ -487,7 +518,6 @@ CONTAINS
       CASE default
          STOP 'ERROR  Noting to construct'
       END SELECT
-      !  this part wil not have sens for 'el' basis
    END IF
    ! write(out_unit,*) ' End  construct  primitive Basis '
 END SUBROUTINE 

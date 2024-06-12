@@ -1,11 +1,13 @@
 module Propa_m
    USE QDUtil_m
    USE psi_m
+   USE Op_m
    USE Ana_psi_m
    Use lanczos_m
    USE Auto_corr_m
    Use Hagedorn_m
    USE sub_propa_m
+   USE Basis_m
 
    implicit none
 
@@ -22,8 +24,10 @@ contains
 
       ! variables locales------------------------------------------------------------------
       TYPE(Basis_t)                       ::  Basis
-      REAL(kind=Rkind)                    :: t, t_deltat, Norm, E
+      TYPE(Op_t)                          :: H
+      REAL(kind=Rkind)                    :: t, t_deltat, Norm, E,e0
       REAL(kind=Rkind), allocatable       :: Qt(:), SQt(:), pop(:),Pt(:)
+      integer, allocatable                :: Tab_iq(:, :)
       complex(kind=Rkind) ,allocatable    :: At(:)
       REAL(kind=Rkind)                    :: aut_func_arg
       complex(kind=Rkind)                 :: aut_func
@@ -55,8 +59,9 @@ contains
       call creat_file_unit(nio=21, name='Rd', propa=propa)
       !call creat_file_unit(nio=22, name='maxcoeff', propa=propa)
       !call creat_file_unit(nio=23, name='psi_int', propa=propa)
-      !call creat_file_unit(nio=24, name='Norm_int', propa=propa)
-      !call creat_file_unit(nio=25, name='E_int', propa=propa)
+      call creat_file_unit(nio=24, name='Norm_13', propa=propa)
+      call creat_file_unit(nio=25, name='E_13', propa=propa)
+      call creat_file_unit(nio=28, name='file_norm_pics', propa=propa)
        call creat_file_unit(nio=26, name='auto_cor', propa=propa)
        call creat_file_unit(nio=27, name='psi_dt_on_basis0', propa=propa)
       
@@ -74,12 +79,17 @@ contains
 
       psi%CVec(:) = psi0%CVec(:)
       psi_t0%CVec(:) = psi0%CVec(:)
+      call Calc_tab_Iq0(Tab_Iq,psi0%Basis)
+      call Set_Op(H, psi0%Basis,Tab_Iq)
 
       ! call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
       ! call Rdensity_Writing(Rd,psi%Basis,nio=21,t=ZERO)
       !  STOP 'cc propa'
       ! ---------------------------------- Beging  propagation----------------------------------------------------------
       
+      !call Hagedorn_temp(psi, psi0,propa)
+      call Calc_Av_E(e0,psi,H)
+
       DO i = 0, nt
          t = i*propa%delta_t
          t_deltat = t + propa%delta_t
@@ -88,30 +98,48 @@ contains
           call Get_Basis_Parameters(psi%Basis,Qt,SQt,At,Pt)
           Else
             call  Calc_Basis_parameters(psi,Qt,SQt,At,Pt)
-         End if
-          call Calc_average_energy(psi, E)
+          End if
+         call Calc_Av_E(E,psi,H)
           call Calc_Norm_OF_psi(psi, Norm)
-          call  Calc_Auto_corr(psi_t0, psi, aut_func, aut_func_arg, propa%propa_name,it =i)
+          call Population(psi, pop)
+          call  Calc_Auto_corr(psi_t0, psi, aut_func, aut_func_arg, propa%propa_name,propa%renorm,t=t)
 
           write (11,*) t, Qt
-          write (12,FMT= "(F20.10,F20.10)") t, E
+          write (12,*) t, E !FMT= "(F20.10,F20.10)"
           write (13,*) t, SQt
-          write (14,FMT= "(F20.10,F20.10)") t, Norm
+          write (14,FMT= *) t, Norm !"(F20.10,F20.10)"
           write (26,*) t,aut_func
-          !write (18,*) t, pop
-          write (19,*) t, Pt
-          write (20,*) t, sqrt(real(At(:),kind=Rkind)),At(:)
-
-         if (mod(i, 20 ) == 0) then
+          write (18,*) t, pop
+           write (19,*) t, Pt
+           !write (20,"(F20.10,F10.5,F10.5,F10.5,F10.5)") t, real(At(:),kind=Rkind), aimag(At(:))
+          write (20,*) t, real(At(:),kind=Rkind), aimag(At(:)) !t, sqrt(real(At(:),kind=Rkind)),At(:)
+          flush  (11);flush  (18)
+          flush  (12);flush  (19)
+          flush  (13);flush  (20)
+          flush  (14)
+          flush  (26)
+          call eval_pics(psi,ib=28,t=t_deltat)
+         if (mod(i, 60 ) == 0) then
               call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
-              , print_basis=.false., t=t, int_print=10, real_part=.false.)
+              , print_basis=.false., t=t_deltat, int_print=10, real_part=.false.)
+             ! call eval_pics(psi,ib=28,t=t)
               call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
-              call Rdensity_Writing(Rd,psi%Basis,nio=21,ib=1,t=t)
+              call Rdensity_Writing(Rd,psi%Basis,nio=21,ib=1,t=t_deltat)
              ! call test_propa_Hagedorn(psi,t)
               write(10,*)
+              flush  (10)
               write(21,*)
+              flush  (21)
+
          end if
-        call march_Global(psi, psi_dt, t, propa)
+        call march_Global(psi, psi_dt, t_deltat, propa,H)
+        If (propa%propa_name == 'hagedorn') Then
+           !> cette partitie reconstruit le potentiel apres reconstruction de la base.
+            !deallocate(H%Scal_pot)
+            !call Set_Op(H, psi%Basis,Tab_Iq)
+
+        End if
+  
       END DO
     psif%CVec(:) = psi_dt%CVec(:)
       CALL Calc_Norm_OF_Psi(psif, Norm)         

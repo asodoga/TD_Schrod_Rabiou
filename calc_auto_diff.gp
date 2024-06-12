@@ -1,5 +1,5 @@
  
- set terminal pngcairo
+set terminal pngcairo
 set output 'diff-auto.png'
  set title "auto-func"
 set xlabel "temps"

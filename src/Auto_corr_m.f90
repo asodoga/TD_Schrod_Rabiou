@@ -5,11 +5,11 @@ module Auto_corr_m
    Use Hagedorn_m
 
    implicit none
-   public :: Calc_Auto_corr, Calc_fft_Auto_corr
+   public :: Calc_Auto_corr, Calc_fft_Auto_corr,test_write_cplx,eval_pics
 
 contains
 
-   SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name,t,it)
+   SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name,renorm,t,it)
       USE QDUtil_m
       USE psi_m
 
@@ -17,7 +17,8 @@ contains
       real(kind=Rkind),intent(in),optional       :: t
       integer,intent(in),optional                :: it
       complex(kind=Rkind), intent(inout)         :: corre_coeff
-      real(kind=Rkind), intent(inout)            :: arg_corre_coeff
+      real(kind=Rkind), intent(inout)            :: arg_corre_coeff 
+      logical, intent(in)                        :: renorm
       character(*), intent(in)                   :: propa_name
 
       !local variables---------------------------------------------------
@@ -39,14 +40,15 @@ contains
 
          psi%CVec = CZERO
          psi_t0%CVec(:) =psi_dt%CVec(:)
-         call  Hagedorn_Inv2(psi, psi_t0)
+         call  Hagedorn_Inv(psi, psi_t0,renorm)
          corre_coeff = dot_product(psi0%CVec, psi%CVec)/dot_product(psi%CVec, psi%CVec)**2
          X = real(corre_coeff, kind=Rkind)
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
          if(present(t)) then
-           call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
-            , print_basis=.false., t=t, int_print=27, real_part=.false.)
+           !call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
+            !, print_basis=.false., t=t, int_print=27, real_part=.false.)
+            call test_write_cplx(psi,ib=27,t=t)
              write(27,*)
          end if
 
@@ -63,8 +65,9 @@ contains
          Y = aimag(corre_coeff)
          arg_corre_coeff = atan2(Y, X)
          if(present(t)) then
-           call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
-           , print_basis=.false., t=t, int_print=27, real_part=.false.)
+           !call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
+           !, print_basis=.false., t=t, int_print=27, real_part=.false.)
+           call test_write_cplx(psi_dt,ib=27,t=t)
             write(27,*)
          end if
          if(present(it)) call test_write(psi_dt,ib=27)
@@ -118,5 +121,60 @@ contains
  ! end do
 
    END SUBROUTINE
+
+
+   SUBROUTINE test_write_cplx(psi,ib,t)
+      implicit none
+      TYPE(psi_t), intent(in)                     :: psi
+      integer,intent(in)                          :: ib
+      real(kind=Rkind) ,intent(in)                :: t
+     integer                                      :: i
+
+        do i =1,size(psi%CVec)
+         write(ib,*) t, i, psi%CVec(i)
+        end do
+
+   END SUBROUTINE
+
+
+   SUBROUTINE eval_pics(psi,ib,t)
+      implicit none
+      TYPE(psi_t), intent(in)                     :: psi
+      integer,intent(in)                          :: ib
+      real(kind=Rkind) ,intent(in)                :: t
+      real(kind=Rkind)                            :: norm,n0
+      integer                                     :: i,nb
+       
+      norm = 0._Rkind
+      call Calc_Norm_OF_Psi(psi,n0)
+       do i =2,size(psi%CVec)
+         norm = norm + abs(psi%CVec(i))**2
+       end do
+
+       if ( t==0 ) then
+         write(ib,*) t, abs(n0**2-abs(psi%CVec(1))**2) , ZERO  !FMT= "(F20.10,F20.15,F20.18)"
+       else
+         write(ib,*) t, abs(n0**2-abs(psi%CVec(1))**2) , norm
+       end if
+
+   END SUBROUTINE
+
+
+   !SUBROUTINE eval_pics_temp(psi,ib,t)
+   !   implicit none
+   !   TYPE(psi_t), intent(in)                     :: psi
+   !   integer,intent(in)                          :: ib
+   !   real(kind=Rkind) ,intent(in)                :: t
+   !   integer                                     :: nb
+   !    
+   !     nb = size(psi%CVec)
+   !     if ( t==0 ) then
+   !      write(ib,*) t, abs(ONE-abs(psi%CVec(1))) , 0.0
+   !     else
+   !      write(ib,*) t, abs(ONE-abs(psi%CVec(1))**2) ,sqrt( sum(abs(psi%CVec(2:nb))**2))
+   !     end if
+   !      
+   !END SUBROUTINE
+
 end module Auto_corr_m
 

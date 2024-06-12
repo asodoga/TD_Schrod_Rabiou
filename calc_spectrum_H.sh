@@ -5,7 +5,7 @@ echo $nb
 cd results_H_nb$nb
 
 ../spectrum_H.x << ** > spect_H.txt
-&param Emin=0. Emax=5. file_auto='auto_cor_hagedorn_taylor.txt' option=2 dE=0.01 /
+&param Emin=0. Emax=8.0 file_auto='auto_cor_hagedorn_taylor.txt' option=2 dE=0.0001 /
 
 **
 
