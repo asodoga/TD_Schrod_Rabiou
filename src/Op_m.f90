@@ -17,7 +17,7 @@ module Op_m
    END TYPE Op_t
 
    public :: Op_t, write_Op, Set_Op, dealloc_Op, calc_OpPsi, Calc_Hpsi, Kpsi_nD, Make_Mat_H
-   public  :: test_op,Calc_Scalar_Pot, test_openmp_op,calc_tab_Iq
+   public  :: test_op,Calc_Scalar_Pot, test_openmp_op,calc_tab_Iq,calc_nac,calc_VV,Popu
 
 contains
    SUBROUTINE alloc_Op(Op, nb)
@@ -194,8 +194,8 @@ contains
 
          DO i3 = 1, ubound(psi_ggb, dim=3)
             DO i1 = 1, ubound(psi_ggb, dim=1)
-               !KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, psi_ggb(i1, :, i3))
-               Kpsi_ggb(i1, :, i3) = Kpsi_ggb(i1, :, i3) - HALF*matmul(d2gg, psi_ggb(i1, :, i3))
+               KPsi_ggb(i1, :, i3) = KPsi_ggb(i1, :, i3) - HALF*GGdef(inb, inb)*matmul(d2gg, psi_ggb(i1, :, i3))
+               !Kpsi_ggb(i1, :, i3) = Kpsi_ggb(i1, :, i3) - HALF*matmul(d2gg, psi_ggb(i1, :, i3))
             END DO
          END DO
 
@@ -222,23 +222,41 @@ SUBROUTINE Calc_Scalar_Pot(V, Basis)
    nq =Basis%nq
    nsurf=Basis%tab_basis(ndim+1)%nb
 
+   open (unit = 200, file = "Vm.txt")
+   open (unit = 205, file = "x.txt")
+   open (unit = 206, file = "y.txt")
+
+   open (unit = 201, file = "V22-ad=f.txt")
+   open (unit = 202, file = "V12-ad=f.txt")
+
     allocate (Q(ndim),Tab_iq(ndim))
     allocate(V(nq, nsurf, nsurf))
+
+    do i= 1,Basis%tab_basis(1)%nq
+      write (205,*) Basis%tab_basis(1)%x(i) 
+      write (206,*) Basis%tab_basis(2)%x(i) 
+    end do
+
 
    Call Init_tab_ind(Tab_iq, Basis%NDindexq)
    Iq = 0
    DO
       Iq = Iq + 1
-     ! i =Tab_iq(2)
+      i =Tab_iq(2)
       CALL increase_NDindex(Tab_iq, Basis%NDindexq, Endloop)
       IF (Endloop) exit
       do inb = 1, ndim
           Q(inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
       end do
       CALL sub_Qmodel_V(V(iq, :, :), Q(:))
-      !if ( (Tab_iq(2)/= i) )  write(270,*)
-      !write(270,*) Q(:),V(iq, 1, 1),V(iq, 2, 2)
-
+      if ( (Tab_iq(2)/= i) )then 
+          write(200,*)
+          write(201,*)
+          write(202,*)
+      end if    
+      write(200,*) Q(:),V(iq, 1, 1)
+      write(201,*) Q(:),V(iq, 2, 2)
+      write(202,*) Q(:),V(iq, 2, 1)
    END DO
 
    deallocate(Tab_iq,Q)
@@ -256,11 +274,11 @@ SUBROUTINE test_op(Basis,psi0)
     complex(kind=Rkind) ,allocatable             :: CEigVal(:),CEigVec(:,:)
     real(kind=Rkind) ,allocatable                :: prob(:),vec(:)
     real(Kind=Rkind)            , allocatable    ::Pop(:)
-    integer                                      :: nb,ndim,ib,nsurf
+    integer                                      :: nb,ndim,ib,nsurf,jb
 
-    open(unit=50, file = 'proj')
-    open(unit=51, file = 'EingVec')
-    open(unit=52, file = 'population')
+    open(unit=50, file = 'proj.txt')
+    open(unit=51, file = 'EingVec.txt')
+    open(unit=52, file = 'population.txt')
 
      call  Make_Mat_H(Basis,H)
      ndim = size(Basis%tab_basis) - 1
@@ -268,18 +286,34 @@ SUBROUTINE test_op(Basis,psi0)
      nsurf =Basis%tab_basis(ndim+1)%nb
      allocate(CEigVal(nb),CEigVec(nb,nb),prob(nb),vec(nb),Pop(nsurf))
      call init_psi(psi, psi0%Basis, cplx=.true., grid=.false.)
-     call   Write_VecMat(H%CMat,out_unit,5, info='<psi|H|psi>',Rformat='e13.4')
+     !call   Write_VecMat(H%CMat,out_unit,5, info='<psi|H|psi>',Rformat='e13.4')
      call diagonalization(H%CMat,CEigVal,CEigVec)
-     prob = matmul(CEigVec,psi0%CVec)
+     !prob = matmul(conjg(transpose(CEigVec)),psi0%CVec)
+     !prob = matmul(conjg(CEigVec),psi0%CVec)
+     !print*,'E=', dot_product(psi0%CVec,matmul(H%CMat,psi0%CVec))
+
+     !Do ib = 1,nb
+     ! psi%CVec(:)=CEigVec(:,ib)
+     ! prob(ib)=ZERO 
+     ! prob(ib)= dot_product(conjg(psi%CVec), psi0%CVec)
+     ! !Do jb = 1,nb
+     !   !prob(ib) = prob(ib) + conjg(psi%CVec(jb))*psi0%CVec(jb)
+     !   !print*,jb, psi%CVec(jb), psi0%CVec(jb)
+     ! !End do
+     ! write(50,*),ib,prob(ib)
+     !End Do
+
+
      Do ib = 1,nb
       psi%CVec(:)=CEigVec(:,ib)
+      prob(ib) = sum(CEigVec(:,ib)*psi0%CVec(:))
       call Popu(psi,Pop)
       write(51,*) ib, CEigVal(ib)%re
-      write(50,*) ib, abs(prob(ib))
+      write(50,*) ib, prob(ib)
       write(52,*) ib, Pop(:)
      End Do
 
-     call Calc_Scalar_Pot(V, Basis)
+     !call Calc_Scalar_Pot(V, Basis)
      
 
      call dealloc_psi(psi)
@@ -482,16 +516,20 @@ SUBROUTINE test_openmp_op(Basis)
    real(kind=Rkind), allocatable                 :: V(:, :, :)
    integer, allocatable                          :: Tab_Iq(:, :)
    real(kind=Rkind)                              :: t1,t2,tps, tpsopenmp
+   integer                                        :: iq, nq
 
-
+  nq = Basis%nq
+  print*,"nq=",nq
    call Calc_tab_Iq(Tab_Iq,Basis)
+   call  Calc_Scalar_Pot(V, Basis)
+   
      
    !call cpu_time(time=t1)
-    call Calc_Scalar_Pot_openmp(V, Basis,Tab_Iq)
+    !call Calc_Scalar_Pot_openmp(V, Basis,Tab_Iq)
    ! call cpu_time(time=t2)
     !tpsopenmp = t2-t1
     !write(*,*)"temps CPU  openmp :",tpsopenmp
-    deallocate(V)
+    !deallocate(V)
     !call cpu_time(time=t1)
     !call Calc_Scalar_Pot(V, Basis)
     !call cpu_time(time=t2)
@@ -502,6 +540,137 @@ END SUBROUTINE
 
 
 
+
+
+SUBROUTINE calc_nac(Basis)
+   USE  QDUtil_m
+   USE Basis_m
+   TYPE(Basis_t), intent(in), target                :: Basis
+   real(kind=Rkind), allocatable                    :: NAC(:, :, :)
+
+   integer, allocatable                             :: Tab_iq(:)
+   integer                                          :: inb, ndim, iq,nq,nsurf,i,nq1,nq2
+   real(Kind=Rkind)               , allocatable     :: Q(:),G(:,:,:),V(:,:)
+   logical                                          :: Endloop
+
+   ndim = size(Basis%tab_basis) - 1
+   nq =Basis%nq
+   nsurf=Basis%tab_basis(ndim+1)%nb
+   nq1= Basis%tab_basis(1)%nq
+   nq2= Basis%tab_basis(2)%nq
+
+   open (unit = 300, file = "N121-ad=t.txt")
+   open (unit = 301, file = "N122-ad=t.txt")
+
+   open (unit = 302, file = "N211-ad=t.txt")
+   open (unit = 303, file = "N212-ad=t.txt")
+   open (unit = 500, file = "x.txt")
+   open (unit = 501, file = "y.txt")
+
+    allocate (Q(ndim),Tab_iq(ndim))
+    allocate(V(nsurf, nsurf), NAC(nsurf, nsurf,ndim), G(nsurf, nsurf,ndim))
+
+   Call Init_tab_ind(Tab_iq, Basis%NDindexq)
+   Iq = 0
+   DO
+      Iq = Iq + 1
+      i =Tab_iq(2)
+      CALL increase_NDindex(Tab_iq, Basis%NDindexq, Endloop)
+      IF (Endloop) exit
+      do inb = 1, ndim
+          Q(inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
+      end do
+      CALL sub_Qmodel_VG_NAC(V, G, NAC, Q)
+      if ( (Tab_iq(2)/= i) )then 
+          write(300,*)
+          write(301,*)
+          write(302,*)
+          write(302,*)
+      end if  
+
+      write(300,*) Q(:),NAC(1, 2, 1)
+      write(301,*) Q(:),NAC(1, 2, 2)
+
+      write(302,*) Q(:),NAC(2, 1, 1)
+      write(303,*) Q(:),NAC(2, 1, 2)
+
+   END DO
+   do i = 1, nq1
+      write(500,*) Basis%tab_basis(1)%x(i)
+   end do
+   do i = 1, nq2
+      write(501,*) Basis%tab_basis(2)%x(i)
+   end do
+
+   deallocate(Tab_iq,Q, NAC,G,V)
+
+END SUBROUTINE 
+
+
+
+
+SUBROUTINE calc_VV(Basis)
+   USE  QDUtil_m
+   USE Basis_m
+   TYPE(Basis_t), intent(in), target                :: Basis
+
+   integer, allocatable                             :: Tab_iq(:)
+   integer                                          :: inb, ndim, iq,nq,nsurf,i,nq1,nq2
+   real(Kind=Rkind)               , allocatable     :: Q(:),V(:,:)
+   logical                                          :: Endloop
+
+   ndim = size(Basis%tab_basis) - 1
+   nq =Basis%nq
+   nsurf=Basis%tab_basis(ndim+1)%nb
+   nq1= Basis%tab_basis(1)%nq
+   nq2= Basis%tab_basis(2)%nq
+
+   !open (unit = 400, file = "v11-ad=t.txt")
+   !open (unit = 401, file = "v22-ad=t.txt")
+
+   !open (unit = 402, file = "v21-ad=t.txt")
+   !open (unit = 403, file = "v12-ad=t.txt")
+   !open (unit = 404, file = "x.txt")
+   !open (unit = 405, file = "y.txt")
+
+    allocate (Q(ndim),Tab_iq(ndim))
+    allocate(V(nsurf, nsurf))
+
+   Call Init_tab_ind(Tab_iq, Basis%NDindexq)
+   Iq = 0
+   DO
+      Iq = Iq + 1
+      i =Tab_iq(2)
+      CALL increase_NDindex(Tab_iq, Basis%NDindexq, Endloop)
+      IF (Endloop) exit
+      do inb = 1, ndim
+          Q(inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
+      end do
+      CALL sub_Qmodel_V(V, Q)
+      !if ( (Tab_iq(2)/= i) )then 
+       !   write(400,*)
+        !  write(401,*)
+          !write(402,*)
+         ! write(403,*)
+      !end if  
+
+      !write(400,*) Q(:), V(1, 1)
+      !write(401,*) Q(:), V(2, 2)
+
+      !write(402,*) Q(:), V(2, 1)
+      !write(403,*) Q(:),V(1, 2)
+
+   END DO
+   !do i = 1, nq1
+    !  write(404,*) Basis%tab_basis(1)%x(i)
+   !end do
+   !do i = 1, nq2
+    !  write(405,*) Basis%tab_basis(2)%x(i)
+   !end do
+
+   deallocate(Tab_iq,Q,V)
+
+END SUBROUTINE 
 
  
 end module Op_m

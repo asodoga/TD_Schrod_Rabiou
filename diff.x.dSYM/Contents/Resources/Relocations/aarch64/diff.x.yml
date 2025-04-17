@@ -1,0 +1,16 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     diff.x
+relocations:
+  - { offset: 0x42, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x1768, symBinAddr: 0x1000038C0, symSize: 0x2C }
+  - { offset: 0x8B, size: 0x8, addend: 0x0, symName: _MAIN__, symObjAddr: 0x24C, symBinAddr: 0x100002854, symSize: 0x106C }
+  - { offset: 0xA5, size: 0x8, addend: 0x0, symName: _int_to_string.0, symObjAddr: 0x0, symBinAddr: 0x100002608, symSize: 0x24C }
+  - { offset: 0x2CE, size: 0x8, addend: 0x0, symName: _slen.7.9, symObjAddr: 0x35D0, symBinAddr: 0x100008040, symSize: 0x0 }
+  - { offset: 0x2EF, size: 0x8, addend: 0x0, symName: _slen.11.8, symObjAddr: 0x35C8, symBinAddr: 0x100008038, symSize: 0x0 }
+  - { offset: 0x304, size: 0x8, addend: 0x0, symName: _slen.15.7, symObjAddr: 0x35C0, symBinAddr: 0x100008030, symSize: 0x0 }
+  - { offset: 0x325, size: 0x8, addend: 0x0, symName: _slen.19.6, symObjAddr: 0x35B8, symBinAddr: 0x100008028, symSize: 0x0 }
+  - { offset: 0x33A, size: 0x8, addend: 0x0, symName: _slen.23.5, symObjAddr: 0x35B0, symBinAddr: 0x100008020, symSize: 0x0 }
+  - { offset: 0x35B, size: 0x8, addend: 0x0, symName: _slen.26.4, symObjAddr: 0x35A8, symBinAddr: 0x100008018, symSize: 0x0 }
+  - { offset: 0x392, size: 0x8, addend: 0x0, symName: _slen.30.3, symObjAddr: 0x35A0, symBinAddr: 0x100008010, symSize: 0x0 }
+  - { offset: 0x3D6, size: 0x8, addend: 0x0, symName: _slen.34.2, symObjAddr: 0x3598, symBinAddr: 0x100008008, symSize: 0x0 }
+...

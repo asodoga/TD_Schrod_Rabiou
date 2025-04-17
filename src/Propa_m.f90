@@ -33,7 +33,7 @@ contains
       complex(kind=Rkind)                 :: aut_func
       TYPE(REDUCED_DENSIRY_t)             :: Rd
       integer                             :: Ndim
-      INTEGER                             :: i, nt, nf,nsurf
+      INTEGER                             :: i, nt, nf,nsurf,index
       TYPE(psi_t)                         :: psi, psi_dt,psi_t0
       if (debug) then
 
@@ -57,14 +57,14 @@ contains
       call creat_file_unit(nio=19, name='Imp_k', propa=propa)
       call creat_file_unit(nio=20, name='alpha', propa=propa)
       call creat_file_unit(nio=21, name='Rd', propa=propa)
-      !call creat_file_unit(nio=22, name='maxcoeff', propa=propa)
-      !call creat_file_unit(nio=23, name='psi_int', propa=propa)
+      call creat_file_unit(nio=22, name='maxcoeff', propa=propa)
+      call creat_file_unit(nio=23, name='psi_int', propa=propa)
       call creat_file_unit(nio=24, name='Norm_13', propa=propa)
       call creat_file_unit(nio=25, name='E_13', propa=propa)
       call creat_file_unit(nio=28, name='file_norm_pics', propa=propa)
-       call creat_file_unit(nio=26, name='auto_cor', propa=propa)
-       call creat_file_unit(nio=27, name='psi_dt_on_basis0', propa=propa)
-      
+       call creat_file_unit(nio=26,name='auto_cor', propa=propa)
+       call creat_file_unit(nio=27,name='psi_dt_on_basis0', propa=propa)
+       
       call init_Basis1_TO_Basis2(Basis, psi0%Basis)
       call construct_primitive_basis(Basis)
       Ndim = size(psi0%Basis%tab_basis) - 1
@@ -81,6 +81,14 @@ contains
       psi_t0%CVec(:) = psi0%CVec(:)
       call Calc_tab_Iq0(Tab_Iq,psi0%Basis)
       call Set_Op(H, psi0%Basis,Tab_Iq)
+
+
+      !call creat_file_unit(nio=2000, name='q1', propa=propa)
+      !call creat_file_unit(nio=2001, name='q2', propa=propa)
+      !do i= 1,Basis%tab_basis(1)%nq
+      !   write (2000,*) Basis%tab_basis(1)%x(i) 
+      !   write (2001,*) Basis%tab_basis(2)%x(i) 
+      !end do
 
       ! call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
       ! call Rdensity_Writing(Rd,psi%Basis,nio=21,t=ZERO)
@@ -104,6 +112,7 @@ contains
           call Population(psi, pop)
           call  Calc_Auto_corr(psi_t0, psi, aut_func, aut_func_arg, propa%propa_name,propa%renorm,t=t)
 
+
           write (11,*) t, Qt
           write (12,*) t, E !FMT= "(F20.10,F20.10)"
           write (13,*) t, SQt
@@ -118,11 +127,16 @@ contains
           flush  (13);flush  (20)
           flush  (14)
           flush  (26)
-          call eval_pics(psi,ib=28,t=t_deltat)
+
+        index =i+1000
+   !call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
+    !      , print_basis=.false., t=t_deltat, int_print=index, real_part=.false.)
+
+          !call eval_pics(psi,ib=28,t=t_deltat)
          if (mod(i, 60 ) == 0) then
-              call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
+              call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.true. &
               , print_basis=.false., t=t_deltat, int_print=10, real_part=.false.)
-             ! call eval_pics(psi,ib=28,t=t)
+              call eval_pics(psi,ib=28,t=t)
               call Calc_reduced_density(Rd,psi%CVec,psi%Basis)
               call Rdensity_Writing(Rd,psi%Basis,nio=21,ib=1,t=t_deltat)
              ! call test_propa_Hagedorn(psi,t)
@@ -132,11 +146,23 @@ contains
               flush  (21)
 
          end if
+         
         call march_Global(psi, psi_dt, t_deltat, propa,H)
+
+        !if (mod(i, 100 ) == 0) call Ecrire_psi(psi,nio=100,t=t_deltat)
+!
+        !if (mod(i, 1000 ) == 0)call Ecrire_psi(psi,nio=1000,t=t_deltat)
+!
+        !if (mod(i, 2500 ) == 0)call Ecrire_psi(psi,nio=2500,t=t_deltat)
+!
+        !if (mod(i, 5000 ) == 0)call Ecrire_psi(psi,nio=5000,t=t_deltat)
+        !
+        !if (mod(i, 8000 ) == 0)call Ecrire_psi(psi,nio=8000,t=t_deltat)
+
         If (propa%propa_name == 'hagedorn') Then
            !> cette partitie reconstruit le potentiel apres reconstruction de la base.
-            !deallocate(H%Scal_pot)
-            !call Set_Op(H, psi%Basis,Tab_Iq)
+            deallocate(H%Scal_pot)
+            call Set_Op(H, psi%Basis,Tab_Iq)
 
         End if
   

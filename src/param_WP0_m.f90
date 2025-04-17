@@ -83,16 +83,20 @@
            TYPE (GWP1D_t),    intent(in) :: GWP1D
         
            real (kind=Rkind) :: ze,zk,DQ
+           complex(kind=Rkind) :: At
            !----- for debuging --------------------------------------------------
            character (len=*), parameter :: name_sub='calc_GWP1D'
            logical, parameter :: debug =.FALSE.
            !logical, parameter :: debug =.TRUE.
            !-----------------------------------------------------------
+           At = complex((TWO/GWP1D%sigma**2),TWO*GWP1D%Beta)
+           !print*,'at=',At%re
            DQ = Q-GWP1D%Q0
            ze = (DQ/GWP1D%sigma)**2
            zk = mod(-DQ*DQ*GWP1D%Beta+DQ*GWP1D%imp_k+GWP1D%gamma ,TWO*pi)
         
            calc_GWP1D = exp(-ze + EYE*zk) / sqrt(sqrt(pi/TWO)*GWP1D%sigma)
+           !calc_GWP1D = exp(-(At/TWO)*DQ*DQ+ EYE*DQ +GWP1D%gamma)*sqrt(sqrt(At%re/pi))
         
          END FUNCTION calc_GWP1D
         

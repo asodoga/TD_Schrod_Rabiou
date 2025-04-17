@@ -127,19 +127,23 @@ SUBROUTINE Calc_Avg_A_nD(psi, At)
   call Calc_AVQ_SQ_nD_scd(psi, VQ, SQt, VQQ, Tab_Iq)
   call Calc_Av_imp_k_nD(psi, VP)
   call Calc_VQP_nD(VQP, psi)
+  write (out_unit, *) 'VQQ = ', VQQ
+  
+   
 
   At(:) = CZERO 
   CB(:) = ZERO
   CA(:) = ZERO
    
    Do Ib = 1, Ndim
-    CA(Ib) = ONE/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
-    CB(Ib) = (VQP(Ib)-TWO*VP(Ib)*VQ(Ib))/(FOUR*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
+    !CA(Ib) = ONE/(TWO*(VQQ(Ib)-VQ(Ib)*VQ(Ib)))
+      CA(Ib) = SQt(Ib)**2
+    CB(Ib) = (VQP(Ib)-TWO*VP(Ib)*VQ(Ib))/(TWO*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
     At(Ib) = complex(CA(Ib),-CB(Ib))   
    End do
    
-   At(:) = TWO*At(:)
-   write (out_unit, *) 'At = ', At
+   !At(:) = At(:)
+   !write (out_unit, *) 'At = ', At
    
    IF (debug) THEN
    
@@ -413,7 +417,7 @@ SUBROUTINE Calc_AVQ_SQ_nD(psi_in, AVQ, SQ,Tab_Iq)
 
          DO inb = 1, ndim
             w = w*psi%Basis%tab_basis(inb)%w(Tab_Iq(inb,Iq))
-            Q(inb)= psi%Basis%tab_basis(inb)%x(Tab_Iq(inb,Iq))
+            Q(inb)= psi%Basis%tab_basis(inb)%x(Tab_Iq(inb,Iq))!+psi%Basis%tab_basis(inb)%Q0
          END DO
          
            N(inbe) = N(inbe) + conjg(psi_gb(iq, inbe))*psi_gb(iq, inbe)*W
@@ -428,8 +432,8 @@ SUBROUTINE Calc_AVQ_SQ_nD(psi_in, AVQ, SQ,Tab_Iq)
    DO inb = 1, ndim
       AVQ(inb) = sum(AVQel(inb,:))/(Sum(N)**2)
       SQ(inb) = sum(SQel(inb, :))/(Sum(N)**2)
-      SQ(inb) = sqrt(SQ(inb) - AVQ(inb)*AVQ(inb))
-      SQ(inb) = ONE/(SQ(inb)*sqrt(TWO))
+      SQ(inb) = TWO*(SQ(inb) - AVQ(inb)*AVQ(inb))
+      SQ(inb) = sqrt(ONE/SQ(inb))
    
    END DO   
 

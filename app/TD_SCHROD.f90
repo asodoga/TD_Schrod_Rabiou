@@ -15,7 +15,10 @@ PROGRAM TD_SCHROD
    TYPE(propa_t)                     :: propa
    TYPE(GWP_t), allocatable          :: tab_GWP(:)
    integer, allocatable              :: Tab_iq(:, :)
-   real(Kind=Rkind)                  :: E, Norm 
+   real(Kind=Rkind), allocatable     :: V(:, :, :)
+   real(Kind=Rkind)                  :: E, Norm ,Pt(2),Qt(2),SQt(2)
+   complex(Kind=Rkind)               :: At(2)
+   real(Kind=Rkind)                  :: t_deltat=0
  
 !-------------------------------------------------------------------------------
 ! for QML
@@ -32,12 +35,14 @@ PROGRAM TD_SCHROD
    write (out_unit, *) 'ndim,nsurf', ndim, nsurf
    write (out_unit, *) 'pot_name'
    
+   
    !---------------------------------------------------------------------------------
    ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
    ! the basis/grid informations have to be put in a module
    call Read_Basis(Basis, nio=in_unit)
    call construct_primitive_basis(Basis)
    !call Write_Basis(Basis) 
+   !stop 'cc'
 !-------------------------------------------------------------------------------------------
 !print*,"Basis is allocated",Basis_IS_allocated(Basis)
    write (out_unit, *) "------------------- Initialization of  psi0 ---------------------"
@@ -49,17 +54,27 @@ PROGRAM TD_SCHROD
    call Calc_tab_Iq0(Tab_Iq,psi0%Basis)
    call Set_Op(H, psi0%Basis,Tab_Iq)
    call psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
+   !call Ecrire_psi(psi0,nio=100,t=ZERO)
+
+   !print*,"psi0",psi0%CVec(:)
    !psi0%CVec=CZERO
    !psi0%CVec(1) =CONE
-   call Calc_Av_E(E,psi0,H)
+   !call Calc_Basis_parameters(psi0,Qt,SQt,At,Pt)
+   !call Get_Basis_Parameters(Basis,Qt,SQt,At,Pt)
+   !call Calc_Avg_A_nD(psi0, At)
+   !call Calc_Av_E(E,psi0,H)
    !call Calc_Norm_OF_Psi(psi0,Norm)
    !write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
    !write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
    !write (out_unit, *) '-------------End  Initialization of  psi0 ---------------------'
-    !call test_op(Basis,psi0)
+   !call test_op(Basis,psi0) ! diagonalisation
    ! call Make_Mat_H(H)
-
-    call read_propa(propa)
+   !call test_openmp_op(Basis)
+   !call calc_nac(Basis)
+   !call calc_VV(Basis)
+   call read_propa(propa)
+   !call Calc_Scalar_Pot(V, Basis)
+   !call test_taylor(psi0, psif, propa, H)
    !STOP 'calcul de H|psi> est fait'
    call propagation(psif, psi0, propa)
    print*, 'Fin de la propagationt'

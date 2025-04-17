@@ -22,7 +22,7 @@ module psi_m
 
    public :: psi_t, write_psi, init_psi, dealloc_psi, write_psi_grid
    public :: write_psi_basis, Calc_Norm_OF_PsiBasis, Calc_Norm_OF_PsiGrid, Calc_Norm_OF_Psi
-   public:: Projection,Projection1,psi_init_GWP
+   public:: Projection,Projection1,psi_init_GWP,Ecrire_psi
 contains
 
 
@@ -934,5 +934,54 @@ END SUBROUTINE
       print *, 'NormG = ', NormG
       print *, 'NormB = ', NormB
    end subroutine test
+
+
+
+   subroutine Ecrire_psi(psi,nio,t)
+      implicit none
+      TYPE(psi_t)           , intent(in)     :: psi
+      TYPE(psi_t)    ,target                        :: psiG
+      real(kind= Rkind), allocatable         :: Q(:, :)
+      complex(Kind= Rkind), pointer          :: gb(:, :)
+      real(kind= Rkind),intent(in)           :: t
+      integer,intent(in)                     :: nio
+      integer                                :: iq,ib,nq,nsurf,ndim,nio_2,nq1
+      CHARACTER(len=100)                     :: t_string
+      CHARACTER(len=100)                     :: name_1,name_2
+
+      ndim = size(psi%Basis%tab_basis)-1
+      nsurf = psi%Basis%tab_basis(ndim+1)%nb
+      nq = psi%Basis%nq
+      nio_2 =nio+1
+      nq1 = psi%Basis%tab_basis(1)%nq
+
+      ! Convertir delta_t en chaîne de caractères
+      WRITE(t_string, '(F12.6)') t 
+      name_1 = 'density_1_t=' // TRIM(ADJUSTL(t_string)) // '.txt'
+      name_2 = 'density_2_t=' // TRIM(ADJUSTL(t_string)) // '.txt'
+      
+      open (unit=nio, file=name_1)
+      open (unit=nio_2, file=name_2)
+
+      call calc_Q_grid(Q, psi%Basis)
+      CALL init_psi(psiG, psi%Basis, cplx=.TRUE., grid=.true.)
+      call BasisTOGrid_nD_cplx(psiG%CVec, psi%CVec, psi%Basis)
+
+      gb(1:nq, 1:nsurf) => psiG%CVec
+      DO iq = 1,nq
+       write(nio,*)  Q(iq,:),    abs( gb(iq,1))**2
+       write(nio_2,*)  Q(iq,:),   abs( gb(iq,2))**2
+       if (mod(iq, nq1 ) == 0) write(nio,*)
+       if (mod(iq, nq1 ) == 0)  write(nio_2,*)
+      END DO
+
+      
+      deallocate (Q)
+      CALL dealloc_psi(psiG)
+   end subroutine 
+
+
+
+
 
 end module psi_m

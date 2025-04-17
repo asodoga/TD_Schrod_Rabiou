@@ -23,6 +23,7 @@ module sub_propa_m
 
    public :: march_taylor, marh_RK4th,March,march_ITP,march_SIL,march_VP
    public :: mEyeHPsi, write_propa, Analyse, creat_file_unit, read_propa,diff2
+   public :: test_taylor,march_taylor_nolim
 
 contains
 
@@ -725,6 +726,82 @@ END SUBROUTINE
        print*,"NG=",sqrt(sum(abs(G0(:))**2))
       deallocate(Tab_iq,Q)
    END SUBROUTINE 
+
+
+
+   
+   SUBROUTINE march_taylor_nolim(psi, psi_dt, propa,H)
+      USE op_m
+      USE psi_m
+      USE Basis_m
+      TYPE(psi_t), intent(inout)       :: psi_dt
+      TYPE(psi_t), intent(in)          :: psi
+      TYPE(propa_t), intent(in)        :: propa
+      TYPE(Op_t), intent(in)           :: H
+
+      TYPE(psi_t)                      :: psi0
+      TYPE(psi_t)                      :: Hpsi
+      real(kind=Rkind)                 :: alpha
+
+      ! variables locales-------------------------------------------------------------------------------
+
+      real(kind=Rkind)                 :: Rkk, Norm, Norm0
+      integer                          :: kk
+
+      CALL init_psi(Hpsi, psi%basis, cplx=.true., grid=.false.) 
+      CALL init_psi(Psi0, psi%basis, cplx=.true., grid=.false.) 
+
+
+      Rkk = ONE
+      Psi_dt%CVec = Psi%CVec
+      Psi0%CVec = Psi%CVec
+
+      Do kk = 1, propa%max_iter, 1
+
+         call  mEyeHPsi_temp(psi0, Hpsi,H)
+          psi0%CVec(:) = Hpsi%CVec(:)*(propa%delta_t/kk)
+          psi_dt%CVec(:) = psi_dt%CVec(:) + psi0%CVec(:)
+          Hpsi%CVec(:) = CZERO
+         call Calc_Norm_OF_Psi(psi0, Norm)
+         write (5000, *)  kk, Norm
+
+      End do
+
+      CALL Calc_Norm_OF_Psi(Psi, Norm0)
+      CALL Calc_Norm_OF_Psi(Psi_dt, Norm)
+      write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =', abs(Norm0 - Norm)
+      write (out_unit, *) 'END march_taylor'
+      CALL dealloc_psi(psi0)
+      CALL dealloc_psi(Hpsi)
+
+   END SUBROUTINE 
+
+   SUBROUTINE test_taylor(psi, psi_dt, propa, H)
+      USE op_m
+      USE psi_m
+      USE Basis_m
+      
+      TYPE(psi_t), intent(inout)       :: psi_dt
+      TYPE(psi_t), intent(in)          :: psi
+      TYPE(propa_t), intent(in)        :: propa
+      TYPE(Op_t), intent(in)           :: H
+      
+      CHARACTER(len=100)               :: delta_t_string
+      CHARACTER(len=100)               :: name_tot
+  
+      ! Convertir delta_t en chaîne de caractères
+      WRITE(delta_t_string, '(F6.2)') propa%delta_t 
+  
+      ! Construire le nom du fichier
+     name_tot = 'ty_norm_' // TRIM(ADJUSTL(delta_t_string)) // '.txt'
+  
+      ! Ouvrir le fichier
+      OPEN(unit=5000, file=name_tot)
+  
+      ! Appeler la fonction de propagation
+      CALL march_taylor_nolim(psi, psi_dt, propa, H)
+  END SUBROUTINE test_taylor
+
 
       
 end module sub_propa_m
