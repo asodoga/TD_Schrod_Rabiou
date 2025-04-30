@@ -140,6 +140,7 @@ cd ..
 &basis_nd name='el' nb=1 /
 
 ```
+---
 ```fortran
 ### Basis Parameters Reference Table
 | Parameter  | Type      | Description                                  | Required For          | Default Value |
