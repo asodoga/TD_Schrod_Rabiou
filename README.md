@@ -266,7 +266,7 @@ cd ..
 ### Basic Syntax
 ```fortran
 &prop
-  t0 tf= delta_t
+  t0 tf delta_t
   propa_name propa_name2
   Beta P renorm
   eps max_iter
@@ -274,7 +274,7 @@ cd ..
 ```
 
 ### Parameter Reference Table
-
+```fortran bash
 | Parameter        Type     | Description                          | Valid Options                 | Default   |
 |----------------|----------|--------------------------------------|-------------------------------|-----------|
 | `t0`           | real     | Initial time (a.u.)                  | ≥ 0.0                         | 0.0       |
@@ -288,6 +288,8 @@ cd ..
 | `eps`          | real     | Convergence threshold                | > 0.0                         | 1.0E-20   |
 | `max_iter`     | integer  | Max iterations per step              | ≥ 1                           | 500       |
 
+```
+---
 ### Complete Examples
 
 #### Example 1: Hagedorn Propagation
