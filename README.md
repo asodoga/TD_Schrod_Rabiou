@@ -140,6 +140,7 @@ cd ..
 &basis_nd name='el' nb=1 /
 
 ```
+```latex
 ### Basis Parameters Reference Table
 | Parameter  | Type      | Description                                  | Required For          | Default Value |
 |------------|-----------|----------------------------------------------|-----------------------|---------------|
@@ -152,7 +153,8 @@ cd ..
 | `Imp_k`    | real      | Initial momentum [a.u.]                      | Optional              | 0.0           |
 | `Alpha`    | complex   | Gaussian width (α = a + ib)                  | Hagedorn basis        | (1.0,0.0)     |
 | `scaleQ`   | real      | Coordinate scaling factor                    | Optional              | 1.0           |
-
+---
+```
 #### Legend:
 - `dp` = Direct product basis
 - `a.u.` = atomic units
