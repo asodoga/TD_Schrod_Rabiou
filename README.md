@@ -274,23 +274,22 @@ cd ..
   eps max_iter
 /
 ```
-
 ### Parameter Reference Table
 
-| Parameter        Type     | Description                          | Valid Options                 | Default   |
-|----------------|----------|--------------------------------------|-------------------------------|-----------|
-| `t0`           | real     | Initial time (a.u.)                  | ≥ 0.0                         | 0.0       |
-| `tf`           | real     | Final time (a.u.)                    | > `t0`                        | Required  |
-| `delta_t`      | real     | Time step (a.u.)                     | > 0.0                         | Required  |
-| `propa_name`   | string   | Propagation type                     | `'hagedorn'`, `'no_hagedorn'` | Required  |
-| `propa_name2`  | string   | Integrator method                    | `'Taylor'`, `'SIL'`, `'RK4'`  | `'Taylor'`|
-| `Beta`         | logical  | Include imag(α) in basis evolution   | `.true.`, `.false.`           | `.false.` |
-| `P`            | logical  | Include momentum in basis            | `.true.`, `.false.`           | `.false.` |
-| `renorm`       | logical  | Renormalize wavefunction             | `.true.`, `.false.`           | `.false.` |
-| `eps`          | real     | Convergence threshold                | > 0.0                         | 1.0E-20   |
-| `max_iter`     | integer  | Max iterations per step              | ≥ 1                           | 500       |
-
+| Parameter      | Type    | Description                          | Valid Options                 | Default     |
+|----------------|---------|--------------------------------------|-------------------------------|-------------|
+| `t0`           | real    | Initial time (a.u.)                  | ≥ 0.0                         | 0.0         |
+| `tf`           | real    | Final time (a.u.)                    | > `t0`                        | Required    |
+| `delta_t`      | real    | Time step (a.u.)                     | > 0.0                         | Required    |
+| `propa_name`   | string  | Propagation type                     | `'hagedorn'`, `'no_hagedorn'` | Required    |
+| `propa_name2`  | string  | Integrator method                    | `'Taylor'`, `'SIL'`, `'RK4'`  | `'Taylor'`  |
+| `Beta`         | logical | Include imag(α) in basis evolution   | `.true.`, `.false.`           | `.false.`   |
+| `P`            | logical | Include momentum in basis            | `.true.`, `.false.`           | `.false.`   |
+| `renorm`       | logical | Renormalize wavefunction             | `.true.`, `.false.`           | `.false.`   |
+| `eps`          | real    | Convergence threshold                | > 0.0                         | 1.0E-20     |
+| `max_iter`     | integer | Max iterations per step              | ≥ 1                           | 500         |
 ---
+
 ### Complete Examples
 
 #### Example 1: Hagedorn Propagation
