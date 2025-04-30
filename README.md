@@ -34,7 +34,7 @@ A high-performance tool for simulating quantum molecular dynamics using generali
 - Fortran 95    
 
 ### Customization Options  
-- Tunable propagators (`Hagedorn`/`Taylor`/`SIL`/`RK4`)  
+- Tunable propagators (`Hagedorn`/`Taylor`)  
 - Basis control flags (`B`, `P`, `renorm`)  
 - Adiabatic/diabatic representations  
 
@@ -274,7 +274,7 @@ cd ..
 ```
 
 ### Parameter Reference Table
-```fortran bash
+
 | Parameter        Type     | Description                          | Valid Options                 | Default   |
 |----------------|----------|--------------------------------------|-------------------------------|-----------|
 | `t0`           | real     | Initial time (a.u.)                  | ≥ 0.0                         | 0.0       |
@@ -288,7 +288,6 @@ cd ..
 | `eps`          | real     | Convergence threshold                | > 0.0                         | 1.0E-20   |
 | `max_iter`     | integer  | Max iterations per step              | ≥ 1                           | 500       |
 
-```
 ---
 ### Complete Examples
 
