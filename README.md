@@ -141,7 +141,6 @@ cd ..
 
 ```
 ### Basis Parameters Reference Table
-
 | Parameter  | Type      | Description                                  | Required For          | Default Value |
 |------------|-----------|----------------------------------------------|-----------------------|---------------|
 | `name`     | string    | Basis type (`dp`,`fourier`,`hagedorn`,`el`)  | All                   | -             |
