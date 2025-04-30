@@ -141,7 +141,7 @@ cd ..
 
 ```
 ---
-```fortran
+
 ### Basis Parameters Reference Table
 | Parameter  | Type      | Description                                  | Required For          | Default Value |
 |------------|-----------|----------------------------------------------|-----------------------|---------------|
@@ -155,7 +155,7 @@ cd ..
 | `Alpha`    | complex   | Gaussian width (α = a + ib)                  | Hagedorn basis        | (1.0,0.0)     |
 | `scaleQ`   | real      | Coordinate scaling factor                    | Optional              | 1.0           |
 ---
-```
+
 #### Legend:
 - `dp` = Direct product basis
 - `a.u.` = atomic units
