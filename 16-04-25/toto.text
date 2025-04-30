@@ -1,0 +1,166 @@
+# Quantum Molecular Dynamics Simulator (Hagedorn Wavepacket Propagation)
+
+**A Fortran-based simulation tool for quantum molecular dynamics using generalized Hagedorn wavepackets with multi-basis support**
+
+## Table of Contents
+- [Key Features](#key-features)
+- [Theoretical Background](#theoretical-background)
+- [Installation](#installation)
+- [Compilation](#Compilation and testing)
+- [License](#license)
+
+## Key Features
+
+### Advanced Wavepacket Propagation
+- Generalized Hagedorn basis implementation (multi-dimensional)
+- Support for alternative primitive bases (Fourier, etc.)
+- Three-step propagation scheme (non-variational approach)
+
+### Technical Specifications
+- High-performance Fortran 95+ 
+
+### Simulation Capabilities
+- Flexible propagator options (Hagedorn/standard)
+- Customizable basis parameters(B=T/F,P=T/F)
+
+## Theoretical Background
+
+This code implements:
+- Time-dependent Schrödinger equation solver
+- Hagedorn's wavepacket formulation extended to:
+  - Multi-dimensional systems
+  - Generalized basis sets(possibility  of mixing Hagedorn primitive basis set et other like(Fourrier Basis set))
+- Specialized propagation algorithm(instead of variational principle) (3-step process: 1-Asuming basis independentand standard prapagation,2- Evaluation of evolved basis parameters and its construction, 3-Projection onto the new bais constructed )
+
+## Installation
+
+### Dependencies
+| Package        | Minimum Version | Notes                     |
+|--------------  |-----------------|---------------------------|
+| gfortran       | 9.5             | Fortran compiler          |
+|  Make          | 3.12            | Build system              |
+| QuantumModelLib| -               | Potential library         |
+| QDUtilLib      | -               | Math/IO utilities         |
+
+### Setup(To compile, on need create objet directorie(obj) and external librairy directorie(EXT_LIB))
+```bash
+# Create required directories
+mkdir -p obj EXT_LIB
+
+# Clone and build dependencies
+cd EXT_LIB
+git clone https://github.com/lauvergn/QuantumModelLib.git
+git clone https://github.com/lauvergn/QDUtilLib.git
+# Follow build instructions in each repository
+```
+-Le premier contient des potentiel model recenceé dans la litterature par D. Lauvergnat.
+-Le second contient des procedures pour effectuer des calculs de l'algebre linenire, des formats d'affichage(I/O) et beaucoup plus,etc
+-Liser les descriptions de ces librairies externes(readme) pour mieux apprehander le contenu
+
+## Compilation and testing
+ Le fichier default.comp permet de faire deux choses :
+ 1- Compillation,
+ 2- Test execution.
+ Pour le realiser , il suffit de copier la commande si dessus dans le terminal bash.
+
+``` bash
+./default.comp nb
+
+```
+nb(nb_k) est le nombre de fonction dans chaque base primitive.
+Remarque: dans ceertains cas, s'il y a des problemes de permission, il faudra, donnner les permissions en utilisant la commande chmod.
+
+### description du fichier default.comp
+
+Ce fichier contient trois grande parties:
+1- Le choix du potentiel,
+2- Parametres de la base,
+3- Initialisation du paquet d'onde initial et de la propagation
+
+
+# Le choix du potentiel
+Cette section est dans sa forme la plus simple est :
+
+&potential
+    pot_name  = 'model'
+    option= number
+    adiabatic = f  ou t(à choisire)
+    nsurf = number
+    ndim = number
+   /
+
+El commance par &potentiel et fini par un slash(/)
+Les mots cles sont :
+-pot_name: ce parametre permet de choisir le type de potentiel dans QML
+-option : Ce paramet de choisir l'option du potentiel(Certains potentiel comporte plusieurs variante. Le readme de QML est tres eloquant a cet sujet plus que moi )
+-adiabatic : Ce parametre permet de de choisir la represention(adiabatique(T) et Diabatique(F)).C'est un parametre logique (T=true et F(false))
+- nsurf : cet parametre definit le nombbre de surface electronique
+-ndim : ce parametre definit le nombre de degre de liberté(dimension)
+
+
+# Parametres de la base
+Cette section commance par  &basis_nd et termine par un slash(/)
+elle comporte ndim+2 name liste. la forme generale est :
+/basis_ns/ name, nb_basis, nb, nq, A, B, scaleQ, Q0,Imp_k,Alpha
+
+-name: ce mot definit le type de base. Dans le cas d'une base multidimensinnele, la base es construite par un produit direct(d'ou dp pour dot product), il y a encore d'autre possibile que nous allons completer par la suite.
+
+-nb_basis : definit le nombre de base primitives a utiliser(entier).
+-nb : nombre de fonction dans la base primitive(entier).
+-nq: nombre de points de grille de la grille primitive(entier).
+-A,B : les bornes de la grille(reel).
+scaleQ : facteur d'echelle(reel).
+Q0: : centre de la base(reel)
+Imp_k: impulsion(reel)
+Alpha : Definit la largeur de la gaussien(complex).
+
+Remarque :Certain de ces  mots clefs ont des on des valeu par defaut.
+La forme genera de la section est :
+
+&basis_nd name='dp' nb_basis=3 / (#definit le type de construction de la base et le nombe de base primitive)
+
+&basis_nd name='basis type' nb =$nb nq=$nq Q0  SCALEQ  Imp_k  alpha/(# il y aura nb_basis -1 lignes)
+
+&basis_nd name= 'el' nb=1 / (# cette derniere definit le nombre de surface electronique)
+
+
+# Initialisation du paquet d'onde initial et de la propagation
+
+#  Initial WP Settings
+Cette partie definit les parametres pour la construction de la fonction d'onde initiale.
+Elle comporte nb_basis name listes.  et es de la forme suivante :
+
+  &defGWP ndim  Elecindex  Coef/
+  &defWP0  sigma=   Beta=  Qeq=    imp_k gamma /(#ndim lignes)
+
+  Remarque: cette partie n'est pas encore totalement optimizer
+
+  -sigma : definit la largeur  a mis hauteur de la gaussienne,
+  -Beta : est la partie imaginair de alpha,
+  -Qeq : est le centre de la gaussienne,
+  -imp_k : est l'impulsion,
+  -gamma : est la phase.
+
+  ramarque :Cette partie est à completer appres. Vous pouvez construire votre paquet d'onde initiale avotre convenace.
+
+# Propagation Settings
+Cette partie definit les paramettres initiales de la propagation, choisit le type de propagation a effectuer(standard/Hagedorn), et definit le type de base a construire.
+
+La forme generale est :
+&prop t0 tf delta_t eps max_iter   propa_name  propa_name2  Beta P renorm/
+
+-propa_name : definit le type de propagation. si vous vous voulez effetuer une propagation standard, choisir(no_hagedorn) et si vous voulez effectuer la propagation Hagedorn, choisir(hagedorn)
+-propa_name2:   definit le type de propagateur standard( Taylor, SIL, RK4, etc). Pour le moment le plus optimiser et pres à l'itulisation est Taylor. Les autre sont a ammeleore dans les jours avenire.  
+-delta_t : definit le pas de temps en unite atomique(reel, au)
+-t_0,tf : definit les borne de l'intervale di temps de propagation(reel,au)
+-eps : defini un precision(reel,au),
+-max_iter: nombre d'iterations maximale pour chaque iteration temporele(entier).
+-Beta : si voulez construire la base en integrant la partie imaginaire de alpha(choisir, T) sinon(choisir, F).
+-P = si voulez integrer  l'inpulsion dans la construction de la base, (choisir,T) sinon (choisir, F).
+-renorm : Si voulez renormaliser le paquet d'ondes apres chaque iteration, (choisir,T) sinon (choisir, F).
+
+
+Remarque generale:  ce code est construit dans le cadre de notre these de doctorat intituler 'Dynamique quantique par l'approche des paquets d'ondes d'Hagerdorn: application a la photo-isomerisation de retinal."
+Nous compton l'ameléore dans les jours avenir. Nous somme ouvert a toute colaboration dans le cadre des projet de recherche en dynamique moleculaire, et toutes siggesion envue d'ameleorer le code.
+
+

@@ -24,6 +24,7 @@ results_std_nb100dt01
 16-04-25
 diff.x.dSYM
 DAT_files
+obj
 
 # Compiled Object files
 *.slo
@@ -55,3 +56,5 @@ DAT_files
 *.out
 *.app
 *.zip
+*.x
+*.f90

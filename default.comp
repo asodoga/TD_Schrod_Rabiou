@@ -1,15 +1,12 @@
 #!/bin/bash
 make clean
-rm -r obj
-mkdir -p obj
 make
 
 nb=$1
 nq=$((nb+5))
 echo $nb $nq
-nbb=$2
-mkdir -p results_std_nb$nbb
-cd results_std_nb$nbb
+mkdir -p results_H_nb$nb
+cd results_H_nb$nb
 
 ../TD_SCHROD.x << ** > resultat_std.lua
 &potential
@@ -21,7 +18,7 @@ cd results_std_nb$nbb
    /
 
 &basis_nd name='dp' nb_basis=3 /
-  &basis_nd name='HO' nb =$nb nq=$nq Q0 =0.0 SCALEQ = 1.0 Imp_k=0.0  alpha =( 1.,0.0) /
+  &basis_nd name='HO' nb =$nb nq=$nq Q0 =2.0 SCALEQ = 1.0 Imp_k=0.0  alpha =( 1.,0.0) /
   &basis_nd name='HO' nb =$nb nq=$nq Q0 =0.0 SCALEQ = 1.0 Imp_k=0.0  alpha =( 1.,0.0) /
   &basis_nd name= 'el' nb=1 /
 
@@ -30,5 +27,5 @@ cd results_std_nb$nbb
   &defWP0  sigma=  1.4142135623730951  Beta=0.0  Qeq= 0.0   imp_k=0.0 gamma=0.0 /
 
 &prop t0=0.0  tf=60. delta_t=0.1 eps=1.e-20
-      max_iter=500   propa_name='non_hagedorn'  propa_name2='taylor' Beta=T  P=T renorm=f  /
+      max_iter=500   propa_name='hagedorn'  propa_name2='taylor' Beta=T  P=T renorm=f  /
 **
