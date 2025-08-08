@@ -11,6 +11,7 @@
 *.a
 *.lib
 *.dylib
+*.sh
 
 # === FICHIERS TEMPORAIRES OU DE TRAVAIL ===
 *.log
@@ -23,6 +24,9 @@
 *.png
 *.gch
 *.pch
+*.ipynb
+*.lua
+*.gp
 
 # === DOSSIERS DE RÉSULTATS ===
 res*/             # Dossiers c
