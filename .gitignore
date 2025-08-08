@@ -1,10 +1,10 @@
 # === EXECUTABLES ET FICHIERS COMPILÉS ===
-*.x            # Exécutables .x (Fortran)
-*.exe          # Exécutables Windows
-*.out          # Exécutables Unix
-*.o            # Fichiers objets compilés
-*.mod          # Modules Fortran compilés
-*.smod         # Modules spécifiques
+*.x            
+*.exe          
+*.out          
+*.o            
+*.mod          
+*.smod         
 *.obj
 *.dll
 *.so
@@ -27,17 +27,20 @@
 *.ipynb
 *.lua
 *.gp
+*.py
 
 # === DOSSIERS DE RÉSULTATS ===
-res*/             # Dossiers c
-results*/         # Dossiers comme results_H_nb5, results_anhar-h-a-ttf_nb*
+res*            
+results*         
 obj
 
 # === OUTILS ET LIBS LOCAUX ===
 EXT_Lib/
 
 # === WINSURF ===
-winsurf/          # Si WinSurf a un dossier ou une sortie dans le projet
-*.wsv             # Fichier de surface WinSurf (WinSurfView)
-*.srf             # Fichiers de surface
-*.sur             # Fichiers de données WinSurf
+winsurf/          
+*.wsv            
+*.srf            
+*.sur 
+calc*
+spectrum*           
