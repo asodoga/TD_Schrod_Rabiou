@@ -26,12 +26,10 @@ A high-performance tool for simulating quantum molecular dynamics using generali
 - Generalized Hagedorn basis (multi-dimensional)  
 - Hybrid primitive bases (Hagedorn/Fourier)  
 - Non-variational 3-step algorithm:  
-  1. Standard propagation (basis-independent)  
+  1. Standard propagation (asuming basis is time independent)  
   2. Basis parameter evolution  
   3. Projection onto updated basis  
 
-### Technical Specifications  
-- Fortran 95    
 
 ### Customization Options  
 - Tunable propagators (`Hagedorn`/`Taylor`)  
@@ -40,26 +38,9 @@ A high-performance tool for simulating quantum molecular dynamics using generali
 
 ---
 
-## Theoretical Background  
-
-Solves the time-dependent Schrödinger equation using:  
-
 ### Extended Hagedorn Formulation  
 - Multi-dimensional systems  
 - Mixed basis construction.
-
----
-
-## Installation
-
-### Dependencies
-| Package        | Minimum Version | Notes                     |
-|--------------  |-----------------|---------------------------|
-| gfortran       | 9.5             | Fortran compiler          |
-| make           | 3.12            | Build system              |
-| QuantumModelLib| letest          | Potential library         |
-| QDUtilLib      | letest          | Math/IO utilities         |
-
 
 ---
 
@@ -68,7 +49,7 @@ The main program compilation need two directories one for object(obj) et second 
 ### Setup
 
 ```bash
-# 1. Create build directories
+# 1. Create build directories in TD_Schrod_Rabiou directory
 mkdir -p obj EXT_LIB
 ```
 
@@ -80,15 +61,6 @@ git clone https://github.com/lauvergn/QDUtilLib.git
 # Follow build instructions in each repository
 ```
 
-# 3. Compile main program
-The compilation is done by Makefile
-```bash
-cd ..
-  make clean
-  make  
-```
----
-
 ## Potential Setup (`&potential` Namelist)
 
 ### Basic Syntax
@@ -99,26 +71,6 @@ cd ..
     adiabatic    ! Adiabatic representation
     nsurf        ! Electronic surfaces
     ndim         ! Degrees of freedom
-/
-```
-### Example Configuration
-```fortan
-! Diabatic 2-surface 3D system
-&potential
-    pot_name  = 'Morse'
-    option    = 2
-    adiabatic = .false.
-    nsurf     = 2
-    ndim      = 3
-/
-
-! Adiabatic single surface
-&potential
-    pot_name  = 'HenonHeiles'
-    option    = 1
-    adiabatic = .true.
-    nsurf     = 1
-    ndim      = 2
 /
 ```
 
@@ -218,51 +170,6 @@ cd ..
 
 ---
 
-### 3. Complete 3D System Example
-
-```fortran
-! Global definition (3D system on 1st electronic state)
-&defGWP ndim=3 Elecindex=1 Coef=(1.0,0) /
-
-! X-dimension (narrow stationary Gaussian)
-&defWP0 sigma=0.3 Beta=0.0 Qeq=0.0 imp_k=0.0 gamma=0.0 /
-
-! Y-dimension (broad moving wavepacket)
-&defWP0 sigma=1.2 Beta=0.1 Qeq=0.0 imp_k=1.5 gamma=0.0 /
-
-! Z-dimension (displaced excited state)
-&defWP0 sigma=0.5 Beta=0.2 Qeq=2.0 imp_k=0.0 gamma=1.57 /
-
-```
-
----
-
-### 4. Special Case Configurations
-
-#### Case 1: Stationary Gaussian
-```fortran
-&defWP0 sigma=0.5 Beta=0.0 Qeq=0.0 imp_k=0.0 gamma=0.0 /
-```
-- **Purpose**: Ground state simulations
-- **Key Features**:
-  - Zero momentum (`imp_k=0`)
-  - No initial displacement (`Qeq=0`)
-
-#### Case 2: Moving Wavepacket
-```fortran
-&defWP0 sigma=0.4 Beta=0.0 Qeq=0.0 imp_k=3.0 gamma=0.0 /
-```
-
-#### Case 3: Excited Electronic State
-```fortran
-&defGWP ndim=2 Elecindex=2 Coef=(0.0,1.0) /
-```
-- **Requirements**:
-  - Must match `nsurf` from `&potential`
-  - Complex `Coef` for superposition states
-
----
-
 ## Propagation Settings (`&prop` Namelist)
 
 ### Basic Syntax
@@ -290,45 +197,14 @@ cd ..
 | `max_iter`     | integer | Max iterations per step              | ≥ 1                           | 500         |
 ---
 
-### Complete Examples
-
-#### Example 1: Hagedorn Propagation
-```fortran
-&prop
-  t0=0.0 tf=50.0 delta_t=0.05
-  propa_name='hagedorn' propa_name2='Taylor'
-  Beta=.true. P=.true. renorm=.true.
-  eps=1.0E-20 max_iter=500
-/
-```
-
-#### Example 2: Standard Propagation
-```fortran
-&prop
-  t0=0.0 tf=100.0 delta_t=0.1
-  propa_name='non_hagedorn' propa_name2='Taylor'
-  renorm=.false.
-/
-``` 
----
-
-This project provides a script to compile the code and run a propagation test using a Hagedorn basis.
 
 ## Compilation and Test
 
-Compilation and propagation are handled together using the `default.comp` script.
+Compilation and propagation are handled together using the `default.inp` script.
 
 ```bash
 # Build with a specific basis size (e.g., 10)
 ./default.inp 10
-```
-
-## Clean Build Artifacts
-
-To remove all build artifacts:
-
-```bash
-make clean
 ```
 
 ## License

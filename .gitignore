@@ -43,4 +43,5 @@ winsurf/
 *.srf            
 *.sur 
 calc*
-spectrum*           
+spectrum* 
+diff*          
