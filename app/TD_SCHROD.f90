@@ -9,63 +9,109 @@ PROGRAM TD_SCHROD
    USE lanczos_m
    USE Sub_Vp_m
    IMPLICIT NONE
-   TYPE(Basis_t), target             :: Basis
-   !TYPE(Op_t)                       :: H
-   TYPE(psi_t)                       :: psi0, psif
-   TYPE(propa_t)                     :: propa
-   TYPE(GWP_t), allocatable          :: tab_GWP(:)
-   real(Kind=Rkind)                  :: E, Norm 
- 
-!-------------------------------------------------------------------------------
-! for QML
-   integer :: ndim, nsurf, option
-   logical :: adiabatic
-   character(len=16)                  :: pot_name
 
+   !======================= Main Variables ===========================
+   TYPE(Basis_t), TARGET         :: Basis        ! Basis object
+   TYPE(Op_t)                    :: H            ! Hamiltonian operator
+   TYPE(psi_t)                   :: psi0, psif   ! Initial and final wavefunctions
+   TYPE(propa_t)                :: propa        ! Propagation parameters
+   TYPE(GWP_t), ALLOCATABLE     :: tab_GWP(:)   ! Gaussian wavepacket parameters
+   INTEGER, ALLOCATABLE         :: Tab_iq(:, :) ! Index mapping for operator setup
+   REAL(Kind=Rkind), ALLOCATABLE :: V(:, :, :)  ! Scalar potential (optional)
+
+   ! Variables for initial WP parameters
+   REAL(Kind=Rkind) :: E, E0, Norm
+   REAL(Kind=Rkind) :: Pt(2), Qt(2), SQt(2)
+   COMPLEX(Kind=Rkind) :: At(2)
+   REAL(Kind=Rkind) :: t_deltat = 0
+
+   !======================= QML and Potential Info ====================
+   INTEGER :: ndim, nsurf, option
+   LOGICAL :: adiabatic
+   CHARACTER(len=16) :: pot_name
+
+   !======================= Initialization ============================
    ndim = -1
    nsurf = -1
    pot_name = 'read_model'
    adiabatic = .false.
    option = 1
-   call sub_Init_Qmodel(ndim, nsurf, pot_name, adiabatic, option)
-   write (out_unit, *) 'ndim,nsurf', ndim, nsurf
-   write (out_unit, *) 'pot_name'
-   
-   !---------------------------------------------------------------------------------
-   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
-   ! the basis/grid informations have to be put in a module
-   call Read_Basis(Basis, nio=in_unit)
-   call construct_primitive_basis(Basis)
-   !call Write_Basis(Basis) 
-!-------------------------------------------------------------------------------------------
-!print*,"Basis is allocated",Basis_IS_allocated(Basis)
-   write (out_unit, *) "------------------- Initialization of  psi0 ---------------------"
 
-   call init_psi(psi0, Basis, cplx=.true., grid=.false.)
-   call init_psi(psif, Basis, cplx=.true., grid=.false.)
-   call Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
-   !call test_basitogridgridtobasis(Basis)
-   call psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
-   call Calc_average_energy(psi0, E)
-   call Calc_Norm_OF_Psi(psi0,Norm)
-   write (out_unit, *)'-------------Energy And Norme initial WP0-----------------------------'
-   write (out_unit, *) ' <psi|H|psi> ',E,'<psi|psi>',Norm
-   write (out_unit, *) '-------------End  Initialization of  psi0 ---------------------'
-   !call H_test(psi0)
-   !call Vp_test_temp(psi0)
-   !call Set_Op(H,Basis)
-   ! call Make_Mat_OP(H)
-   !call  write_Op(H)
-   call read_propa(propa)
-   !call test_psi_temp(psi0,propa)
+   ! Initialize QML potential model
+   CALL sub_Init_Qmodel(ndim, nsurf, pot_name, adiabatic, option)
+   WRITE(out_unit, *) 'ndim, nsurf', ndim, nsurf
+   WRITE(out_unit, *) 'pot_name'
+
+   !===================================================================
+   ! Read basis set parameters from input file and construct basis
+   CALL Read_Basis(Basis, nio=in_unit)
+   CALL construct_primitive_basis(Basis)
+   !CALL Write_Basis(Basis) 
+   !STOP 'cc'
+
+   !WRITE(*,*) "Basis is allocated", Basis_IS_allocated(Basis)
+
+   WRITE(out_unit, *) "------------------- Initialization of  psi0 ---------------------"
+
+   ! Initialize wavefunctions
+   CALL init_psi(psi0, Basis, cplx=.true., grid=.false.)
+   CALL init_psi(psif, Basis, cplx=.true., grid=.false.)
+
+   ! Read Gaussian wavepacket parameters from file
+   CALL Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
+
+   !CALL test_basitogridgridtobasis(Basis)
+
+   ! Construct operator H
+   CALL Calc_tab_Iq0(Tab_Iq, psi0%Basis)
+   !stop 'cc'
+   CALL Set_Op(H, psi0%Basis, Tab_Iq)
+
+   ! Initialize psi0 using the GWP parameters
+   CALL psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
+
+   !CALL Test_Calc_S()
+   !CALL Ecrire_psi(psi0, nio=100, t=ZERO)
+
+   !PRINT*, "psi0", psi0%CVec(:)
+   !psi0%CVec = CZERO
+   !psi0%CVec(1) = CONE
+
+   !CALL Calc_Basis_parameters(psi0, Qt, SQt, At, Pt)
+   !CALL Get_Basis_Parameters(Basis, Qt, SQt, At, Pt)
+   !CALL Calc_Avg_A_nD(psi0, At)
+
+   ! Compute initial energy and norm
+   CALL Calc_Av_E(E, psi0, H)
+   CALL Calc_Norm_OF_Psi(psi0, Norm)
+
+   WRITE(out_unit, *) '-------------Energy And Norm of initial WP0-----------------------------'
+   WRITE(out_unit, *) ' <psi|H|psi> ', E, ' <psi|psi> ', Norm
+   WRITE(out_unit, *) '-------------End Initialization of psi0 -------------------------------'
+
+   !CALL Test_projection_hagedorn(Basis, psi0)
+   !CALL test_op(Basis, psi0)  ! Diagonalization test
+   !CALL Calc_Scalar_Pot(V, Basis)
+   !CALL Make_Mat_H(H)
+   !CALL test_openmp_op(Basis)
+   !CALL calc_nac(Basis)
+   !CALL calc_VV(Basis)
+
+   ! Read propagation parameters
+   CALL read_propa(propa)
+
+   !CALL test_taylor(psi0, psif, propa, H)
    !STOP 'calcul de H|psi> est fait'
-   call propagation(psif, psi0, propa)
-   !call diff2()
-   !call test_psi_temp(psif,propa)
-   print*, 'Fin de la propagationt'
-   ! CALL Write_psi(psif)
-   write (out_unit, *) 'deallocation'
-   call dealloc_psi(psi0)
-   call dealloc_psi(psif)
+
+   !====================== Time Propagation ============================
+   CALL propagation(psif, psi0, propa)
+   PRINT*, 'Fin de la propagation'
+
+   !CALL Write_psi(psif)
+
+   !====================== Finalization ================================
+   WRITE(out_unit, *) 'deallocation'
+   CALL dealloc_psi(psi0)
+   CALL dealloc_psi(psif)
 
 END PROGRAM TD_SCHROD

@@ -34,7 +34,7 @@ contains
                 Mat_V(:,:) = 0
             do i = 1, size(Mat_V(1,:))
                do iq = 1, size(Q)
-                Mat_V(i,i) = Mat_V(i,i)+ HALF*(Q(iq)-0)**2
+                Mat_V(i,i) = Mat_V(i,i)+ HALF*(Q(iq))**2
                end do
                 !do j = 1, size(Mat_V(:,1))
                 !    if (abs(i-j)== 1) then

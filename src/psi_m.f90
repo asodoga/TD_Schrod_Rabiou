@@ -16,13 +16,13 @@ module psi_m
 
       PRIVATE
       PROCEDURE, PASS         :: Copy_psi    ! Copy content from other psi1 to psi2 instance,
-      GENERIC, PUBLIC          :: ASSIGNMENT(=) => Copy_psi
+      GENERIC, PUBLIC         :: ASSIGNMENT(=) => Copy_psi
 
    END TYPE psi_t
 
    public :: psi_t, write_psi, init_psi, dealloc_psi, write_psi_grid
    public :: write_psi_basis, Calc_Norm_OF_PsiBasis, Calc_Norm_OF_PsiGrid, Calc_Norm_OF_Psi
-   public:: Projection,Projection1,psi_init_GWP
+   public:: Projection,Projection1,psi_init_GWP,Ecrire_psi
 contains
 
 
@@ -276,95 +276,92 @@ contains
    END SUBROUTINE write_psi
 
    SUBROUTINE Projection(psi_dt_2, psi_dt_1)
-
       TYPE(psi_t), intent(in), target                  :: psi_dt_1
       TYPE(psi_t), intent(inout), target               :: psi_dt_2
-
-      complex(kind= Rkind), pointer                    :: BBB1(:, :, :), BBB2(:, :, :)
-      complex(kind= Rkind), allocatable, target        :: B1(:), B2(:)
-      real(kind= Rkind)                                :: Norm0
-
+      complex(kind=Rkind), pointer                     :: BBB1(:, :, :), BBB2(:, :, :)
+      complex(kind=Rkind), allocatable, target         :: B1(:), B2(:)
+      real(kind=Rkind)                                 :: Norm0
       logical, parameter                               :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim
       Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
-
-
+   
+      ! Compute index arrays for multidimensional basis representation
       call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
+   
+      ! Determine the number of dimensions (basis functions)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
-      call Calc_Norm_OF_psi(psi_dt_1,Norm0)
-
-      write (out_unit, *) 'Begin Hagedorn projection <psi|psi>=',Norm0
-      !write (out_unit, *) 'out',psi_dt_2%CVec
-      !call  Write_VecMat(psi_dt_1%Basis%tab_basis(1)%S, out_unit, 5,  info='S')
-
-      If (Ndim == 1) then
-
+   
+      ! Compute initial norm of psi_dt_1 for verification
+      call Calc_Norm_OF_psi(psi_dt_1, Norm0)
+      write (out_unit, *) 'Begin Hagedorn projection <psi|psi>=', Norm0
+   
+      ! Perform the Hagedorn projection
+      if (Ndim == 1) then
+         ! Link the CVec arrays to pointer views for easier access
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
-
+   
+         ! Initialize psi_dt_2%CVec to zero
          psi_dt_2%CVec(:) = CZERO
-
+   
+         ! Apply the basis transformation along dimension 1
          DO i3 = 1, ubound(BBB1, dim=3)
-
-         DO i1 = 1, ubound(BBB1, dim=1)
-
-            BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
-
+            DO i1 = 1, ubound(BBB1, dim=1)
+               BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S, BBB1(i1, :, i3))
+            END DO
          END DO
-
-         END DO
-
       else
-
+         ! Allocate temporary vector B1 to hold intermediate data
          allocate (B1(Ib1(1)*Ib2(1)*Ib3(1)))
+   
+         ! Link pointers for manipulation
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B1
-
+   
+         ! First transformation along dimension 1
          DO i3 = 1, ubound(BBB1, dim=3)
-
-         DO i1 = 1, ubound(BBB1, dim=1)
-
-            BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
-
+            DO i1 = 1, ubound(BBB1, dim=1)
+               BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S, BBB1(i1, :, i3))
+            END DO
          END DO
-
-         END DO
-
-         Do inb = 2, Ndim
-
+   
+         ! Loop through remaining dimensions to apply projection
+         DO inb = 2, Ndim
+            ! Allocate temporary buffer B2
             allocate (B2(Ib1(inb)*Ib2(inb)*Ib3(inb)))
+   
+            ! Link BBB1 to B1 (previous result), BBB2 to B2 (target of transformation)
             BBB1(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B1
             BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
-
+   
+            ! Apply transformation along current dimension
             DO i3 = 1, ubound(BBB1, dim=3)
-
-            DO i1 = 1, ubound(BBB1, dim=1)
-
-               BBB2(i1, :, i3) = matmul( psi_dt_1%Basis%tab_basis(inb)%S,BBB1(i1, :, i3))
-
+               DO i1 = 1, ubound(BBB1, dim=1)
+                  BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(inb)%S, BBB1(i1, :, i3))
+               END DO
             END DO
-
-            END DO
-
+   
+            ! Prepare for next iteration
             B1 = B2
             B2 = CZERO
             deallocate (B2)
+   
+            ! If last iteration, copy final result to psi_dt_2%CVec
             if (inb == Ndim) psi_dt_2%CVec = B1
-
          END DO
-
       END IF
-
-        call Calc_Norm_OF_psi(psi_dt_2,Norm0)
-
-        deallocate(Ib1, Ib2, Ib3)
-        if(allocated(B1)) deallocate(B1)
-        if(allocated(B2)) deallocate(B2)
-
-      write (out_unit, *) 'END Hagedorn projection <psi|psi>=',Norm0
-      !write (out_unit, *) 'out',psi_dt_2%CVec
-
+   
+      ! Compute final norm for verification
+      call Calc_Norm_OF_psi(psi_dt_2, Norm0)
+   
+      ! Clean up dynamically allocated memory
+      deallocate(Ib1, Ib2, Ib3)
+      if (allocated(B1)) deallocate(B1)
+      if (allocated(B2)) deallocate(B2)
+   
+      write (out_unit, *) 'END Hagedorn projection <psi|psi>=', Norm0
    END SUBROUTINE Projection
+
 
 
    SUBROUTINE Projection1(psi_dt_2, psi_dt_1)
@@ -880,8 +877,8 @@ END SUBROUTINE
       END DO
       !------------------transformation Grid to Basis-------------------------
       call Calc_Norm_OF_Psi(psi0, NormG)
-      psi0%CVec(:) = psi0%CVec(:)/NormG
-      call Calc_Norm_OF_Psi(psi0, NormG)
+      !psi0%CVec(:) = psi0%CVec(:)/NormG
+      !call Calc_Norm_OF_Psi(psi0, NormG)
       write (out_unit, *)'------------------- Begining Norm Checking---------------------------------------'
       write (out_unit, *)
       write (out_unit, *) 'NormG = ', NormG
@@ -889,13 +886,13 @@ END SUBROUTINE
       call GridTOBasis_nD_cplx(psi%CVec, psi0%CVec, psi%Basis)
 
       call Calc_Norm_OF_Psi(psi, NormB)
-      psi%CVec(:) = psi%CVec(:)/NormB
-      call Calc_Norm_OF_Psi(psi, NormB)
+      !psi%CVec(:) = psi%CVec(:)/NormB
+      !call Calc_Norm_OF_Psi(psi, NormB)
 
       print *, 'NormB = ', NormB
 
-      psi%CVec(:) = psi%CVec(:)/NormB
-      call Calc_Norm_OF_Psi(psi, NormB)
+      !psi%CVec(:) = psi%CVec(:)/NormB
+      !call Calc_Norm_OF_Psi(psi, NormB)
 
       print *, 'NormB (renormed)= ', NormB
       write (out_unit, *)'------------------------------End Norm Checking---------------------------------'
@@ -934,5 +931,54 @@ END SUBROUTINE
       print *, 'NormG = ', NormG
       print *, 'NormB = ', NormB
    end subroutine test
+
+
+
+   subroutine Ecrire_psi(psi,nio,t)
+      implicit none
+      TYPE(psi_t)           , intent(in)     :: psi
+      TYPE(psi_t)    ,target                        :: psiG
+      real(kind= Rkind), allocatable         :: Q(:, :)
+      complex(Kind= Rkind), pointer          :: gb(:, :)
+      real(kind= Rkind),intent(in)           :: t
+      integer,intent(in)                     :: nio
+      integer                                :: iq,ib,nq,nsurf,ndim,nio_2,nq1
+      CHARACTER(len=100)                     :: t_string
+      CHARACTER(len=100)                     :: name_1,name_2
+
+      ndim = size(psi%Basis%tab_basis)-1
+      nsurf = psi%Basis%tab_basis(ndim+1)%nb
+      nq = psi%Basis%nq
+      nio_2 =nio+1
+      nq1 = psi%Basis%tab_basis(1)%nq
+
+      ! Convertir delta_t en chaîne de caractères
+      WRITE(t_string, '(F12.6)') t 
+      name_1 = 'density_1_t=' // TRIM(ADJUSTL(t_string)) // '.txt'
+      name_2 = 'density_2_t=' // TRIM(ADJUSTL(t_string)) // '.txt'
+      
+      open (unit=nio, file=name_1)
+      open (unit=nio_2, file=name_2)
+
+      call calc_Q_grid(Q, psi%Basis)
+      CALL init_psi(psiG, psi%Basis, cplx=.TRUE., grid=.true.)
+      call BasisTOGrid_nD_cplx(psiG%CVec, psi%CVec, psi%Basis)
+
+      gb(1:nq, 1:nsurf) => psiG%CVec
+      DO iq = 1,nq
+       write(nio,*)  Q(iq,:),    abs( gb(iq,1))**2
+       write(nio_2,*)  Q(iq,:),   abs( gb(iq,2))**2
+       if (mod(iq, nq1 ) == 0) write(nio,*)
+       if (mod(iq, nq1 ) == 0)  write(nio_2,*)
+      END DO
+
+      
+      deallocate (Q)
+      CALL dealloc_psi(psiG)
+   end subroutine 
+
+
+
+
 
 end module psi_m

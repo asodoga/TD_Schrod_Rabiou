@@ -1,50 +1,39 @@
-*.x
-res*
-fort.*
-*log
-*.pdf
+# === EXECUTABLES ET FICHIERS COMPILÉS ===
+*.x            # Exécutables .x (Fortran)
+*.exe          # Exécutables Windows
+*.out          # Exécutables Unix
+*.o            # Fichiers objets compilés
+*.mod          # Modules Fortran compilés
+*.smod         # Modules spécifiques
+*.obj
+*.dll
+*.so
+*.a
+*.lib
+*.dylib
+
+# === FICHIERS TEMPORAIRES OU DE TRAVAIL ===
+*.log
+*.txt
 *.dat
 *.swap
-*.txt
-*.png
-# Prerequisites
 *.d
-cplx-basis-test
-EXT_Lib
-results_H_nb70
-results_H_nb70dt01
-results_std_nb70dt01
-results_std_nb50dt01
-results_std_nb100dt01
-
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
+*.zip
+*.pdf
+*.png
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+# === DOSSIERS DE RÉSULTATS ===
+res*/             # Dossiers c
+results*/         # Dossiers comme results_H_nb5, results_anhar-h-a-ttf_nb*
+obj
 
-# Fortran module files
-*.mod
-*.smod
+# === OUTILS ET LIBS LOCAUX ===
+EXT_Lib/
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-*.zip
+# === WINSURF ===
+winsurf/          # Si WinSurf a un dossier ou une sortie dans le projet
+*.wsv             # Fichier de surface WinSurf (WinSurfView)
+*.srf             # Fichiers de surface
+*.sur             # Fichiers de données WinSurf
