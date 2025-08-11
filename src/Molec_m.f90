@@ -1,6 +1,14 @@
 module Molec_m
   USE QDUtil_m
   implicit none
+
+  INTERFACE
+    SUBROUTINE sub_Qmodel_V(V, Q)
+      REAL(KIND=8), INTENT(INOUT) :: V(:,:)
+      REAL(KIND=8), INTENT(IN)    :: Q(:)
+    END SUBROUTINE sub_Qmodel_V
+  END INTERFACE
+
   private
 
   real(kind=Rkind) :: mass =  2000._Rkind

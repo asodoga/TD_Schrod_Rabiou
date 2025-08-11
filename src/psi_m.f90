@@ -7,10 +7,10 @@ module psi_m
 
    TYPE :: psi_t
    
-      type(Basis_t), pointer      :: Basis
-      real(kind= Rkind), allocatable :: RVec(:)
+      type(Basis_t), pointer            :: Basis
+      real(kind= Rkind), allocatable    :: RVec(:)
       complex(kind= Rkind), allocatable :: CVec(:)
-      logical                        :: Grid = .true.
+      logical                           :: Grid = .true.
 
    CONTAINS
 
@@ -50,104 +50,93 @@ contains
 
    END SUBROUTINE copy_psi
 
+
    SUBROUTINE init_psi(psi, Basis, cplx, grid)
       USE Basis_m
-
       TYPE(psi_t), intent(inout)          :: psi
       TYPE(Basis_t), intent(in), target   :: Basis
-      logical, intent(in)                 :: cplx, grid
-
-      CALL dealloc_psi(psi)
-
-      IF (.NOT. Basis_IS_allocated(Basis)) STOP 'ERROR in init_psi: the Basis is not initialized'
-
-      IF (Basis%nb < 1) STOP 'ERROR in init_psi: Basis%nb < 1!'
-
-      Psi%Basis => Basis
-      Psi%Grid = Grid
-
-      If (Grid) THEN !allocation on grid
-         !print*,"psi is on Grid"
-         IF (cplx) THEN
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%CVec(Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            else
-
-               allocate (psi%CVec(Basis%nq))
-
-            END IF
-
-         ELSE
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%RVec(Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            ELSE
-
-               allocate (psi%RVec(Basis%nq))
-
-            END IF
-
-         END IF
-
-      ELSE ! allocation on basis
-         !print*,"psi is on Basis"
-
-         IF (cplx) THEN
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%CVec(Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            else
-
-               allocate (psi%CVec(Basis%nb))
-
-            END IF
-
-         ELSE
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%RVec(Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            ELSE
-
-               allocate (psi%RVec(Basis%nb))
-
-            END IF
-
-         END IF
-
+      LOGICAL, intent(in)                 :: cplx, grid
+      INTEGER                             :: nb, nq, ndim
+      LOGICAL                             :: has_tab_basis
+   
+      ! Check if tab_basis is allocated and non-empty
+      has_tab_basis = ALLOCATED(Basis%tab_basis) .AND. SIZE(Basis%tab_basis) > 0
+   
+      ! Determine dimension index to use (default to 1 if tab_basis absent)
+      IF (has_tab_basis) THEN
+         ndim = SIZE(Basis%tab_basis)
+      ELSE
+         ndim = 1
       END IF
+   
+      ! Calculate total basis sizes depending on presence of tab_basis
+      IF (has_tab_basis) THEN
+         nb = Basis%nb * Basis%tab_basis(ndim)%nb
+         nq = Basis%nq * Basis%tab_basis(ndim)%nb
+      ELSE
+         nb = Basis%nb
+         nq = Basis%nq
+      END IF
+    
+      ! Deallocate any existing psi arrays to avoid memory leaks
+      CALL dealloc_psi(psi)
+   
+      ! Check that Basis is allocated and valid
+      IF (.NOT. Basis_IS_allocated(Basis)) THEN
+         STOP 'ERROR in init_psi: the Basis is not initialized'
+      END IF
+   
+      IF (Basis%nb < 1) THEN
+         STOP 'ERROR in init_psi: Basis%nb < 1!'
+      END IF
+     
+      ! Associate the input Basis to psi and set the Grid flag
+      psi%Basis => Basis
+      psi%Grid = grid
 
+      ! Allocate psi vectors depending on whether it is defined on grid or basis, and real or complex
+      IF (grid) THEN
+         ! psi defined on grid
+         IF (cplx) THEN
+            allocate(psi%CVec(nq))
+            psi%CVec(:) = CZERO   ! Initialize complex vector to zero
+         ELSE
+            allocate(psi%RVec(nq))
+            psi%RVec(:) = ZERO    ! Initialize real vector to zero
+         END IF
+      ELSE
+         ! psi defined on basis
+         IF (cplx) THEN
+            allocate(psi%CVec(nb))
+            psi%CVec(:) = CZERO
+         ELSE
+            allocate(psi%RVec(nb))
+            psi%RVec(:) = ZERO
+         END IF
+      END IF
+     
    END SUBROUTINE init_psi
 
 
    SUBROUTINE dealloc_psi(psi)
-
+      ! Deallocate arrays and nullify pointer in psi to avoid memory leaks
       TYPE(psi_t), intent(inout) :: psi
-
-      nullify (psi%Basis)
-
+   
+      ! Remove association to Basis to avoid dangling pointer
+      nullify(psi%Basis)
+   
+      ! Deallocate real vector if allocated
       IF (allocated(psi%RVec)) THEN
-
-         deallocate (psi%RVec)
-
+         deallocate(psi%RVec)
       END IF
-
+   
+      ! Deallocate complex vector if allocated
       IF (allocated(psi%CVec)) THEN
-
-         deallocate (psi%CVec)
-
+         deallocate(psi%CVec)
       END IF
-
-
+   
    END SUBROUTINE dealloc_psi
+
 
    SUBROUTINE write_psi(psi, psi_cplx, print_psi_grid, print_basis, t, int_print, real_part)
       TYPE(psi_t), intent(in)                                 :: psi

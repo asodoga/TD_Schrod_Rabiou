@@ -29,8 +29,8 @@ contains
       call Calc_tab_Iq0(Tab_Iq,psi%Basis)
       call Calc_Avg_A_nD(psi, At)
 
-        write(out_unit,*) 'At',At
-        write(out_unit,*) '=============================================================================='
+        !write(out_unit,*) 'At',At
+        !write(out_unit,*) '=============================================================================='
    
    END SUBROUTINE 
    
@@ -127,7 +127,7 @@ SUBROUTINE Calc_Avg_A_nD(psi, At)
   call Calc_AVQ_SQ_nD_scd(psi, VQ, SQt, VQQ, Tab_Iq)
   call Calc_Av_imp_k_nD(psi, VP)
   call Calc_VQP_nD(VQP, psi)
-  write (out_unit, *) 'VQQ = ', VQQ
+  !write (out_unit, *) 'VQQ = ', VQQ
   
    
 
@@ -139,7 +139,7 @@ SUBROUTINE Calc_Avg_A_nD(psi, At)
     !CA(Ib) = ONE/(TWO*(VQQ(Ib)-VQ(Ib)*VQ(Ib)))
       CA(Ib) = SQt(Ib)**2
     CB(Ib) = (VQP(Ib)-TWO*VP(Ib)*VQ(Ib))/(TWO*(VQQ(Ib)-VQ(Ib)*VQ(Ib))) 
-    At(Ib) = complex(CA(Ib),-CB(Ib))   
+    At(Ib) = cmplx(CA(Ib),-CB(Ib),kind=Rkind)   
    End do
    
    !At(:) = At(:)
@@ -249,7 +249,7 @@ END SUBROUTINE
          call Calc_Av_imp_k_1D(psi, K(inb), inb)
       End do
 
-      write (out_unit, *) '<psi/-id_xi/psi> =', K
+      !write (out_unit, *) '<psi/-id_xi/psi> =', K
 
       IF (debug) THEN
          flush (out_unit)

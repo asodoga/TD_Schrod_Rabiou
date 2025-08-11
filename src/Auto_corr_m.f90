@@ -50,7 +50,8 @@ SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name
       call Hagedorn_Inv(psi, psi_t0, renorm)
 
       ! Compute auto-correlation coefficient and its phase
-      corre_coeff = dot_product(psi0%CVec, psi%CVec) / dot_product(psi%CVec, psi%CVec)**2
+      !corre_coeff = dot_product(psi0%CVec, psi%CVec) / dot_product(psi%CVec, psi%CVec)**2
+      corre_coeff = dot_product(psi0%CVec, psi%CVec)
       X = real(corre_coeff, kind=Rkind)
       Y = aimag(corre_coeff)
       arg_corre_coeff = atan2(Y, X)
@@ -73,7 +74,8 @@ SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name
 
    ELSE
       ! Compute auto-correlation for non-Hagedorn case
-      corre_coeff = dot_product(psi0%CVec, psi_dt%CVec) / dot_product(psi_dt%CVec, psi_dt%CVec)
+      !corre_coeff = dot_product(psi0%CVec, psi_dt%CVec) / dot_product(psi_dt%CVec, psi_dt%CVec)
+      corre_coeff = dot_product(psi0%CVec, psi_dt%CVec)
       X = real(corre_coeff, kind=Rkind)
       Y = aimag(corre_coeff)
       arg_corre_coeff = atan2(Y, X)
@@ -153,29 +155,53 @@ END SUBROUTINE Calc_Auto_corr
 
    END SUBROUTINE
 
-
-   SUBROUTINE eval_pics(psi,ib,t)
-      implicit none
-      TYPE(psi_t), intent(in)                     :: psi
-      integer,intent(in)                          :: ib
-      real(kind=Rkind) ,intent(in)                :: t
-      real(kind=Rkind)                            :: norm,n0
-      integer                                     :: i,nb
-       
-      norm = 0._Rkind
-      call Calc_Norm_OF_Psi(psi,n0)
-       do i =2,size(psi%CVec)
-         norm = norm + abs(psi%CVec(i))**2
-       end do
-
-       if ( t==0 ) then
-         write(ib,*) t, abs(n0**2-abs(psi%CVec(1))**2) , ZERO  !FMT= "(F20.10,F20.15,F20.18)"
-       else
-         write(ib,*) t, abs(n0**2-abs(psi%CVec(1))**2) , norm
-       end if
-
-   END SUBROUTINE
-
+   SUBROUTINE eval_pics(psi, ib, t)
+      !----------------------------------------------------------------------
+      ! Purpose:
+      !   Evaluate and write certain properties of the wavefunction 'psi'
+      !   to the output unit 'ib' at time 't'.
+      !
+      ! Arguments:
+      !   psi : (IN)  Wavefunction of type psi_t
+      !   ib  : (IN)  Output unit number (integer)
+      !   t   : (IN)  Time value (real, kind=Rkind)
+      !
+      ! Description:
+      !   - Computes the norm of the wavefunction (excluding first coefficient)
+      !   - Writes results to file/unit 'ib' depending on time 't'
+      !----------------------------------------------------------------------
+      IMPLICIT NONE
+      
+      TYPE(psi_t), INTENT(IN)              :: psi
+      INTEGER, INTENT(IN)                  :: ib
+      REAL(KIND=Rkind), INTENT(IN)         :: t
+      
+      REAL(KIND=Rkind)                     :: norm   ! Norm excluding first coefficient
+      REAL(KIND=Rkind)                     :: n0     ! Norm of psi from Calc_Norm_OF_Psi
+      INTEGER                              :: i      ! Loop index
+      
+      ! Initialize variables
+      norm = 0.0_Rkind
+      
+      ! Calculate the norm of the wavefunction
+      CALL Calc_Norm_OF_Psi(psi, n0)
+      
+      ! Sum the squared modulus of psi%CVec(i) for i >= 2
+      DO i = 2, SIZE(psi%CVec)
+          norm = norm + ABS(psi%CVec(i))**2
+      END DO
+      
+      ! Output depending on whether t is zero
+      IF (t == 0.0_Rkind) THEN
+          WRITE(ib, *) t, ABS(n0**2 - ABS(psi%CVec(1))**2), ZERO
+          ! Output: time, deviation from first coefficient norm, zero
+      ELSE
+          WRITE(ib, *) t, ABS(n0**2 - ABS(psi%CVec(1))**2), norm
+          ! Output: time, deviation from first coefficient norm, remaining norm
+      END IF
+  
+  END SUBROUTINE eval_pics
+  
 
    !SUBROUTINE eval_pics_temp(psi,ib,t)
    !   implicit none

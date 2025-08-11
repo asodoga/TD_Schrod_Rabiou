@@ -5,6 +5,7 @@ module Op_m
    USE Molec_m
    Use Psi_m
    implicit none
+
    private
 
    TYPE :: Op_t
@@ -18,6 +19,7 @@ module Op_m
 
    public :: Op_t, write_Op, Set_Op, dealloc_Op, calc_OpPsi, Calc_Hpsi, Kpsi_nD, Make_Mat_H
    public  :: test_op,Calc_Scalar_Pot, test_openmp_op,calc_tab_Iq,calc_nac,calc_VV,Popu
+   public :: Test_calc_Scalar_Pot
 
 contains
    SUBROUTINE alloc_Op(Op, nb)
@@ -228,19 +230,53 @@ contains
    
       allocate(V(nq, nsurf, nsurf))
       call Calc_Q_grid(Q, Basis)
+      V(:,:,:) = ZERO
    
       ! ===== Loop over all grid points in multidimensional space =====
-
+   
       Do iq = 1, Basis%nq
          ! Evaluate the scalar potential matrix at position Q
          call sub_Qmodel_V(V(iq, :, :), Q(iq,:))
          !write(111,*) iq,Q(iq,:),V(iq, :, :)
       end do
-   
+       !stop 'V'
       ! ===== Deallocation =====
       deallocate(Q)
    
    end subroutine Calc_Scalar_Pot
+
+
+
+   subroutine Test_calc_Scalar_Pot(Basis)
+      use iso_fortran_env, only: real64
+      implicit none
+    
+      type(Basis_t), intent(in), target :: Basis
+      real(kind=real64), allocatable :: V(:, :, :)
+      integer :: nq, nsurf, i, j, k
+    
+      ! Dimensions à extraire depuis Basis
+      nq = Basis%nq
+      nsurf = Basis%tab_basis(size(Basis%tab_basis))%nb
+        !stop 'stop'
+      ! Appel de la routine de calcul du potentiel
+      call Calc_Scalar_Pot(V, Basis)
+    
+      ! Affichage d'un résumé textuel
+      print *, "=== Test_calc_Scalar_Pot ==="
+      print *, "Grid points (nq)            : ", nq
+      print *, "Number of electronic surfaces: ", nsurf
+      print *, "Shape of V                  : (", shape(V(:, 1, 1)), ",", shape(V(1, :, 1)), ",", shape(V(1,1,:)), ")"
+    
+      ! Affiche un petit extrait du potentiel (par ex. 1er point de grille)
+      print *, "Sample potential matrix V at first grid point:"
+      do j = 1, nsurf
+        write(*,'(100(f10.4))') (V(1, j, k), k = 1, nsurf)
+      end do
+      ! Nettoyage mémoire
+      if (allocated(V)) deallocate(V)
+    
+    end subroutine Test_calc_Scalar_Pot
 
 SUBROUTINE Calc_Scalar_Pot_temp(V, Basis)
    USE  QDUtil_m
@@ -381,7 +417,6 @@ end subroutine
     IF (.not. allocated(Basis%tab_basis)) THEN
        STOP 'ERROR in Set_Op: the Basis%tab_bais is not initialized'
     END IF
-
     ndim = SIZE(Basis%tab_basis) - 1
     nq =Basis%nq
     nsurf=Basis%tab_basis(ndim+1)%nb
@@ -488,7 +523,6 @@ SUBROUTINE calc_OpPsi(Op, psi, Oppsi)
          ! If psi is in the basis: convert to grid, apply operator, and convert back
          CALL init_psi(psi_g,   psi%Basis, cplx = .true., grid = .true.)
          CALL init_psi(Oppsi_g, psi%Basis, cplx = .true., grid = .true.)
- 
          CALL BasisTOGrid_nD_cplx(psi_g%CVec,   psi%CVec,   psi%Basis)
          CALL Calc_Hpsi(psi_g%CVec, Oppsi_g%CVec, psi%Basis, Op%Scal_pot)
          CALL GridTOBasis_nD_cplx(Oppsi%CVec, Oppsi_g%CVec, psi%Basis)

@@ -1,9 +1,10 @@
 FC=gfortran
 #FC=ifort
 #FFLAGS= -Wall -Wextra  -O3 -fopenmp -J$(MOD_DIR)
-#FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
+#FFLAGS=-O3 -g -fcheck=all -fbacktrace -finit-real=nan -finit-integer=nan -Wuninitialized -Wimplicit-interface -fopenmp -J$(MOD_DIR)
+FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
 #FFLAGS= -Wall -Wextra -Wimplicit-interface -fPIC -O3 -march=native -ffast-math -funroll-loops -fopenmp -J$(MOD_DIR)
-FFLAGS= -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=5 -g -fcheck=all -fbacktrace -Og -g -fcheck=bounds -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
+#FFLAGS= -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=5 -g -fcheck=all -fbacktrace -Og -g -fcheck=bounds -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
 OBJ_DIR=obj
 MOD_DIR=obj
 SRC_DIR=src

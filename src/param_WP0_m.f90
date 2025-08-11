@@ -89,7 +89,7 @@
            logical, parameter :: debug =.FALSE.
            !logical, parameter :: debug =.TRUE.
            !-----------------------------------------------------------
-           At = complex((TWO/GWP1D%sigma**2),TWO*GWP1D%Beta)
+           At = cmplx(TWO/GWP1D%sigma**2,TWO*GWP1D%Beta,kind=Rkind)
            !print*,'at=',At%re
            DQ = Q-GWP1D%Q0
            ze = (DQ/GWP1D%sigma)**2

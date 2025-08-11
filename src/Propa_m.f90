@@ -77,7 +77,7 @@ SUBROUTINE propagation(psif, psi0, propa)
    CALL creat_file_unit(nio=25, name='E_13', propa=propa)
    CALL creat_file_unit(nio=26, name='auto_cor', propa=propa)
    CALL creat_file_unit(nio=27, name='psi_dt_on_basis0', propa=propa)
-   !CALL creat_file_unit(nio=28, name='file_norm_pics', propa=propa)
+   CALL creat_file_unit(nio=28, name='file_norm_pics', propa=propa)
 
    ! Initialize basis from psi0
    CALL init_Basis1_TO_Basis2(Basis, psi0%Basis)
@@ -142,7 +142,7 @@ SUBROUTINE propagation(psif, psi0, propa)
       WRITE(26,*) t, aut_func%re, aut_func%im
       WRITE(18,*) t, pop
       WRITE(19,*) t, Pt
-      WRITE(20,*) t,At(:) ! REAL(At(:), kind=Rkind), AIMAG(At(:))
+      WRITE(20,*) t, REAL(At(:), kind=Rkind), AIMAG(At(:)) !At(:)
 
       FLUSH(11)
       FLUSH(12)
@@ -153,9 +153,9 @@ SUBROUTINE propagation(psif, psi0, propa)
       FLUSH(20)
       FLUSH(26)
 
-      !call eval_pics(psi, ib=28, t=t_deltat)
+      call eval_pics(psi, ib=28, t=t_deltat)
 
-      if (mod(i, 60) == 0) then
+      if (mod(i, 1) == 0) then
          call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false., &
                print_basis=.false., t=t_deltat, int_print=10, real_part=.false.)
          !call eval_pics(psi, ib=28, t=t)

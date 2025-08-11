@@ -59,17 +59,17 @@ PROGRAM TD_SCHROD
 
    ! Read Gaussian wavepacket parameters from file
    CALL Read_tab_GWP(tab_GWP=tab_GWP, nb_GWP=1, nio=in_unit)
-
+   !stop 'cc'
    !CALL test_basitogridgridtobasis(Basis)
 
    ! Construct operator H
    CALL Calc_tab_Iq0(Tab_Iq, psi0%Basis)
    !stop 'cc'
    CALL Set_Op(H, psi0%Basis, Tab_Iq)
-
+   !stop 'cc'
    ! Initialize psi0 using the GWP parameters
    CALL psi_init_GWP(psi=psi0, Tab_GWP=tab_GWP)
-
+   !stop 'cc'
    !CALL Test_Calc_S()
    !CALL Ecrire_psi(psi0, nio=100, t=ZERO)
 
@@ -81,10 +81,14 @@ PROGRAM TD_SCHROD
    !CALL Get_Basis_Parameters(Basis, Qt, SQt, At, Pt)
    !CALL Calc_Avg_A_nD(psi0, At)
 
+   ! Read propagation parameters
+   CALL read_propa(propa)
+
+   !CALL Test_calc_Scalar_Pot(Basis)
+
    ! Compute initial energy and norm
    CALL Calc_Av_E(E, psi0, H)
    CALL Calc_Norm_OF_Psi(psi0, Norm)
-
    WRITE(out_unit, *) '-------------Energy And Norm of initial WP0-----------------------------'
    WRITE(out_unit, *) ' <psi|H|psi> ', E, ' <psi|psi> ', Norm
    WRITE(out_unit, *) '-------------End Initialization of psi0 -------------------------------'
@@ -96,9 +100,6 @@ PROGRAM TD_SCHROD
    !CALL test_openmp_op(Basis)
    !CALL calc_nac(Basis)
    !CALL calc_VV(Basis)
-
-   ! Read propagation parameters
-   CALL read_propa(propa)
 
    !CALL test_taylor(psi0, psif, propa, H)
    !STOP 'calcul de H|psi> est fait'

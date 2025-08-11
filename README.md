@@ -6,8 +6,7 @@ A high-performance tool for simulating quantum molecular dynamics using generali
 ---
 
 ## Table of Contents  
-- [Key Features](#key-features)  
-- [Theoretical Background](#theoretical-background)  
+- [Key Features](#key-features)   
 - [Installation](#installation)  
 - [Default.comp file configuration](#configuration)
   - [Main program complilation](#Compilation)  

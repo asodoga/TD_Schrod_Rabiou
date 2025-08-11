@@ -852,7 +852,7 @@ END SUBROUTINE march_Global
     complex(kind=Rkind)                            :: At
 
       DQ = SQt*(Q-Qt)
-      At= complex(ONE,Bt/(SQt*SQt))
+      At= cmplx(ONE,Bt/(SQt*SQt),kind=Rkind)
       P = Pt/SQt
      d0 = sqrt(SQt)*poly_Hermite(DQ,ib)*exp(-HALF*At*DQ*DQ+EYE*P*DQ)
 End SUBROUTINE
