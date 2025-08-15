@@ -1,0 +1,197 @@
+module Auto_corr_m
+   USE QDUtil_m
+   USE psi_m
+   USE Basis_m
+   Use Hagedorn_m
+
+   implicit none
+   public :: Calc_Auto_corr, Calc_fft_Auto_corr,test_write_cplx,eval_pics
+
+contains
+
+SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name, renorm, t, it)
+   USE QDUtil_m
+   USE psi_m
+
+   TYPE(psi_t), intent(in)                    :: psi0, psi_dt
+   real(kind=Rkind), intent(in), optional     :: t
+   integer, intent(in), optional              :: it
+   complex(kind=Rkind), intent(inout)         :: corre_coeff
+   real(kind=Rkind), intent(inout)            :: arg_corre_coeff 
+   logical, intent(in)                        :: renorm
+   character(*), intent(in)                   :: propa_name
+
+   ! local variables---------------------------------------------------
+   TYPE(psi_t)                                :: psi, psi_t0
+   TYPE(Basis_t)                              :: Basis0, Basis_dt
+   real(kind=Rkind)                           :: X, Y
+   integer                                    :: ib
+
+   !write(out_unit, *) 'Beging Calc_Auto_corr'
+
+   IF (propa_name == 'hagedorn') THEN
+      ! Initialize Basis0 from psi0 and construct primitive basis
+      call init_Basis1_TO_Basis2(Basis0, psi0%Basis)
+      call construct_primitive_basis(Basis0)
+
+      ! Initialize Basis_dt from psi_dt and construct primitive basis
+      call init_Basis1_TO_Basis2(Basis_dt, psi_dt%Basis)
+      call construct_primitive_basis(Basis_dt)
+
+      ! Initialize psi and psi_t0 with complex vectors and grid = false
+      call init_psi(psi,    Basis0, cplx=.TRUE., grid=.false.)
+      call init_psi(psi_t0, Basis_dt, cplx=.TRUE., grid=.false.)
+
+      ! Set psi to zero and copy psi_dt to psi_t0
+      psi%CVec = CZERO
+      psi_t0%CVec(:) = psi_dt%CVec(:)
+
+      ! Apply inverse Hagedorn transformation
+      call Hagedorn_Inv(psi, psi_t0, renorm)
+
+      ! Compute auto-correlation coefficient and its phase
+      corre_coeff = dot_product(psi0%CVec, psi%CVec) !/ dot_product(psi%CVec, psi%CVec)**2
+      X = real(corre_coeff, kind=Rkind)
+      Y = aimag(corre_coeff)
+      arg_corre_coeff = atan2(Y, X)
+
+      ! Output wavefunction data if time is present
+      IF (present(t)) THEN
+         ! call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
+         ! , print_basis=.false., t=t, int_print=27, real_part=.false.)
+         call test_write_cplx(psi, ib=27, t=t)
+         write(27, *)
+      END IF
+
+      ! Optional write if iteration index is present
+      IF (present(it)) call test_write(psi, ib=27)    
+      IF (present(it)) write(27, *)
+
+      ! Clean up memory
+      call dealloc_psi(psi)
+      call dealloc_psi(psi_t0)
+
+   ELSE
+      ! Compute auto-correlation for non-Hagedorn case
+      corre_coeff = dot_product(psi0%CVec, psi_dt%CVec) !/ dot_product(psi_dt%CVec, psi_dt%CVec)
+      X = real(corre_coeff, kind=Rkind)
+      Y = aimag(corre_coeff)
+      arg_corre_coeff = atan2(Y, X)
+
+      ! Output wavefunction data if time is present
+      IF (present(t)) THEN
+         ! call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
+         ! , print_basis=.false., t=t, int_print=27, real_part=.false.)
+         call test_write_cplx(psi_dt, ib=27, t=t)
+         write(27, *)
+      END IF
+
+      ! Optional write if iteration index is present
+      IF (present(it)) call test_write(psi_dt, ib=27)
+      IF (present(it)) write(27, *)
+   END IF
+
+   ! write(out_unit, *) 'corre_coeff =', corre_coeff, 'arg_corre_coeff=', arg_corre_coeff
+   !write(out_unit, *) 'End Calc_Auto_corr'
+
+END SUBROUTINE Calc_Auto_corr
+
+   SUBROUTINE Calc_fft_Auto_corr(autocor_function, time, fft_autocor_function, delta_t, N)
+      USE QDUtil_m
+      COMPLEX(KIND=Rkind), INTENT(IN), allocatable, DIMENSION(:)        :: autocor_function(:)
+      COMPLEX(KIND=Rkind), INTENT(INOUT), ALLOCATABLE                   :: fft_autocor_function(:)
+      REAL(KIND=Rkind), INTENT(IN), DIMENSION(:)                        :: time
+      REAL(KIND=Rkind), ALLOCATABLE, DIMENSION(:)                       :: w
+      INTEGER, intent(in)                                               :: N
+      REAL(KIND=Rkind)                                                  :: delta_t
+      REAL(KIND=Rkind)                                                  :: wm, wmax, dw
+      INTEGER                                                           :: Iw, nw, I
+      OPEN (UNIT=100, FILE="fft_autocor_function.dat")
+      fft_autocor_function(:) = CZERO
+      wm = -0.001_Rkind; wmax = 5._Rkind; dw = 0.005_Rkind
+      nw = int((wmax - wm)/dw)
+      !allocate( fft_autocor_function(0:nw))
+      ALLOCATE (w(0:nw - 1))
+      DO Iw = 0, nw - 1
+         w(Iw) = wm + float(Iw)*dw
+         fft_autocor_function(Iw) = ZERO
+         DO I = 1, N
+            fft_autocor_function(Iw) = fft_autocor_function(Iw) + autocor_function(Iw)*EXP(EYE*w(Iw)*time(I))*delta_t
+         END DO !itime
+         WRITE (100, *) w(Iw), ABS(fft_autocor_function(Iw))
+      END DO !omega
+   END SUBROUTINE
+
+
+
+   SUBROUTINE test_write(psi,ib)
+
+   implicit none
+
+   TYPE(psi_t), intent(in)                    :: psi
+   integer,intent(in)                          :: ib
+  integer                                     :: i
+
+  !do i =1,size(psi%CVec)
+
+  write(ib,*) psi%CVec(:)
+ ! end do
+
+   END SUBROUTINE
+
+
+   SUBROUTINE test_write_cplx(psi,ib,t)
+      implicit none
+      TYPE(psi_t), intent(in)                     :: psi
+      integer,intent(in)                          :: ib
+      real(kind=Rkind) ,intent(in)                :: t
+     integer                                      :: i
+
+        do i =1,size(psi%CVec)
+         write(ib,*) t, i, psi%CVec(i)
+        end do
+
+   END SUBROUTINE
+
+
+   SUBROUTINE eval_pics(psi,ib,t)
+      implicit none
+      TYPE(psi_t), intent(in)                     :: psi
+      integer,intent(in)                          :: ib
+      real(kind=Rkind) ,intent(in)                :: t
+      real(kind=Rkind)                            :: norm,n0
+      integer                                     :: i,nb
+       
+      norm = 0._Rkind
+      call Calc_Norm_OF_Psi(psi,n0)
+       do i =2,size(psi%CVec)
+         norm = norm + abs(psi%CVec(i))**2
+       end do
+
+       if ( t==0 ) then
+         write(ib,*) t, abs(n0**2-abs(psi%CVec(1))**2) , ZERO  !FMT= "(F20.10,F20.15,F20.18)"
+       else
+         write(ib,*) t, abs(n0**2-abs(psi%CVec(1))**2) , norm
+       end if
+
+   END SUBROUTINE
+
+
+   !SUBROUTINE eval_pics_temp(psi,ib,t)
+   !   implicit none
+   !   TYPE(psi_t), intent(in)                     :: psi
+   !   integer,intent(in)                          :: ib
+   !   real(kind=Rkind) ,intent(in)                :: t
+   !   integer                                     :: nb
+   !    
+   !     nb = size(psi%CVec)
+   !     if ( t==0 ) then
+   !      write(ib,*) t, abs(ONE-abs(psi%CVec(1))) , 0.0
+   !     else
+   !      write(ib,*) t, abs(ONE-abs(psi%CVec(1))**2) ,sqrt( sum(abs(psi%CVec(2:nb))**2))
+   !     end if
+   !      
+   !END SUBROUTINE
+
+end module Auto_corr_m
+
