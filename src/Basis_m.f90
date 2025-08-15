@@ -6,18 +6,36 @@ MODULE Basis_m
    IMPLICIT NONE
 
    PRIVATE
-   PUBLIC :: Basis_t, Read_Basis, Write_Basis, Basis_IS_allocated, Deallocate_Basis, Basis_IS_allocatedtot
-   PUBLIC :: Calc_dngg_grid, Calc_tranpose_d0gb, test_basitogridgridtobasis
+   PUBLIC :: Basis_t
+   PUBLIC :: Read_Basis, Write_Basis
+   PUBLIC :: Basis_IS_allocated, Basis_IS_allocatedtot
+   PUBLIC :: Deallocate_Basis
+   
+   PUBLIC :: Calc_dngg_grid, Calc_dngg_grid_0
+   PUBLIC :: Calc_tranpose_d0gb
+   PUBLIC :: test_basitogridgridtobasis
+   
    PUBLIC :: GridTOBasis_nD_cplx, BasisTOGrid_nD_cplx
-   PUBLIC :: Calc_Q_grid, Calc_index,Rdensity_alloc
-   PUBLIC :: Scale_Basis, init_Basis1_TO_Basis2,Calc_dngg_grid_0
-   PUBLIC :: construct_primitive_basis,CheckOrtho_Basis
-   PUBLIC :: pdv2psi_nD,Get_Basis_Parameters,Calc_Basis_dPtQtAt
-   PUBLIC :: Calc_reduced_Density_surf,Calc_reduced_density,Rdensity_Writing, REDUCED_DENSIRY_t
-   PUBLIC :: Hagedorn_construction,Construct_Basis_Ho,Construct_Hagedorn_Variational_Basis
-   PUBLIC :: Change_Basis_Parameters,Complete_Hagedorn_none_variationnal_Basis,Calc_d0d1d2W
-   PUBLIC :: Complete_Hagedorn_none_variationnal_Basis_temp,construct_primitive_basis_temp
-   public :: calc_tab_Iq0 
+   
+   PUBLIC :: Calc_Q_grid, Calc_index
+   PUBLIC :: Rdensity_alloc, Rdensity_Writing
+   
+   PUBLIC :: Scale_Basis, init_Basis1_TO_Basis2
+   PUBLIC :: construct_primitive_basis, construct_primitive_basis_temp
+   PUBLIC :: Construct_Basis_el,Construct_Basis_Fourier,Construct_Basis_Sin
+   PUBLIC :: Construct_Basis_Ho,Construct_Basis_Hag
+   PUBLIC :: CheckOrtho_Basis
+   
+   PUBLIC :: pdv2psi_nD
+   
+   PUBLIC :: Get_Basis_Parameters, Change_Basis_Parameters
+   PUBLIC :: Calc_Basis_dPtQtAt
+   
+   PUBLIC :: Calc_d0d1d2W
+   
+   PUBLIC :: Calc_reduced_Density_surf, Calc_reduced_density
+   PUBLIC :: REDUCED_DENSIRY_t
+   PUBLIC :: calc_tab_Iq0 ,Complete_construct_Basis
 
    TYPE :: Basis_t
       integer                             :: nb_basis = ZERO
@@ -233,149 +251,138 @@ CONTAINS
 
    END SUBROUTINE Write_Basis
 
+
+   !> Recursive subroutine to initialize Basis2 from Basis1
+   !! It supports both composite (multi-dimensional) and 1D primitive basis structures.
    RECURSIVE SUBROUTINE init_Basis1_TO_Basis2(Basis2, Basis1)
-      USE QDUtil_m
-      TYPE(Basis_t), intent(in)           :: Basis1
-      TYPE(Basis_t), intent(inout)        :: Basis2
-      integer                             :: ib
+   USE QDUtil_m
+   IMPLICIT NONE
+     
+     TYPE(Basis_t), intent(in)           :: Basis1   ! Input basis structure
+     TYPE(Basis_t), intent(inout)        :: Basis2   ! Output (initialized) basis structure
+     integer                             :: ib        ! Loop index
+     
+     IF (allocated(Basis1%tab_basis)) THEN
+        ! Composite basis: recursively initialize each sub-basis
+        call Deallocate_Basis(Basis2)
+        Basis2%Basis_name  = Basis1%Basis_name
+        Basis2%nb_basis    = Basis1%nb_basis
+        allocate(Basis2%tab_basis(Basis2%nb_basis))
+     
+        DO ib = 1, Basis1%nb_basis
+           call init_Basis1_TO_Basis2(Basis2%tab_basis(ib), Basis1%tab_basis(ib))
+        END DO
+     
+        ! Recalculate total number of basis functions and quadrature points
+        Basis2%nb = 1
+        Basis2%nq = 1
+        DO ib = 1, Basis1%nb_basis
+           IF (Basis2%tab_basis(ib)%Basis_name == 'el') CYCLE
+           Basis2%nb = Basis2%nb * Basis2%tab_basis(ib)%nb
+           Basis2%nq = Basis2%nq * Basis2%tab_basis(ib)%nq
+        END DO
+     
+     ELSE
+        ! Elementary basis: directly copy parameters
+        Basis2%Basis_name  = Basis1%Basis_name
+        Basis2%nb_basis    = Basis1%nb_basis
+        Basis2%nb          = Basis1%nb
+        Basis2%nq          = Basis1%nq
+        Basis2%Q0          = Basis1%Q0
+        Basis2%SCALEQ      = Basis1%SCALEQ
+        Basis2%Imp_k       = Basis1%Imp_k
+        Basis2%Alpha       = Basis1%Alpha
+        Basis2%A           = Basis1%A
+        Basis2%B           = Basis1%B
+        Basis2%S           = Basis1%S
+     END IF
+     
+     END SUBROUTINE init_Basis1_TO_Basis2
 
-      IF (allocated(Basis1%tab_basis)) THEN
-         call Deallocate_Basis(Basis2)
-         Basis2%Basis_name = Basis1%Basis_name
-         Basis2%nb_basis = Basis1%nb_basis
-         allocate (Basis2%tab_basis(Basis2%nb_basis))
-         DO ib = 1, Basis1%nb_basis
-            call init_Basis1_TO_Basis2(Basis2%tab_basis(ib), Basis1%tab_basis(ib))
-         END DO
-         Basis2%nb = 1
-         Basis2%nq = 1
-         DO ib = 1, Basis1%nb_basis
-            if (Basis2%tab_basis(ib)%Basis_name == 'el') cycle
-            Basis2%nb = Basis2%nb*Basis2%tab_basis(ib)%nb
-            Basis2%nq = Basis2%nq*Basis2%tab_basis(ib)%nq
-         END DO
-      ELSE
-         Basis2%Basis_name       = Basis1%Basis_name
-         Basis2%nb_basis         = Basis1%nb_basis
-         Basis2%nb               = Basis1%nb
-         Basis2%nq               = Basis1%nq
-         Basis2%Q0               = Basis1%Q0
-         Basis2%SCALEQ           = Basis1%SCALEQ
-         Basis2%Imp_k            = Basis1%Imp_k
-         Basis2%Alpha            = Basis1%Alpha
-         Basis2%A                = Basis1%A
-         Basis2%B                = Basis1%B
-         Basis2%S                = Basis1%S
-      END IF
-
-   END SUBROUTINE init_Basis1_TO_Basis2
-
+   !> Recursive subroutine to safely deallocate all allocated components
+   !! of a Basis_t object, including nested basis structures.
    RECURSIVE SUBROUTINE Deallocate_Basis(Basis)
-      USE QDUtil_m
-      TYPE(Basis_t), intent(inout)     :: Basis
-      integer                          :: i
-
-      ! write(out_unit,*) '-------------------------------------------------------------------------------'
-      !write(out_unit,*) 'Deallocate_Basis'
-      !write(out_unit,*) "Basis_name=", Basis%Basis_name
-      !write(out_unit,*) "n_basis=", Basis%nb_basis
-      !write(out_unit,*) 'nb,nq',Basis%nb,Basis%nq
-      !write(out_unit,*) "Q0=", Basis%Q0
-      !write(out_unit,*) "scaleQ =", Basis%scaleQ
-
-      IF (allocated(Basis%tab_basis)) THEN
-         deallocate (Basis%NDindexq%Tab0)
-         deallocate (Basis%NDindexb%Tab0)
-         deallocate (Basis%tab_basis)
-      END IF
-      write (out_unit, *)
-
-      IF (allocated(Basis%x)) THEN
-         deallocate (Basis%x)
-          write(out_unit,*)' Basis table x is now deallocated.'
-      END IF
-
-
-      write (out_unit, *)
-      IF (allocated(Basis%d0gb)) THEN
-         deallocate (Basis%d0gb)
-          write(out_unit,*)' Basis table d0gb is now deallocated.'
-      END IF
-
-      write (out_unit, *)
-      IF (allocated(Basis%d0bgw)) THEN
-         deallocate (Basis%d0bgw)
-          write(out_unit,*)' Basis table d0bgw is now deallocated.'
-      END IF
-        
-      write (out_unit, *)
-      IF (allocated(Basis%dagb)) THEN
-         deallocate (Basis%dagb)
-         write(out_unit,*)' Basis table dagb is now deallocated.'
-      END IF
-
-      write (out_unit, *)
-      IF (allocated(Basis%dagg)) THEN
-         deallocate (Basis%dagg)
-         write(out_unit,*)' Basis table dagg is now deallocated.'
-      END IF
-
-
-      write (out_unit, *)
-      IF (allocated(Basis%dq0gb)) THEN
-         deallocate (Basis%dq0gb)
-         write(out_unit,*)' Basis table dq0gb is now deallocated.'
-      END IF
-
-      
-      write (out_unit, *)
-      IF (allocated(Basis%dq0gb)) THEN
-         deallocate (Basis%dq0gb)
-          write(out_unit,*)' Basis table dq0gb is now deallocated.'
-      END IF
-
-      write (out_unit, *)
-      IF (allocated(Basis%dq0gg)) THEN
-         deallocate (Basis%dq0gg)
-         write(out_unit,*)' Basis table dq0gg is now deallocated.'
-      END IF
-
-
-      write (out_unit, *)
-      IF (allocated(Basis%dp0gg)) THEN
-         deallocate (Basis%dp0gg)
-         write(out_unit,*)' Basis table dp0gg is now deallocated.'
-      END IF
-
-
-      write (out_unit, *)
-      IF (allocated(Basis%d1gb)) THEN
-         deallocate (Basis%d1gb)
-          write(out_unit,*)' Basis table d1gb is now deallocated.'
-      END IF
-      write (out_unit, *)
-      IF (allocated(Basis%d1gg)) THEN
-         deallocate (Basis%d1gg)
-          write(out_unit,*)' Basis table d1gb is now deallocated.'
-      END IF
-
-      write (out_unit, *)
-      IF (allocated(Basis%d2gb)) THEN
-         deallocate (Basis%d2gb)
-         write(out_unit,*)' Basis table d1gb is now deallocated.'
-      END IF
-      write (out_unit, *)
-      IF (allocated(Basis%d2gg)) THEN
-         deallocate (Basis%d2gg)
-           write(out_unit,*)' Basis table d2gg is now deallocated.'
-      END IF
-      IF (allocated(Basis%tab_basis)) THEN
-         DO i = 1, size(Basis%tab_basis)
-            CALL Deallocate_Basis(Basis%tab_basis(i))
-         END DO
-      END IF
-      ! write(out_unit,*) '--------------------------------------------------------------------------------'
-
+   USE QDUtil_m
+   IMPLICIT NONE
+   
+   TYPE(Basis_t), intent(inout) :: Basis
+   integer                      :: i
+   
+   ! Deallocate ND indexing arrays if present
+   IF (allocated(Basis%tab_basis)) THEN
+      IF (allocated(Basis%NDindexq%Tab0)) deallocate(Basis%NDindexq%Tab0)
+      IF (allocated(Basis%NDindexb%Tab0)) deallocate(Basis%NDindexb%Tab0)
+      deallocate(Basis%tab_basis)
+   END IF
+   
+   ! Deallocate 1D basis arrays if present
+   IF (allocated(Basis%x)) THEN
+      deallocate(Basis%x)
+      write(out_unit,*) 'Basis table x is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%d0gb)) THEN
+      deallocate(Basis%d0gb)
+      write(out_unit,*) 'Basis table d0gb is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%d0bgw)) THEN
+      deallocate(Basis%d0bgw)
+      write(out_unit,*) 'Basis table d0bgw is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%dagb)) THEN
+      deallocate(Basis%dagb)
+      write(out_unit,*) 'Basis table dagb is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%dagg)) THEN
+      deallocate(Basis%dagg)
+      write(out_unit,*) 'Basis table dagg is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%dq0gb)) THEN
+      deallocate(Basis%dq0gb)
+      write(out_unit,*) 'Basis table dq0gb is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%dq0gg)) THEN
+      deallocate(Basis%dq0gg)
+      write(out_unit,*) 'Basis table dq0gg is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%dp0gg)) THEN
+      deallocate(Basis%dp0gg)
+      write(out_unit,*) 'Basis table dp0gg is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%d1gb)) THEN
+      deallocate(Basis%d1gb)
+      write(out_unit,*) 'Basis table d1gb is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%d1gg)) THEN
+      deallocate(Basis%d1gg)
+      write(out_unit,*) 'Basis table d1gg is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%d2gb)) THEN
+      deallocate(Basis%d2gb)
+      write(out_unit,*) 'Basis table d2gb is now deallocated.'
+   END IF
+   
+   IF (allocated(Basis%d2gg)) THEN
+      deallocate(Basis%d2gg)
+      write(out_unit,*) 'Basis table d2gg is now deallocated.'
+   END IF
+   
+   ! Recursively deallocate sub-basis if composite
+   IF (allocated(Basis%tab_basis)) THEN
+      DO i = 1, size(Basis%tab_basis)
+         CALL Deallocate_Basis(Basis%tab_basis(i))
+      END DO
+   END IF
+   
    END SUBROUTINE Deallocate_Basis
 
    RECURSIVE SUBROUTINE Read_Basis(Basis, nio)
@@ -457,70 +464,118 @@ CONTAINS
       END IF
    END SUBROUTINE Read_Basis
 
-
-   SUBROUTINE Calc_tab_Iq0(Tab_Iq,Basis)
-      USE  QDUtil_m
-      TYPE(Basis_t), intent(in), target             :: Basis
-      integer, allocatable ,intent(inout)           :: Tab_iq(:, :)
    
-      integer, allocatable                          :: Tab_iq0(:)
-      integer                                       :: ndim, iq,nq
-      logical                                       :: Endloop
-   
-      ndim = size(Basis%tab_basis) - 1
-      nq =Basis%nq
-      !print*,ndim,nq
-   
-       allocate (Tab_iq(ndim,nq),Tab_iq0(ndim))
+   !> Calculates the index table Tab_iq for multi-dimensional quadrature indexing
+   !! Tab_iq(:, iq) contains the index vector for the iq-th point in the total basis grid.
+   SUBROUTINE Calc_tab_Iq0(Tab_Iq, Basis)
+      USE QDUtil_m
+      ! Purpose: Calculate the table of quantum indices (Tab_Iq) for a given basis
+      
+      ! Input/Output variables:
+      TYPE(Basis_t), intent(in), target :: Basis       ! Basis set information
+      integer, allocatable, intent(inout) :: Tab_iq(:,:)  ! Output table of quantum indices
+      
+      ! Local variables:
+      integer, allocatable :: Tab_iq0(:)    ! Temporary array for current quantum indices
+      integer :: ndim                      ! Number of dimensions
+      integer :: iq                        ! Current quantum state index
+      integer :: nq                        ! Total number of quantum states
+      logical :: Endloop                   ! Flag to indicate end of loop
+      
+      ! Get dimensions from the basis set:
+      ndim = size(Basis%tab_basis) - 1     ! Number of dimensions (subtracting 1 for 0-based or other reason)
+      nq = Basis%nq                        ! Total number of quantum states
+      
+      ! Allocate memory for the output table and temporary array:
+      allocate(Tab_iq(ndim, nq), Tab_iq0(ndim))
+      
+      ! Initialize the temporary index array:
       Call Init_tab_ind(Tab_iq0, Basis%NDindexq)
+      
+      ! Loop through all quantum states:
       Iq = 0
       DO
-         Iq = Iq + 1
-         CALL increase_NDindex(Tab_Iq0, Basis%NDindexq, Endloop)
-         IF (Endloop) exit
-         Tab_iq(:,Iq) = Tab_Iq0
-          !print*,iq,Tab_Iq(:,Iq)
+          Iq = Iq + 1  ! Increment quantum state counter
+          
+          ! Get the next set of quantum numbers:
+          CALL increase_NDindex(Tab_Iq0, Basis%NDindexq, Endloop)
+          
+          ! Exit if we've processed all quantum states:
+          IF (Endloop) exit
+          
+          ! Store the current quantum numbers in the output table:
+          Tab_iq(:, Iq) = Tab_Iq0
       END DO
+      
+      ! Clean up temporary array:
       deallocate(Tab_Iq0)
-   END SUBROUTINE 
-   
-
+  END SUBROUTINE Calc_tab_Iq0
 
    RECURSIVE SUBROUTINE construct_primitive_basis_temp(Basis)
    USE QDUtil_m
-   logical, parameter                     :: debug = .true.
-   !logical,             parameter        ::debug = .false.
-   TYPE(Basis_t), intent(inout)           :: Basis
-   integer                                :: ndim, ib
-    ndim = Basis%nb_basis 
-   IF (allocated(Basis%tab_basis)) THEN
+   IMPLICIT NONE
+
+   !==================== Parameters =====================
+   LOGICAL, PARAMETER :: debug = .true.
+   !LOGICAL, PARAMETER :: debug = .false.  ! Uncomment to disable debug mode
+
+   !==================== Interface ======================
+   TYPE(Basis_t), INTENT(INOUT) :: Basis   ! Basis structure to construct
+
+   !==================== Local variables ================
+   INTEGER :: ndim     ! Number of sub-bases
+   INTEGER :: ib       ! Index for loop over sub-bases
+
+   !==================== Logic ==========================
+   ndim = Basis%nb_basis
+
+   ! If the basis is composite (i.e., tab_basis is allocated),
+   ! recursively construct the primitive basis of each subcomponent
+   IF (ALLOCATED(Basis%tab_basis)) THEN
       DO ib = 1, ndim
          CALL construct_primitive_basis_temp(Basis%tab_basis(ib))
       END DO
+
    ELSE
+      ! Otherwise, construct the basis based on its name/type
       SELECT CASE (Basis%Basis_name)
+
       CASE ('el')
-         write (6, *) 'Electronic basis. Electronic state number:', basis%nb
-         basis%nq = 0
+         ! Electronic basis: no spatial degree of freedom
+         WRITE(6, *) 'Electronic basis. Electronic state number:', Basis%nb
+         Basis%nq = 0
+
       CASE ('boxab')
-         call Construct_Basis_Sin(Basis)
-         Basis%Q0 = Basis%A
-         Basis%scaleQ = pi/(Basis%B - Basis%A)
-         call Hagedorn_construction(Basis)
+         ! Particle-in-a-box basis between [A, B]
+         CALL Construct_Basis_Sin(Basis)
+         Basis%Q0     = Basis%A
+         Basis%scaleQ = pi / (Basis%B - Basis%A)
+         CALL Complete_construct_Basis(Basis)
+
       CASE ('fourier')
-         Basis%Q0 = ZERO
+         ! Plane wave / Fourier basis (unbounded domain)
+         Basis%Q0     = ZERO
          Basis%scaleQ = ONE
-         call Construct_Basis_Fourier(Basis)
-         call Hagedorn_construction(Basis)
-      CASE ('herm', 'ho')
-         call Construct_Basis_Ho(Basis)
-         call Complet_scaling_Basis(Basis)
-      CASE default
-         STOP 'ERROR  Noting to construct'
+         CALL Construct_Basis_Fourier(Basis)
+         CALL Complete_construct_Basis(Basis)
+
+      CASE ('hag', 'ho')
+         ! Harmonic or Hagedorn basis (semiclassical Gaussian functions)
+         !CALL Construct_Basis_Ho(Basis)  ! Uncomment if needed
+         CALL Construct_Basis_Hag(Basis)
+         CALL Complete_construct_Basis(Basis)
+
+      CASE DEFAULT
+         ! Unknown or unsupported basis type
+         STOP 'ERROR  Nothing to construct'
+
       END SELECT
    END IF
-   ! write(out_unit,*) ' End  construct  primitive Basis '
-END SUBROUTINE 
+
+   ! Optional debug output
+   !WRITE(out_unit,*) 'End construct primitive Basis'
+
+END SUBROUTINE construct_primitive_basis_temp
 
    RECURSIVE SUBROUTINE construct_primitive_basis(Basis)
       USE QDUtil_m
@@ -591,231 +646,387 @@ END SUBROUTINE
 
    END SUBROUTINE Construct_Basis_Sin
 
-   SUBROUTINE Construct_Basis_Fourier(Basis) !basis_name fourier[-pi,pi]
+
+
+
+   !> Construct the Fourier basis in the interval [-π, π]
+   !! This routine allocates the quadrature grid and computes the Fourier
+   !! basis functions and their derivatives.
+   SUBROUTINE Construct_Basis_Fourier(Basis)
       USE QDUtil_m
-
-      TYPE(Basis_t), intent(inout)        :: Basis
-      real(kind=Rkind)                    :: dx
-      integer                             :: ib, iq, nb, nq
-
-
-
-      if (allocated(Basis%x)) deallocate (Basis%x)
-      if (allocated(Basis%w)) deallocate (Basis%w)
-      if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
-      if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
-      if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
-      if (allocated(Basis%dagb)) deallocate (Basis%dagb)
-      if (allocated(Basis%dp0gb)) deallocate (Basis%dp0gb)
-      if (allocated(Basis%dq0gb)) deallocate (Basis%dq0gb)
-
-
+      IMPLICIT NONE
+   
+      TYPE(Basis_t), intent(inout) :: Basis
+      real(kind=Rkind)             :: dx
+      integer                      :: ib, iq, nb, nq
+   
+      !---------------------------------------------------------------------------
+      ! Deallocate existing arrays if already allocated
+      IF (allocated(Basis%x))       deallocate(Basis%x)
+      IF (allocated(Basis%w))       deallocate(Basis%w)
+      IF (allocated(Basis%d0gb))    deallocate(Basis%d0gb)
+      IF (allocated(Basis%d1gb))    deallocate(Basis%d1gb)
+      IF (allocated(Basis%d2gb))    deallocate(Basis%d2gb)
+      IF (allocated(Basis%dagb))    deallocate(Basis%dagb)
+      IF (allocated(Basis%dp0gb))   deallocate(Basis%dp0gb)
+      IF (allocated(Basis%dq0gb))   deallocate(Basis%dq0gb)
+      !---------------------------------------------------------------------------
+   
       nb = Basis%nb
       nq = Basis%nq
-      dx = TWO*pi/nq
-
-      !>------------------grid and weight -----------------------------------------
-      Basis%x = [(iq*dx - dx/2 - pi, iq=1, nq)]
-      Basis%w = [(dx, iq=1, nq)]
-      !> ---------------------allocation ---------------------------------------
-      allocate (Basis%d0gb(nq, nb))
-      allocate (Basis%d1gb(nq, nb, 1))
-      allocate (Basis%d2gb(nq, nb, 1, 1))
-
+   
+      ! Step size for the uniform grid over [-π, π]
+      dx = TWO * pi / nq
+   
+      !---------------------------------------------------------------------------
+      ! Allocate and initialize grid points and weights
+      allocate(Basis%x(nq))
+      allocate(Basis%w(nq))
+   
+      Basis%x = [(iq * dx - dx / 2 - pi, iq = 1, nq)]
+      Basis%w = [(dx, iq = 1, nq)]
+      !---------------------------------------------------------------------------
+   
+      !---------------------------------------------------------------------------
+      ! Allocate derivative matrices
+      allocate(Basis%d0gb(nq, nb))
+      allocate(Basis%d1gb(nq, nb, 1))
+      allocate(Basis%d2gb(nq, nb, 1, 1))
+      !---------------------------------------------------------------------------
+   
+      !---------------------------------------------------------------------------
+      ! Compute the Fourier basis functions and their derivatives
       DO ib = 1, nb
          DO iq = 1, nq
-            call d0d1d2fourier(Basis%x(iq),Basis%d0gb(iq, ib),Basis%d1gb(iq, ib, 1)&
-                           &,Basis%d2gb(iq, ib, 1, 1),ib)
-         END DO                  
+            CALL d0d1d2fourier(Basis%x(iq), &
+                               Basis%d0gb(iq, ib), &
+                               Basis%d1gb(iq, ib, 1), &
+                               Basis%d2gb(iq, ib, 1, 1), ib)
+         END DO
       END DO
       !---------------------------------------------------------------------------
-      IF (Basis%nb == Basis%nq .AND. mod(Basis%nb, 2) == 0) THEN
-         Basis%d0gb(:, nb) = Basis%d0gb(:, nb)/sqrt(TWO)
-         Basis%d1gb(:, nb, :) = Basis%d1gb(:, nb, :)/sqrt(TWO)
-         Basis%d2gb(:, nb, :, :) = Basis%d2gb(:, nb, :, :)/sqrt(TWO)
+   
+      !---------------------------------------------------------------------------
+      ! Normalize the last basis function if conditions are met
+      IF (nb == nq .AND. MOD(nb, 2) == 0) THEN
+         Basis%d0gb(:, nb)        = Basis%d0gb(:, nb) / SQRT(TWO)
+         Basis%d1gb(:, nb, :)     = Basis%d1gb(:, nb, :) / SQRT(TWO)
+         Basis%d2gb(:, nb, :, :)  = Basis%d2gb(:, nb, :, :) / SQRT(TWO)
       END IF
-
-
+      !---------------------------------------------------------------------------
+   
    END SUBROUTINE Construct_Basis_Fourier
 
-   SUBROUTINE Construct_Basis_el(Basis) ! 'el' :
-      USE QDUtil_m
 
-      TYPE(Basis_t), intent(inout)  :: Basis
+
+
+
+    !> @brief Constructs the 'el' (electronic) type basis
+   SUBROUTINE Construct_Basis_el(Basis)
+      USE QDUtil_m
+      IMPLICIT NONE
+    
+      TYPE(Basis_t), INTENT(inout) :: Basis
+    
+      ! Set number of grid points to zero for 'el' basis
       Basis%nq = 0
+    
       RETURN
+    END SUBROUTINE Construct_Basis_el
 
-   END SUBROUTINE Construct_Basis_el
-
-  SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
+   !> @brief Constructs the 'ho' (harmonic oscillator) type basis
+   !! This subroutine initializes the basis functions and corresponding
+   !! grid values for the harmonic oscillator using Hermite polynomials.
+   !! It allocates and computes the grid points, weights, and the 0th, 1st, and 2nd
+   !! derivatives of the Hermite polynomials at each grid point.
+   SUBROUTINE Construct_Basis_Ho(Basis)
       USE QDUtil_m
+      IMPLICIT NONE
+    
+      TYPE(Basis_t), INTENT(inout) :: Basis
+      INTEGER                      :: iq, ib
+      INTEGER                      :: nb, nq
+    
+      ! Retrieve the number of basis functions and grid points
+      nb = Basis%nb
+      nq = Basis%nq
+    
+      ! Deallocate previously allocated arrays if necessary
+      IF (ALLOCATED(Basis%x))       DEALLOCATE(Basis%x)
+      IF (ALLOCATED(Basis%w))       DEALLOCATE(Basis%w)
+      IF (ALLOCATED(Basis%d0gb))    DEALLOCATE(Basis%d0gb)
+      IF (ALLOCATED(Basis%d1gb))    DEALLOCATE(Basis%d1gb)
+      IF (ALLOCATED(Basis%d2gb))    DEALLOCATE(Basis%d2gb)
+      IF (ALLOCATED(Basis%dagb))    DEALLOCATE(Basis%dagb)
+      IF (ALLOCATED(Basis%dp0gb))   DEALLOCATE(Basis%dp0gb)
+      IF (ALLOCATED(Basis%dq0gb))   DEALLOCATE(Basis%dq0gb)
+    
+      ! Allocate grid points and weights
+      ALLOCATE(Basis%x(nq))
+      ALLOCATE(Basis%w(nq))
+      CALL hercom(nq, Basis%x(:), Basis%w(:))  ! Hermite quadrature points and weights
+    
+      ! Allocate arrays for derivatives
+      ALLOCATE(Basis%d0gb(nq, nb))
+      ALLOCATE(Basis%d1gb(nq, nb, 1))
+      ALLOCATE(Basis%d2gb(nq, nb, 1, 1))
+    
+      ! Compute Hermite polynomials and their derivatives at each grid point
+      DO iq = 1, nq
+        DO ib = 1, nb
+          CALL d0d1d2poly_Hermite_exp(Basis%x(iq), ib - 1,                        &
+               Basis%d0gb(iq, ib), Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), .TRUE.)
+        END DO
+      END DO
+    
+    END SUBROUTINE Construct_Basis_Ho
 
-      TYPE(Basis_t), intent(inout)               :: Basis
-      integer                                    :: iq, ib
-      integer                                    :: nb, nq
-     
-      nb    = Basis%nb
-      nq    = Basis%nq   
 
+   SUBROUTINE Construct_Basis_Hag(Basis)
+      USE QDUtil_m
+      TYPE(Basis_t), intent(inout) :: Basis
+  
+      integer :: iq, ib
+      integer :: nb, nq
+      real(kind=Rkind) :: q0, sq, p0, a, x
+      complex(kind=Rkind) :: alpha
+  
+      !----------------------------------------------------------
+      ! Retrieve basis parameters from the Basis structure
+      !----------------------------------------------------------
+      q0    = Basis%Q0
+      sq    = Basis%scaleQ
+      alpha = Basis%alpha
+      p0    = Basis%imp_k
+  
+      nb = Basis%nb
+      nq = Basis%nq
+  
+      a = REAL(alpha, kind=Rkind)  ! Re(alpha)
+  
+      !----------------------------------------------------------
+      ! Deallocate previous basis arrays if allocated
+      !----------------------------------------------------------
       if (allocated(Basis%x)) deallocate (Basis%x)
       if (allocated(Basis%w)) deallocate (Basis%w)
-
       if (allocated(Basis%d0gb)) deallocate (Basis%d0gb)
       if (allocated(Basis%d1gb)) deallocate (Basis%d1gb)
       if (allocated(Basis%d2gb)) deallocate (Basis%d2gb)
-
-      if (allocated(Basis%dagb)) deallocate (Basis%dagb)
-      if (allocated(Basis%dp0gb)) deallocate (Basis%dp0gb)
-      if (allocated(Basis%dq0gb)) deallocate (Basis%dq0gb)
-
-
+  
+      !----------------------------------------------------------
+      ! Allocate grids and quadrature weights (Hermite quadrature)
+      !----------------------------------------------------------
       allocate (Basis%x(nq))
       allocate (Basis%w(nq))
-      
       call hercom(nq, Basis%x(:), Basis%w(:))
-
+  
+      !----------------------------------------------------------
+      ! Allocate basis function arrays
+      !----------------------------------------------------------
       allocate (Basis%d0gb(nq, nb))
       allocate (Basis%d1gb(nq, nb, 1))
       allocate (Basis%d2gb(nq, nb, 1, 1))
-
+  
+      !----------------------------------------------------------
+      ! Construct Hagedorn basis functions directly
+      !----------------------------------------------------------
       DO iq = 1, nq
-
-         DO ib = 1, nb
-           call d0d1d2poly_Hermite_exp(Basis%x(iq),ib - 1, Basis%d0gb(iq, ib),&
-            Basis%d1gb(iq, ib, 1),Basis%d2gb(iq, ib, 1, 1), .true.) 
-         END DO
-
+          DO ib = 1, nb
+              call d0d1d2poly_Hag_exp(Basis%x(iq), ib - 1, &
+                   Basis%d0gb(iq, ib), Basis%d1gb(iq, ib, 1), Basis%d2gb(iq, ib, 1, 1), &
+                   .true., alpha, p0)
+          END DO
       END DO
-      
-   END SUBROUTINE Construct_Basis_Ho
+  
+  END SUBROUTINE Construct_Basis_Hag
 
 
+   !> Check orthonormality of the basis set
+   !! This subroutine checks if the basis functions are orthonormal (⟨b_i | b_j⟩ ≈ δ_ij)
+   !! It also checks the overlaps with derivatives if requested (up to second order).
    SUBROUTINE CheckOrtho_Basis(Basis, nderiv)
       USE QDUtil_m
-
-      TYPE(Basis_t), intent(in)     :: Basis
-      integer, intent(in)           :: nderiv
-      integer                       :: ib, jb
-      real(kind=Rkind), ALLOCATABLE    :: S(:, :)
-      real(kind=Rkind)                 :: Sii, Sij
-
-      IF (Basis%Basis_name == 'el') Then
-         print *, 'This routine is .not. possible Basis el'
+      IMPLICIT NONE
+   
+      TYPE(Basis_t), intent(in)          :: Basis
+      integer, intent(in)                :: nderiv
+      integer                            :: ib, jb
+      real(kind=Rkind), ALLOCATABLE      :: S(:, :)
+      real(kind=Rkind)                   :: Sii, Sij
+   
+      !-------------------------------------------------------------------------
+      ! Check for incompatible basis type
+      IF (Basis%Basis_name == 'el') THEN
+         PRINT *, 'This routine is not applicable to Basis ''el'''
          RETURN
       END IF
+      !-------------------------------------------------------------------------
+   
+      !-------------------------------------------------------------------------
+      ! Proceed only if basis data is allocated
       IF (Basis_IS_allocated(Basis)) THEN
-
+   
+         ! Compute overlap matrix: S = <d0b|d0b>
          S = matmul(conjg(Basis%d0bgw), Basis%d0gb)
-          do ib = 1,Basis%nb
-          do jb = 1,Basis%nb
-         !write(115,*) ib,jb,S(ib,ib),S(ib,jb)
-           end do
-          end do
-          !IF (nderiv > -1) CALL   Write_VecMat(S,out_unit,5, info='S')
+   
+         ! Optional debug loop (currently disabled)
+         ! DO ib = 1, Basis%nb
+         !    DO jb = 1, Basis%nb
+         !       WRITE(115,*) ib, jb, S(ib, ib), S(ib, jb)
+         !    END DO
+         ! END DO
+   
+         ! Check deviation from orthonormality
          Sii = ZERO
-         Sij = ZERO
-
          DO ib = 1, Basis%nb
-            IF (abs(S(ib, ib) - ONE) > Sii) Sii = abs(S(ib, ib) - ONE)
+            IF (ABS(S(ib, ib) - ONE) > Sii) Sii = ABS(S(ib, ib) - ONE)
             S(ib, ib) = ZERO
-              
          END DO
-         Sij = maxval(S)
-         write (out_unit, *) 'Sii-1,Sij', Sii, Sij
-
+         Sij = MAXVAL(ABS(S))
+   
+         WRITE(out_unit, *) 'Deviation from orthonormality: max|Sii - 1| =', Sii, ', max|Sij| =', Sij
+   
+         !-------------------------------------------------------------------------
+         ! Check overlap with first derivatives if required
          IF (nderiv > 0) THEN
-            write(out_unit,*)
+            WRITE(out_unit, *)
             S = matmul(conjg(Basis%d0bgw), Basis%d1gb(:, :, 1))
-            !call   Write_VecMat(S,out_unit,5, info='<d0b|d1b>',Rformat='e13.4')
-            !call   Write_VecMat(S,out_unit,5, info='<d0b|d1b>')
+            ! CALL Write_VecMat(S, out_unit, 5, info='<d0b|d1b>')
          END IF
-
+   
+         !-------------------------------------------------------------------------
+         ! Check overlap with second derivatives if required
          IF (nderiv > 1) THEN
-            write(out_unit,*)
+            WRITE(out_unit, *)
             S = matmul(conjg(Basis%d0bgw), Basis%d2gb(:, :, 1, 1))
-             !call   Write_VecMat(S,out_unit,5, info='<d0b|d2b>',Rformat='e13.4')
-             !call   Write_VecMat(S,out_unit,5, info='<d0b|d1b>')
+            ! CALL Write_VecMat(S, out_unit, 5, info='<d0b|d2b>')
          END IF
-
+   
       ELSE
-         write (out_unit, *) ' WARNNING in CheckOrtho_Basis'
-         write (out_unit, *) ' the basis is not allocated.'
+         WRITE(out_unit, *) 'WARNING in CheckOrtho_Basis: The basis is not allocated.'
       END IF
-
+   
    END SUBROUTINE CheckOrtho_Basis
-
-   SUBROUTINE Scale_Basis(Basis, x0, sx)
+   SUBROUTINE Scale_Basis(Basis, q0, sq)
       USE QDUtil_m
-
       TYPE(Basis_t), intent(inout)  :: Basis
-      real(kind=Rkind), intent(in)     :: x0, sx
+      real(kind=Rkind), intent(in)  :: q0, sq
+   
+      !----------------------------------------------------------------------
+      ! SUBROUTINE Scale_Basis(Basis, q0, sq)
+      !  --> Perform the change of variable: x = sqrt(a)*(q - q0)
+      !      with a = Re(alpha), sq = sqrt(a) provided directly as input.
+      !
+      ! Inputs:
+      !   Basis : type(Basis_t) containing grid points x, weights w,
+      !            basis functions d0gb, first derivatives d1gb, second derivatives d2gb
+      !   q0    : translation point q0
+      !   sq    : sqrt(a), scaling factor given as input (do not recompute a)
+      !
+      ! The subroutine applies:
+      !   - Translation and rescaling of points x -> q
+      !   - Adjusts integration weights w
+      !   - Applies normalization factors using sq directly:
+      !         a^{1/4}  = sqrt(sq)
+      !         a^{3/4}  = sq * sqrt(sq)
+      !         a^{5/4}  = sq^2 * sqrt(sq)
+      !----------------------------------------------------------------------
+   
+      REAL(KIND=Rkind) :: sq_half, sq_3half, sq_5half
+   
       IF (Basis%nq == 0) RETURN
-      IF (abs(sx) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
-
-         Basis%x(:) = x0 + Basis%x(:)/sx
-         Basis%w(:) = Basis%w(:)/sx
-
-         Basis%d0gb(:, :) = Basis%d0gb(:, :)*sqrt(sx)
-         Basis%d1gb(:, :, :) = Basis%d1gb(:, :, :)*sqrt(sx)*sx
-         Basis%d2gb(:, :, :, :) = Basis%d2gb(:, :, :, :)*sqrt(sx)*sx*sx
-
+      IF (TO_lowercase(Basis%Basis_name) /= 'ho' ) RETURN
+   
+      IF (abs(sq) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
+         sq_half  = sqrt(sq)
+         sq_3half = sq * sq_half
+         sq_5half = sq * sq * sq_half
+   
+         ! Transform grid points from x to q
+         Basis%x(:) = q0 + Basis%x(:)/sq
+         ! Adjust integration weights
+         Basis%w(:) = Basis%w(:)/sq
+   
+         ! Apply normalization factor a^{1/4} = sqrt(sq)
+         Basis%d0gb(:, :) = Basis%d0gb(:, :) * sq_half
+   
+         ! Scale derivatives accordingly
+         Basis%d1gb(:, :, :) = Basis%d1gb(:, :, :) * sq_3half
+         Basis%d2gb(:, :, :, :) = Basis%d2gb(:, :, :, :) * sq_5half
       ELSE
          write (out_unit, *) ' ERROR in Scale_Basis'
-         write (out_unit, *) ' sx is too small  or ...'
-         write (out_unit, *) ' the basis is not allocated.'
+         write (out_unit, *) ' sq is too small or the basis is not allocated.'
          STOP 'ERROR in Scale_Basis'
       END IF
-
    END SUBROUTINE Scale_Basis
 
-   SUBROUTINE Hagedorn_construction(Basis)
+   SUBROUTINE Complete_construct_Basis(Basis)
+      USE QDUtil_m
+      TYPE(Basis_t), intent(inout) :: Basis
+      real(kind=Rkind) :: Q0, SQ0, a
+      complex(kind=Rkind) :: alpha
+  
+      !--------------------------------------------------------------
+      ! Retrieve alpha and compute scaling factor SQ0 = sqrt(Re(alpha))
+      !--------------------------------------------------------------
+      alpha = Basis%alpha
+      a     = REAL(alpha, kind=Rkind)
+      SQ0   = SQRT(a)
+  
+      !--------------------------------------------------------------
+      ! Retrieve the translation center Q0
+      !--------------------------------------------------------------
+      Q0 = Basis%Q0
+  
+      !--------------------------------------------------------------
+      ! Apply scaling transformation: x = SQ0 * (q - Q0)
+      !--------------------------------------------------------------
+      call Scale_Basis(Basis, Q0, SQ0)
+      !--------------------------------------------------------------
+      ! Compute the transpose of d0gb (for efficiency in projections)
+      !--------------------------------------------------------------
+      call Calc_tranpose_d0gb(Basis)
+      !--------------------------------------------------------------
+      call Calc_dngg_grid_0(Basis)
+      !--------------------------------------------------------------
+      ! Check orthonormality of the constructed basis up to 2nd derivative
+      !--------------------------------------------------------------
+      call CheckOrtho_Basis(Basis, nderiv=2)
+  
+  END SUBROUTINE 
+ 
+
+    !> Compute the transpose of d0gb and apply the quadrature weights
+    !! This subroutine computes the weighted transpose of the d0gb 
+    !! matrix and stores it in d0bgw.
+    SUBROUTINE Calc_tranpose_d0gb(Basis)
        USE QDUtil_m
-       TYPE(Basis_t), intent(inout)  :: Basis
-        real(kind=Rkind):: Q0,SQ0
-
-        SQ0 = Basis%scaleQ
-        Q0 = Basis%Q0
-
-        call Scale_Basis(Basis,Q0,SQ0)
-        call Calc_Basis_dPtQtAt(Basis)
-        Call Calc_tranpose_d0gb(Basis)
-        Call Calc_dngg_grid(Basis)
-        call CheckOrtho_Basis(Basis, nderiv=2)
-
-   END SUBROUTINE
-
-    SUBROUTINE Complet_scaling_Basis(Basis)
-      USE QDUtil_m
-      TYPE(Basis_t), intent(inout)  :: Basis
-   
-       
-       call Scale_Basis(Basis,Basis%Q0,Basis%SCALEQ)
-       call Complete_Hagedorn_none_variationnal_Basis(Basis)
-       Call Calc_tranpose_d0gb(Basis)
-       Call Calc_dngg_grid_0(Basis)
-       call CheckOrtho_Basis(Basis, nderiv=2)
-  END SUBROUTINE
-
-
-
-   SUBROUTINE Calc_tranpose_d0gb(Basis)
-      USE QDUtil_m
-      TYPE(Basis_t), intent(inout)     :: Basis
-      INTEGER                          :: ib,nb
-
-      nb= Basis%nb
-
-      if (allocated(Basis%d0bgw)) deallocate (Basis%d0bgw)
-      if (Basis%Basis_name == 'el') then
-         return
-      end if
-
-      Basis%d0bgw = transpose(Basis%d0gb)
-      DO ib = 1, nb
-         Basis%d0bgw(ib, :) = Basis%d0bgw(ib, :)*Basis%w(:)
-      END DO
-
-   END SUBROUTINE
+       IMPLICIT NONE
+    
+       TYPE(Basis_t), intent(inout)      :: Basis
+       INTEGER                           :: ib, nb
+    
+       !-------------------------------------------------------------------------
+       ! Get the number of basis functions
+       nb = Basis%nb
+    
+       !-------------------------------------------------------------------------
+       ! If the output array already exists, deallocate it
+       IF (allocated(Basis%d0bgw)) DEALLOCATE(Basis%d0bgw)
+    
+       !-------------------------------------------------------------------------
+       ! Special case: skip computation if Basis is of type 'el'
+       IF (Basis%Basis_name == 'el') RETURN
+    
+       !-------------------------------------------------------------------------
+       ! Compute the transpose and apply weights
+       Basis%d0bgw = TRANSPOSE(Basis%d0gb)
+    
+       DO ib = 1, nb
+          Basis%d0bgw(ib, :) = Basis%d0bgw(ib, :) * Basis%w(:)
+       END DO
+    
+    END SUBROUTINE Calc_tranpose_d0gb
 
 
     SUBROUTINE Calc_Basis_dPtQtAt(Basis)
@@ -875,102 +1086,144 @@ END SUBROUTINE
 
  END SUBROUTINE
 
-
+    !> Computes several grid-based derivative matrices in the gg (grid-grid) representation
+   !! using the precomputed gb (grid-basis) data and the weighted conjugate transpose (d0bgw).
    SUBROUTINE Calc_dngg_grid(Basis)
       USE QDUtil_m
-      TYPE(Basis_t), intent(inout)    :: Basis
-      integer                         :: ib,iq,nb,nq
-      !logical, parameter             :: debug = .true.
-      logical, parameter              :: debug = .false.
-
+      IMPLICIT NONE
+   
+      TYPE(Basis_t), intent(inout) :: Basis
+      INTEGER                      :: ib, iq, nb, nq
+      LOGICAL, PARAMETER           :: debug = .false.  ! Set to true for debugging output
+   
+      !-------------------------------------------------------------------------
+      ! Retrieve number of basis functions and grid points
       nb = Basis%nb
       nq = Basis%nq
-
+   
+      !-------------------------------------------------------------------------
+      ! Debug output (if enabled)
       IF (debug) THEN
-         write (out_unit, *) 'BEGINNING Calc_dngg_grid'
+         WRITE(out_unit, *) 'BEGINNING Calc_dngg_grid'
          CALL Write_Basis(Basis)
-         flush (out_unit)
+         FLUSH(out_unit)
       END IF
-
-      if (allocated(Basis%d1gg)) deallocate (Basis%d1gg)
-      if (allocated(Basis%d2gg)) deallocate (Basis%d2gg)
-      if (allocated(Basis%dagg)) deallocate (Basis%dagg)
-      if (allocated(Basis%dq0gg)) deallocate (Basis%dq0gg)
-      if (allocated(Basis%dp0gg)) deallocate (Basis%dp0gg)
-
-      allocate (Basis%d1gg(nq, nq, 1))
-      allocate (Basis%d2gg(nq,nq, 1, 1))
-      allocate (Basis%dagg(nq, nq))
-      allocate (Basis%dq0gg(nq, nq))
-      allocate (Basis%dp0gg(nq, nq))
-
+   
+      !-------------------------------------------------------------------------
+      ! Deallocate previous gg matrices if already allocated
+      IF (allocated(Basis%d1gg)) DEALLOCATE(Basis%d1gg)
+      IF (allocated(Basis%d2gg)) DEALLOCATE(Basis%d2gg)
+      IF (allocated(Basis%dagg)) DEALLOCATE(Basis%dagg)
+      IF (allocated(Basis%dq0gg)) DEALLOCATE(Basis%dq0gg)
+      IF (allocated(Basis%dp0gg)) DEALLOCATE(Basis%dp0gg)
+   
+      !-------------------------------------------------------------------------
+      ! Allocate matrices for gg representations
+      ALLOCATE(Basis%d1gg(nq, nq, 1))
+      ALLOCATE(Basis%d2gg(nq, nq, 1, 1))
+      ALLOCATE(Basis%dagg(nq, nq))
+      ALLOCATE(Basis%dq0gg(nq, nq))
+      ALLOCATE(Basis%dp0gg(nq, nq))
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug output: show d0bgw matrix
       IF (debug) THEN
-         CALL   Write_VecMat(Basis%d0bgw(:, :), out_unit, 5,  info='d0bgw')
-         write (out_unit, *)
+         CALL Write_VecMat(Basis%d0bgw, out_unit, 5, info='d0bgw')
+         WRITE(out_unit, *)
       END IF
-
-      if (Basis%Basis_name == 'el') THEN
-         RETURN
-      end if
-
-      Basis%d1gg(:, :, 1) = matmul(Basis%d1gb(:, :, 1), conjg(Basis%d0bgw))
-      Basis%d2gg(:, :, 1, 1) = matmul(Basis%d2gb(:, :, 1, 1), conjg(Basis%d0bgw))
-
-      Basis%dagg(:, :) = matmul(Basis%dagb, conjg(Basis%d0bgw))
-      Basis%dq0gg(:, :) = matmul(Basis%dq0gb,conjg(Basis%d0bgw))
-      Basis%dp0gg(:, :) = matmul(Basis%dp0gb,conjg(Basis%d0bgw))
-
+   
+      !-------------------------------------------------------------------------
+      ! Skip computation for 'el' basis type
+      IF (Basis%Basis_name == 'el') RETURN
+   
+      !-------------------------------------------------------------------------
+      ! Compute grid-grid matrices via matrix multiplications
+      Basis%d1gg(:, :, 1)     = MATMUL(Basis%d1gb(:, :, 1), CONJG(Basis%d0bgw))
+      Basis%d2gg(:, :, 1, 1)  = MATMUL(Basis%d2gb(:, :, 1, 1), CONJG(Basis%d0bgw))
+      Basis%dagg              = MATMUL(Basis%dagb, CONJG(Basis%d0bgw))
+      Basis%dq0gg             = MATMUL(Basis%dq0gb, CONJG(Basis%d0bgw))
+      Basis%dp0gg             = MATMUL(Basis%dp0gb, CONJG(Basis%d0bgw))
+   
+      !-------------------------------------------------------------------------
+      ! Debug output: print calculated matrices
       IF (debug) THEN
-         call   Write_VecMat(Basis%d1gg(:, :, 1), out_unit, 5,  info='d1gg')
-         write (out_unit, *)
-         call    Write_VecMat(Basis%d2gg(:, :, 1, 1), out_unit, 5,  info='d2gg')
-         write (out_unit, *)
-         call    Write_VecMat(Basis%dp0gg(:, :), out_unit, 5,  info='dp0gg')
-         write (out_unit, *)
-         call    Write_VecMat(Basis%dq0gg(:, :), out_unit, 5,  info='dq0gg')
-         write (out_unit, *)
-         call   Write_VecMat(Basis%dagg(:, :), out_unit, 5,  info='dagg')
-         write (out_unit, *) 'END Calc_dngg_grid'
-         flush (out_unit)
+         CALL Write_VecMat(Basis%d1gg(:, :, 1), out_unit, 5, info='d1gg')
+         WRITE(out_unit, *)
+         CALL Write_VecMat(Basis%d2gg(:, :, 1, 1), out_unit, 5, info='d2gg')
+         WRITE(out_unit, *)
+         CALL Write_VecMat(Basis%dp0gg, out_unit, 5, info='dp0gg')
+         WRITE(out_unit, *)
+         CALL Write_VecMat(Basis%dq0gg, out_unit, 5, info='dq0gg')
+         WRITE(out_unit, *)
+         CALL Write_VecMat(Basis%dagg, out_unit, 5, info='dagg')
+         WRITE(out_unit, *) 'END Calc_dngg_grid'
+         FLUSH(out_unit)
       END IF
-
-   END SUBROUTINE 
-
+   
+   END SUBROUTINE Calc_dngg_grid
+   
+   
+   !> Computes only the first and second derivative operators (d1gg and d2gg)
+   !! in the grid-grid representation, using the basis-grid derivative data.
    SUBROUTINE Calc_dngg_grid_0(Basis)
-   USE QDUtil_m
-   TYPE(Basis_t), intent(inout)    :: Basis
-   integer                         :: ib,iq,nb,nq
-   !logical, parameter             :: debug = .true.
-   logical, parameter              :: debug = .false.
-   nb = Basis%nb
-   nq = Basis%nq
-   IF (debug) THEN
-      write (out_unit, *) 'BEGINNING Calc_dngg_grid'
-      CALL Write_Basis(Basis)
-      flush (out_unit)
-   END IF
-   if (allocated(Basis%d1gg)) deallocate (Basis%d1gg)
-   if (allocated(Basis%d2gg)) deallocate (Basis%d2gg)
-   allocate (Basis%d1gg(nq, nq, 1))
-   allocate (Basis%d2gg(nq,nq, 1, 1))
-   IF (debug) THEN
-      CALL   Write_VecMat(Basis%d0bgw(:, :), out_unit, 5,  info='d0bgw')
-      write (out_unit, *)
-   END IF
-   if (Basis%Basis_name == 'el') THEN
-      RETURN
-   end if
-   Basis%d1gg(:, :, 1) = matmul(Basis%d1gb(:, :, 1), conjg(Basis%d0bgw))
-   Basis%d2gg(:, :, 1, 1) = matmul(Basis%d2gb(:, :, 1, 1), conjg(Basis%d0bgw))
-   IF (debug) THEN
-      call   Write_VecMat(Basis%d1gg(:, :, 1), out_unit, 5,  info='d1gg')
-      write (out_unit, *)
-      call    Write_VecMat(Basis%d2gg(:, :, 1, 1), out_unit, 5,  info='d2gg')
-      write (out_unit, *)
-      write (out_unit, *) 'END Calc_dngg_grid'
-      flush (out_unit)
-   END IF
-END SUBROUTINE 
+      USE QDUtil_m
+      IMPLICIT NONE
+   
+      TYPE(Basis_t), intent(inout) :: Basis
+      INTEGER                      :: ib, iq, nb, nq
+      LOGICAL, PARAMETER           :: debug = .false.  ! Set to true for debug printing
+   
+      !-------------------------------------------------------------------------
+      ! Retrieve the number of basis functions and grid points
+      nb = Basis%nb
+      nq = Basis%nq
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug print of basis setup
+      IF (debug) THEN
+         WRITE(out_unit, *) 'BEGINNING Calc_dngg_grid_0'
+         CALL Write_Basis(Basis)
+         FLUSH(out_unit)
+      END IF
+   
+      !-------------------------------------------------------------------------
+      ! Deallocate previous versions of d1gg and d2gg if already allocated
+      IF (ALLOCATED(Basis%d1gg)) DEALLOCATE(Basis%d1gg)
+      IF (ALLOCATED(Basis%d2gg)) DEALLOCATE(Basis%d2gg)
+   
+      !-------------------------------------------------------------------------
+      ! Allocate arrays for the derivative operators in the grid representation
+      ALLOCATE(Basis%d1gg(nq, nq, 1))
+      ALLOCATE(Basis%d2gg(nq, nq, 1, 1))
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug print of basis-weighted transpose
+      IF (debug) THEN
+         CALL Write_VecMat(Basis%d0bgw, out_unit, 5, info='d0bgw')
+         WRITE(out_unit, *)
+      END IF
+   
+      !-------------------------------------------------------------------------
+      ! Skip computation if basis is of type 'el'
+      IF (Basis%Basis_name == 'el') RETURN
+   
+      !-------------------------------------------------------------------------
+      ! Compute derivative matrices in grid-grid representation
+      Basis%d1gg(:, :, 1) = MATMUL(Basis%d1gb(:, :, 1), CONJG(Basis%d0bgw))
+      Basis%d2gg(:, :, 1, 1) = MATMUL(Basis%d2gb(:, :, 1, 1), CONJG(Basis%d0bgw))
+   
+      !-------------------------------------------------------------------------
+      ! Debug output of resulting matrices
+      IF (debug) THEN
+         CALL Write_VecMat(Basis%d1gg(:, :, 1), out_unit, 5, info='d1gg')
+         WRITE(out_unit, *)
+         CALL Write_VecMat(Basis%d2gg(:, :, 1, 1), out_unit, 5, info='d2gg')
+         WRITE(out_unit, *)
+         WRITE(out_unit, *) 'END Calc_dngg_grid_0'
+         FLUSH(out_unit)
+      END IF
+   
+   END SUBROUTINE Calc_dngg_grid_0
 
    SUBROUTINE test_basitogridgridtobasis(Basis)
       USE QDUtil_m
@@ -1034,320 +1287,382 @@ END SUBROUTINE
 
    END SUBROUTINE test_basitogridgridtobasis
 
-     SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis)
+   !> Transform a function from grid representation (GG) to basis representation (BB)
+   !! in one dimension, using complex arithmetic.
+   !! The transformation is: BB = <basis|grid> * GG
+   SUBROUTINE GridTOBasis_1D_cplx(BB, GG, Basis)
       USE QDUtil_m
-      TYPE(Basis_t), intent(in), target              :: Basis
-      complex(kind=Rkind), intent(inout)             :: BB(:, :, :)
-      complex(kind=Rkind), intent(in)                :: GG(:, :, :)
-      logical, parameter                             :: debug = .true.
-      Integer                                        :: i1, i3
-
-
+      IMPLICIT NONE
+   
+      TYPE(Basis_t), intent(in), target        :: Basis
+      COMPLEX(kind=Rkind), intent(inout)       :: BB(:, :, :)  ! Output: Basis representation
+      COMPLEX(kind=Rkind), intent(in)          :: GG(:, :, :)  ! Input: Grid representation
+      LOGICAL, PARAMETER                       :: debug = .true.
+      INTEGER                                  :: i1, i3
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug flushing
       IF (debug) THEN
-         flush (out_unit)
+         FLUSH(out_unit)
       END IF
-
+   
+      !-------------------------------------------------------------------------
+      ! Initialize the BB array to zero
       BB = CZERO
-      DO i3 = 1, ubound(GG, dim=3)
-      DO i1 = 1, ubound(GG, dim=1)
-
-         BB(i1, :, i3) = matmul(conjg(Basis%d0bgw),GG(i1, :, i3))
-
+   
+      !-------------------------------------------------------------------------
+      ! Loop over all dimensions (assumed to be 1D data with extra indices)
+      DO i3 = 1, UBOUND(GG, dim=3)
+         DO i1 = 1, UBOUND(GG, dim=1)
+            ! Matrix multiplication: BB(i1,:,i3) = <basis|grid> * GG(i1,:,i3)
+            BB(i1, :, i3) = MATMUL(CONJG(Basis%d0bgw), GG(i1, :, i3))
+         END DO
       END DO
-      END DO
-
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug flushing
       IF (debug) THEN
-         flush (out_unit)
+         FLUSH(out_unit)
       END IF
-   END SUBROUTINE
+   
+   END SUBROUTINE GridTOBasis_1D_cplx
 
+   !> Transform a function from basis representation (BB) to grid representation (GB)
+   !! in one dimension, using complex arithmetic.
+   !! The transformation is: GB = <x|basis> * BB
    SUBROUTINE BasisTOGrid_1D_cplx(GB, BB, Basis)
       USE QDUtil_m
-      TYPE(Basis_t), intent(in), target           :: Basis
-      complex(kind=Rkind), intent(inout)          :: GB(:, :, :)
-      complex(kind=Rkind), intent(in)             :: BB(:, :, :)
-      logical, parameter                          :: debug = .true.
-      integer                                     :: i1, i3, iq, ib
-
+      IMPLICIT NONE
+   
+      TYPE(Basis_t), intent(in), target         :: Basis
+      COMPLEX(kind=Rkind), intent(inout)        :: GB(:, :, :)  ! Output: Grid representation
+      COMPLEX(kind=Rkind), intent(in)           :: BB(:, :, :)  ! Input: Basis representation
+      LOGICAL, PARAMETER                        :: debug = .true.
+      INTEGER                                   :: i1, i3
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug flushing before processing
       IF (debug) THEN
-         flush (out_unit)
+         FLUSH(out_unit)
       END IF
-
+   
+      !-------------------------------------------------------------------------
+      ! Initialize the GB array to zero
       GB = CZERO
-      DO i3 = 1, ubound(BB, dim=3)
-      DO i1 = 1, ubound(BB, dim=1)
-
-         GB(i1, :, i3) = matmul(Basis%d0gb(:,:),BB(i1, :, i3))
-
+   
+      !-------------------------------------------------------------------------
+      ! Loop over all dimensions (i1 and i3 are loop indices for external dimensions)
+      DO i3 = 1, UBOUND(BB, dim=3)
+         DO i1 = 1, UBOUND(BB, dim=1)
+            ! Matrix multiplication:
+            ! GB(i1,:,i3) = <x|basis> * BB(i1,:,i3)
+            ! d0gb contains basis functions evaluated on the grid: φ_b(x_q)
+            GB(i1, :, i3) = MATMUL(Basis%d0gb(:, :), BB(i1, :, i3))
+         END DO
       END DO
-      END DO
-
+   
+      !-------------------------------------------------------------------------
+      ! Optional debug flushing after processing
       IF (debug) THEN
-         flush (out_unit)
+         FLUSH(out_unit)
       END IF
-   END SUBROUTINE
+   
+   END SUBROUTINE BasisTOGrid_1D_cplx
 
+
+
+   !> Calculates indexing parameters (Ib1, Ib2, Ib3, Iq1, Iq2, Iq3) 
+   !! used for reshaping and accessing multidimensional basis/grid data.
+   !! This subroutine is typically used in multidimensional simulations (e.g., 3D quantum grids).
    SUBROUTINE Calc_index(Ib1, Ib2, Ib3, Iq1, Iq2, Iq3, Basis)
-      TYPE(Basis_t), intent(in), target              :: Basis
-      integer, intent(inout), allocatable, optional  :: Iq1(:), Iq2(:), Iq3(:)
-      integer, intent(inout), allocatable, optional  :: Ib1(:), Ib2(:), Ib3(:)
-      integer                                        :: Ndim
-      integer                                        :: inb
+   TYPE(Basis_t), intent(in), target              :: Basis
+   INTEGER, intent(inout), allocatable, optional  :: Iq1(:), Iq2(:), Iq3(:)
+   INTEGER, intent(inout), allocatable, optional  :: Ib1(:), Ib2(:), Ib3(:)
+   INTEGER                                        :: Ndim      ! Number of spatial dimensions
+   INTEGER                                        :: inb       ! Loop index
 
-      ndim = size(Basis%tab_basis) - 1
+   ! Determine the number of spatial dimensions (tab_basis has Ndim+1 entries)
+   Ndim = SIZE(Basis%tab_basis) - 1
 
-      if (present(Ib3)) allocate (Ib3(Ndim))
-      if (present(Ib2)) allocate (Ib2(Ndim))
-      if (present(Ib1)) allocate (Ib1(Ndim))
+   ! Allocate index arrays if they are present in the arguments
+   IF (PRESENT(Ib3)) ALLOCATE(Ib3(Ndim))
+   IF (PRESENT(Ib2)) ALLOCATE(Ib2(Ndim))
+   IF (PRESENT(Ib1)) ALLOCATE(Ib1(Ndim))
+   IF (PRESENT(Iq3)) ALLOCATE(Iq3(Ndim))
+   IF (PRESENT(Iq2)) ALLOCATE(Iq2(Ndim))
+   IF (PRESENT(Iq1)) ALLOCATE(Iq1(Ndim))
 
-      if (present(Iq3)) allocate (Iq3(Ndim))
-      if (present(Iq2)) allocate (Iq2(Ndim))
-      if (present(Iq1)) allocate (Iq1(Ndim))
+   ! Loop over each dimension to calculate indexing terms
+   DO inb = 1, Ndim
+      IF (inb == 1) THEN
+         ! First dimension
+         IF (PRESENT(Iq1)) Iq1(1) = 1
+         IF (PRESENT(Ib1)) Ib1(1) = 1
+         IF (PRESENT(Iq2)) Iq2(1) = Basis%tab_basis(1)%nq
+         IF (PRESENT(Ib2)) Ib2(1) = Basis%tab_basis(1)%nb
+         IF (PRESENT(Iq3)) Iq3(1) = PRODUCT(Basis%tab_basis(2:Ndim)%nq) * Basis%tab_basis(Ndim + 1)%nb
+         IF (PRESENT(Ib3)) Ib3(1) = PRODUCT(Basis%tab_basis(2:Ndim + 1)%nb)
 
+      ELSE IF (inb == Ndim) THEN
+         ! Last dimension
+         IF (PRESENT(Iq1)) Iq1(inb) = PRODUCT(Basis%tab_basis(1:Ndim - 1)%nq)
+         IF (PRESENT(Ib1)) Ib1(inb) = PRODUCT(Basis%tab_basis(1:Ndim - 1)%nb)
+         IF (PRESENT(Iq2)) Iq2(inb) = Basis%tab_basis(Ndim)%nq
+         IF (PRESENT(Ib2)) Ib2(inb) = Basis%tab_basis(Ndim)%nb
+         IF (PRESENT(Iq3)) Iq3(inb) = Basis%tab_basis(Ndim + 1)%nb
+         IF (PRESENT(Ib3)) Ib3(inb) = Basis%tab_basis(Ndim + 1)%nb
 
-      DO inb = 1, ndim
+      ELSE
+         ! Intermediate dimensions
+         IF (PRESENT(Iq1)) Iq1(inb) = PRODUCT(Basis%tab_basis(1:inb - 1)%nq)
+         IF (PRESENT(Ib1)) Ib1(inb) = PRODUCT(Basis%tab_basis(1:inb - 1)%nb)
+         IF (PRESENT(Iq2)) Iq2(inb) = Basis%tab_basis(inb)%nq
+         IF (PRESENT(Ib2)) Ib2(inb) = Basis%tab_basis(inb)%nb
+         IF (PRESENT(Iq3)) Iq3(inb) = PRODUCT(Basis%tab_basis(inb + 1:Ndim)%nq) * Basis%tab_basis(Ndim + 1)%nb
+         IF (PRESENT(Ib3)) Ib3(inb) = PRODUCT(Basis%tab_basis(inb + 1:Ndim + 1)%nb)
+      END IF
+   END DO
 
-         IF (inb == 1) THEN
-
-            if (present(Iq1)) Iq1(1) = 1
-            if (present(Ib1)) Ib1(1) = 1
-
-            if (present(Iq2)) Iq2(1) = Basis%tab_basis(1)%nq
-            if (present(Ib2)) Ib2(1) = Basis%tab_basis(1)%nb
-
-            if (present(Iq3)) Iq3(1) = Product(Basis%tab_basis(2:Ndim)%nq)*Basis%tab_basis(Ndim + 1)%nb
-            if (present(Ib3)) Ib3(1) = Product(Basis%tab_basis(2:Ndim + 1)%nb)
-
-         ELSE IF (inb == Ndim) THEN
-
-            if (present(Iq1)) Iq1(inb) = Product(Basis%tab_basis(1:Ndim - 1)%nq)
-            if (present(Ib1)) Ib1(inb) = Product(Basis%tab_basis(1:Ndim - 1)%nb)
-
-            if (present(Ib2)) Ib2(inb) = Basis%tab_basis(Ndim)%nb
-            if (present(Iq2)) Iq2(inb) = Basis%tab_basis(Ndim)%nq
-
-            if (present(Ib3)) Ib3(inb) = Basis%tab_basis(Ndim + 1)%nb
-            if (present(Iq3)) Iq3(inb) = Basis%tab_basis(Ndim + 1)%nb
-         ELSE
-
-            if (present(Iq1)) Iq1(inb) = Product(Basis%tab_basis(1:inb - 1)%nq)
-            if (present(Ib1)) Ib1(inb) = Product(Basis%tab_basis(1:inb - 1)%nb)
-
-            if (present(Iq2)) Iq2(inb) = Basis%tab_basis(inb)%nq
-            if (present(Ib2)) Ib2(inb) = Basis%tab_basis(inb)%nb
-
-            if (present(Ib3)) Ib3(inb) = Product(Basis%tab_basis(inb + 1:Ndim + 1)%nb)
-            if (present(Iq3)) Iq3(inb) = Product(Basis%tab_basis(inb + 1:Ndim)%nq)*Basis%tab_basis(Ndim + 1)%nb
-
-         END IF
-      END DO
-
-
-   END SUBROUTINE
+END SUBROUTINE Calc_index
 
 SUBROUTINE BasisTOGrid_nD_cplx(G, B, Basis)
-    USE QDUtil_m
-    USE NDindex_m
-    !Logical,           parameter                 :: debug = .true.
-    Logical, parameter                            :: debug = .false.
-    TYPE(Basis_t), intent(in)                     :: Basis
-    complex(kind=Rkind), intent(in), target       :: B(:) 
-    complex(kind=Rkind), intent(inout), target    :: G(:) 
-    complex(kind=Rkind), pointer                  :: BBG(:, :, :)
-    complex(kind=Rkind), pointer                  :: BBB(:, :, :), GGB(:, :, :)
-    integer, allocatable                          :: Ib3, Iq1, Iq2, Ib1, Ib2, Iq3
-    complex(kind=Rkind), pointer                  :: GBB(:, :, :)
-    complex(kind=Rkind), allocatable, target      :: GBB1(:), GGB2(:)
-    Integer                                       :: Ib, Iq, nq, nb, inb, ndim
-    Integer                                       :: jb, jb1, jb2
+   USE QDUtil_m
+   USE NDindex_m
 
-    IF (debug) THEN
-       write (out_unit, *) 'BEGINNING BasisTOGrid_nD_cplx'
-       write (out_unit, *) 'intent(in) :: B(:)', B
-       Call Write_Basis(Basis)
-       flush (out_unit)
-    END IF
+   ! Toggle debugging output
+   LOGICAL, PARAMETER :: debug = .false.
 
-    IF (.NOT. Basis_IS_Allocated(Basis)) THEN
-       write (out_unit, *) ' ERROR in BasisTOGrid_Basis'
-       write (out_unit, *) " the basis is not Allocated."
-       STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
-    END IF
-    IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-       write (out_unit, *) ' ERROR in BasisTOGrid_Basis'
-       write (out_unit, *) ' the size of B is different from nb.'
-       write (out_unit, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
+   ! Input/Output arguments
+   TYPE(Basis_t), INTENT(IN)                  :: Basis          ! Basis definition and metadata
+   COMPLEX(KIND=Rkind), INTENT(IN), TARGET    :: B(:)           ! Input in Basis representation
+   COMPLEX(KIND=Rkind), INTENT(INOUT), TARGET :: G(:)           ! Output in Grid representation
+
+   ! Pointers for reshaped views of arrays
+   COMPLEX(KIND=Rkind), POINTER :: BBG(:, :, :), BBB(:, :, :), GGB(:, :, :)
+   COMPLEX(KIND=Rkind), POINTER :: GBB(:, :, :)
+
+   ! Indexing variables (flattening multidimensional data)
+   INTEGER, ALLOCATABLE :: Ib3, Iq1, Iq2, Ib1, Ib2, Iq3
+
+   ! Temporary working arrays
+   COMPLEX(KIND=Rkind), ALLOCATABLE, TARGET :: GBB1(:), GGB2(:)
+
+   ! Integer variables
+   INTEGER :: Ib, Iq, nq, nb, inb, ndim
+   INTEGER :: jb, jb1, jb2
+
+   ! Debugging: print inputs and basis
+   IF (debug) THEN
+       WRITE(out_unit, *) 'BEGINNING BasisTOGrid_nD_cplx'
+       WRITE(out_unit, *) 'intent(in) :: B(:)', B
+       CALL Write_Basis(Basis)
+       FLUSH(out_unit)
+   END IF
+
+   ! Check that basis is allocated
+   IF (.NOT. Basis_IS_Allocated(Basis)) THEN
+       WRITE(out_unit, *) ' ERROR: the basis is not allocated.'
+       STOP 'ERROR BasisTOGrid_Basis: the basis is not allocated.'
+   END IF
+
+   ! Check that the sizes of B and G are compatible with the basis structure
+   IF (SIZE(B) /= Basis%nb * Basis%tab_basis(SIZE(Basis%tab_basis))%nb) THEN
+       WRITE(out_unit, *) ' ERROR: the size of B does not match expected nb.'
        STOP 'ERROR in BasisTOGrid_Basis: wrong B size.'
-    END IF
-    IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-       write (out_unit, *) ' ERROR in GridTOBasis_Basis'
-       write (out_unit, *) ' the size of G is different from nq.'
-       write (out_unit, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
-       STOP 'ERROR in BasisTOGrid_Basis: wrong G size..'
-    END IF
+   END IF
+   IF (SIZE(G) /= Basis%nq * Basis%tab_basis(SIZE(Basis%tab_basis))%nb) THEN
+       WRITE(out_unit, *) ' ERROR: the size of G does not match expected nq.'
+       STOP 'ERROR in BasisTOGrid_Basis: wrong G size.'
+   END IF
 
-    ndim = size(Basis%tab_basis) - 1
-    IF (ndim == 1) THEN
-      Iq1 = 1
-      Iq2 = Basis%tab_basis(1)%nq
-      Iq3 = Basis%tab_basis(ndim + 1)%nb
-      
-      Ib1 = 1
-      Ib2 = Basis%tab_basis(1)%nb
-      Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
-      
-       BBB(1:Ib1, 1:Ib2, 1:Ib3) => B
-       GGB(1:Iq1, 1:Iq2, 1:Iq3) => G
-       G = CZERO
-       Call BasisTOGrid_1D_cplx(GGB, BBB, Basis%tab_basis(1))
-       
-    ELSE
-       
+   ! Determine number of dimensions (excluding electronic dimension)
+   ndim = SIZE(Basis%tab_basis) - 1
+
+   ! --- Special Case: 1D Transform ---
+   IF (ndim == 1) THEN
+       ! Set index factors for single-dimension case
        Iq1 = 1
        Iq2 = Basis%tab_basis(1)%nq
-       Iq3 = Basis%tab_basis(ndim+1)%nb
+       Iq3 = Basis%tab_basis(ndim + 1)%nb
 
        Ib1 = 1
        Ib2 = Basis%tab_basis(1)%nb
-       Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
+       Ib3 = PRODUCT(Basis%tab_basis(2:ndim + 1)%nb)
 
-       Allocate (GBB1(Iq1*Iq2*Ib3))
+       ! Reshape input B and output G into 3D slices
+       BBB(1:Ib1, 1:Ib2, 1:Ib3) => B
+       GGB(1:Iq1, 1:Iq2, 1:Iq3) => G
+
+       ! Initialize output
+       G = CZERO
+
+       ! Perform transformation for 1D case
+       CALL BasisTOGrid_1D_cplx(GGB, BBB, Basis%tab_basis(1))
+
+   ELSE
+   ! --- General Case: Multi-Dimensional Transform ---
+       ! Initialize first transformation (dimension 1)
+       Iq1 = 1
+       Iq2 = Basis%tab_basis(1)%nq
+       Iq3 = Basis%tab_basis(ndim + 1)%nb
+
+       Ib1 = 1
+       Ib2 = Basis%tab_basis(1)%nb
+       Ib3 = PRODUCT(Basis%tab_basis(2:ndim + 1)%nb)
+
+       ALLOCATE(GBB1(Iq1 * Iq2 * Ib3))
        BBB(1:Iq1, 1:Ib2, 1:Ib3) => B
        GBB(1:Iq1, 1:Iq2, 1:Ib3) => GBB1
        GBB1 = CZERO
-       Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(1))
 
-    DO inb = 2, ndim - 1
+       ! First 1D transformation
+       CALL BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(1))
 
-       Iq1 = Product(Basis%tab_basis(1:inb - 1)%nq)
-       Ib1 = Product(Basis%tab_basis(1:inb - 1)%nb)
-       Iq2 = Basis%tab_basis(inb)%nq
-       Ib2 = Basis%tab_basis(inb)%nb
-       Ib3 = Product(Basis%tab_basis(inb + 1:ndim + 1)%nb)
-       Iq3 = Product(Basis%tab_basis(inb + 1:ndim)%nq)*Basis%tab_basis(ndim + 1)%nb  
+       ! Loop over intermediate dimensions (2 to ndim-1)
+       DO inb = 2, ndim - 1
+           Iq1 = PRODUCT(Basis%tab_basis(1:inb - 1)%nq)
+           Ib1 = PRODUCT(Basis%tab_basis(1:inb - 1)%nb)
+           Iq2 = Basis%tab_basis(inb)%nq
+           Ib2 = Basis%tab_basis(inb)%nb
+           Ib3 = PRODUCT(Basis%tab_basis(inb + 1:ndim + 1)%nb)
+           Iq3 = PRODUCT(Basis%tab_basis(inb + 1:ndim)%nq) * Basis%tab_basis(ndim + 1)%nb
 
-       Allocate (GGB2(Iq1*Iq2*Ib3))
+           ! Allocate temporary output
+           ALLOCATE(GGB2(Iq1 * Iq2 * Ib3))
 
-       BBB(1:Iq1, 1:Ib2, 1:Ib3) => GBB1
-       GBB(1:Iq1, 1:Iq2, 1:Ib3) => GGB2
-       Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(inb))
-       GBB1 = GGB2
-       Deallocate (GGB2)
+           ! Set reshaped views for input/output
+           BBB(1:Iq1, 1:Ib2, 1:Ib3) => GBB1
+           GBB(1:Iq1, 1:Iq2, 1:Ib3) => GGB2
 
-    END DO
-     
-       Iq1 = Product(Basis%tab_basis(1:ndim - 1)%nq)
-       Ib1 = Product(Basis%tab_basis(1:ndim - 1)%nb)
+           ! Perform 1D transformation for dimension `inb`
+           CALL BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(inb))
+
+           ! Move result to input buffer for next iteration
+           GBB1 = GGB2
+           DEALLOCATE(GGB2)
+       END DO
+
+       ! Final transformation for last dimension
+       Iq1 = PRODUCT(Basis%tab_basis(1:ndim - 1)%nq)
+       Ib1 = PRODUCT(Basis%tab_basis(1:ndim - 1)%nb)
        Ib2 = Basis%tab_basis(ndim)%nb
        Iq2 = Basis%tab_basis(ndim)%nq
        Ib3 = Basis%tab_basis(ndim + 1)%nb
        Iq3 = Basis%tab_basis(ndim + 1)%nb
+
        BBB(1:Iq1, 1:Ib2, 1:Ib3) => GBB1
        GBB(1:Iq1, 1:Iq2, 1:Ib3) => G
-       Call BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(ndim))
-    END IF
 
-    IF (debug) THEN
-       write (out_unit, *) 'intent(INOUT) :: G(:)', G
-       write (out_unit, *) 'END BasisTOGrid_nD_cplx'
-       flush (out_unit)
-    END IF
+       CALL BasisTOGrid_1D_cplx(GBB, BBB, Basis%tab_basis(ndim))
+   END IF
 
- END SUBROUTINE
+   ! Debugging: output result
+   IF (debug) THEN
+       WRITE(out_unit, *) 'intent(INOUT) :: G(:)', G
+       WRITE(out_unit, *) 'END BasisTOGrid_nD_cplx'
+       FLUSH(out_unit)
+   END IF
 
+END SUBROUTINE
 
-
- SUBROUTINE GridTOBasis_nD_cplx(B, G, Basis)
+SUBROUTINE GridTOBasis_nD_cplx(B, G, Basis)
    USE QDUtil_m
-   !Logical,          parameter                     :: debug = .true.
    Logical, parameter                               :: debug = .false.
    TYPE(Basis_t), intent(in), target                :: Basis
-   complex(kind=Rkind), intent(in), target          :: G(:)
-   complex(kind=Rkind), intent(inout), target       :: B(:)
+   complex(kind=Rkind), intent(in), target          :: G(:)         ! Input: Grid representation
+   complex(kind=Rkind), intent(inout), target       :: B(:)         ! Output: Basis representation
    complex(kind=Rkind), pointer                     :: BBB(:, :, :), GGB(:, :, :)
    complex(kind=Rkind), allocatable, target         :: BGG1(:), BGG2(:)
    complex(kind=Rkind), pointer                     :: GGG(:, :, :)
    Integer                                          :: ib, i1, i3, inb, Ndim, iq
    Integer                                          :: Ib1, Ib2, Iq3, Iq1, Iq2, Ib3
+
+   ! Optional debug output
    IF (debug) THEN
       write (out_unit, *) 'BEGINNING GridTOBasis_nD_cplx'
       write (out_unit, *) 'intent(in) :: G(:)', G
-      !Call Write_Basis(Basis)
       flush (out_unit)
    END IF
+
+   ! Check that basis is properly allocated
    IF (.NOT. Basis_IS_Allocated(Basis)) THEN
       write (out_unit, *) ' ERROR in BasisTOGrid_nD_cplx'
-      write (out_unit, *) " the basis is not Allocated."
       STOP "ERROR BasisTOGrid_Basis: the basis is not Allocated."
    END IF
-   IF (size(B) /= Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-      write (out_unit, *) ' ERROR in BasisTOGrid_nD_cplx'
-      write (out_unit, *) ' the size of G is different from nb.'
-      write (out_unit, *) ' size(B), Basis%nb', size(B), Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb
+
+   ! Check input and output array sizes
+   IF (size(B) /= Basis%nb * Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
+      write (out_unit, *) ' ERROR: Wrong size for B'
       STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
    END IF
-   IF (size(G) /= Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
-      write (out_unit, *) ' ERROR in GridTOBasis_Basis'
-      write (out_unit, *) ' the size of G is different from nq.'
-      write (out_unit, *) ' size(G), Basis%nq', size(G), Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb
+
+   IF (size(G) /= Basis%nq * Basis%tab_basis(size(Basis%tab_basis))%nb) THEN
+      write (out_unit, *) ' ERROR: Wrong size for G'
       STOP 'ERROR in GridTOBasis_Basis: wrong G size'
    END IF
-   ndim = size(Basis%tab_basis) - 1
 
+   ndim = size(Basis%tab_basis) - 1   ! Number of spatial dimensions
 
-   If (ndim == 1) then
+   ! Special case: 1D
+   IF (ndim == 1) THEN
       Iq1 = 1
       Iq2 = Basis%tab_basis(1)%nq
-      Iq3 = Basis%tab_basis(ndim+1)%nb
+      Iq3 = Basis%tab_basis(ndim + 1)%nb
+
       Ib1 = 1
       Ib2 = Basis%tab_basis(1)%nb
       Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
+
       B = CZERO
       GGB(1:Iq1, 1:Iq2, 1:Iq3) => G
       BBB(1:Ib1, 1:Ib2, 1:Ib3) => B
       Call GridTOBasis_1D_cplx(BBB, GGB, Basis%tab_basis(1))
-      
-   else
-     Iq1 = 1
-     Iq2 = Basis%tab_basis(1)%nq
-     Iq3 = Product(Basis%tab_basis(2:ndim)%nq)*Basis%tab_basis(ndim+1)%nb
-     Ib1 = 1
-     Ib2 = Basis%tab_basis(1)%nb
-     Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
+
+   ELSE
+      ! Initialization for first dimension
+      Iq1 = 1
+      Iq2 = Basis%tab_basis(1)%nq
+      Iq3 = Product(Basis%tab_basis(2:ndim)%nq) * Basis%tab_basis(ndim + 1)%nb
+
+      Ib1 = 1
+      Ib2 = Basis%tab_basis(1)%nb
+      Ib3 = Product(Basis%tab_basis(2:ndim+1)%nb)
 
       allocate (BGG1(Ib1*Ib2*Iq3))
       BGG1 = CZERO
       GGG(1:Ib1, 1:Iq2, 1:Iq3) => G
       GGB(1:Ib1, 1:Ib2, 1:Iq3) => BGG1
+
       Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(1))
 
+      ! Iterative transform for inner dimensions
       DO inb = 2, ndim - 1
-
-          Iq1 = Product(Basis%tab_basis(1:inb - 1)%nq)
-          Ib1 = Product(Basis%tab_basis(1:inb - 1)%nb)
-          Iq2 = Basis%tab_basis(inb)%nq
-          Ib2 = Basis%tab_basis(inb)%nb
-          Ib3 = Product(Basis%tab_basis(inb + 1:ndim + 1)%nb)
-          Iq3 = Product(Basis%tab_basis(inb + 1:ndim)%nq)*Basis%tab_basis(ndim + 1)%nb 
+         Iq1 = Product(Basis%tab_basis(1:inb - 1)%nq)
+         Ib1 = Product(Basis%tab_basis(1:inb - 1)%nb)
+         Iq2 = Basis%tab_basis(inb)%nq
+         Ib2 = Basis%tab_basis(inb)%nb
+         Ib3 = Product(Basis%tab_basis(inb + 1:ndim + 1)%nb)
+         Iq3 = Product(Basis%tab_basis(inb + 1:ndim)%nq) * Basis%tab_basis(ndim + 1)%nb 
 
          allocate (BGG2(Ib1*Ib2*Iq3))
          BGG2 = CZERO
          GGG(1:Ib1, 1:Iq2, 1:Iq3) => BGG1
          GGB(1:Ib1, 1:Ib2, 1:Iq3) => BGG2
+
          Call GridTOBasis_1D_cplx(GGB, GGG, Basis%tab_basis(inb))
          BGG1 = BGG2
          deallocate (BGG2)
-
       END DO
 
+      ! Final step for last dimension
       B(:) = CZERO
 
-        Iq1 = Product(Basis%tab_basis(1:ndim - 1)%nq)
-        Ib1 = Product(Basis%tab_basis(1:ndim - 1)%nb)
-        Ib2 = Basis%tab_basis(ndim)%nb
-        Iq2 = Basis%tab_basis(ndim)%nq
-        Ib3 = Basis%tab_basis(ndim + 1)%nb
-        Iq3 = Basis%tab_basis(ndim + 1)%nb
+      Iq1 = Product(Basis%tab_basis(1:ndim - 1)%nq)
+      Ib1 = Product(Basis%tab_basis(1:ndim - 1)%nb)
+      Ib2 = Basis%tab_basis(ndim)%nb
+      Iq2 = Basis%tab_basis(ndim)%nq
+      Ib3 = Basis%tab_basis(ndim + 1)%nb
+      Iq3 = Basis%tab_basis(ndim + 1)%nb
 
       GGG(1:Ib1, 1:Iq2, 1:Iq3) => BGG1
       GGB(1:Ib1, 1:Ib2, 1:Iq3) => B
@@ -1359,29 +1674,51 @@ SUBROUTINE BasisTOGrid_nD_cplx(G, B, Basis)
       flush (out_unit)
    END IF
 END SUBROUTINE
-   SUBROUTINE Calc_Q_grid(Q, Basis)
+SUBROUTINE Calc_Q_grid(Q, Basis)
+   IMPLICIT NONE
 
-      implicit none
-      TYPE(Basis_t), intent(in)                                    :: Basis
-      integer, ALLOCATABLE                                         :: Tab_iq(:)
-      integer                                                      :: inb, ndim, iq
-      real(Kind=Rkind), intent(inout), allocatable                 :: Q(:, :)
-      logical                                                      :: Endloop
-      ndim = SIZE(Basis%tab_basis) - 1
-       allocate (Q(Basis%nq, Ndim),Tab_iq(ndim))
-      Call Init_tab_ind(Tab_iq, Basis%NDindexq)
-      Iq = 0
-      DO
-         Iq = Iq + 1
-         CALL increase_NDindex(Tab_iq, Basis%NDindexq, Endloop)
-         IF (Endloop) exit
-         do inb = 1, Ndim
-             Q(iq, inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
-         end do
-         !    print*,iq,Q(iq,:)
-      END DO
-      deallocate(Tab_iq)
-   END SUBROUTINE Calc_Q_grid
+   ! Input
+   TYPE(Basis_t), INTENT(IN)                 :: Basis
+
+   ! Local variables
+   INTEGER, ALLOCATABLE                      :: Tab_iq(:)
+   INTEGER                                   :: inb, ndim, iq
+   REAL(KIND=Rkind), INTENT(INOUT), ALLOCATABLE :: Q(:, :)
+   LOGICAL                                   :: Endloop
+
+   ! Determine the number of dimensions excluding the electronic basis
+   ndim = SIZE(Basis%tab_basis) - 1
+
+   ! Allocate output array Q and index array Tab_iq
+   ALLOCATE(Q(Basis%nq, ndim), Tab_iq(ndim))
+
+   ! Initialize the index array for multidimensional looping
+   CALL Init_tab_ind(Tab_iq, Basis%NDindexq)
+
+   iq = 0
+   DO
+       iq = iq + 1
+
+       ! Update the multi-dimensional index
+       CALL increase_NDindex(Tab_iq, Basis%NDindexq, Endloop)
+       IF (Endloop) EXIT
+
+       ! Fill the Q array with the appropriate basis grid values
+       DO inb = 1, ndim
+           Q(iq, inb) = Basis%tab_basis(inb)%x(Tab_iq(inb))
+       END DO
+
+       ! Optional debug print
+       ! PRINT*, iq, Q(iq, :)
+
+   END DO
+
+   ! Deallocate local array to avoid memory leak
+   DEALLOCATE(Tab_iq)
+
+
+END SUBROUTINE Calc_Q_grid
+
 
  SUBROUTINE Hermite_double_product_func(Hf, x, B1,B2,j, i)
 
@@ -1823,163 +2160,154 @@ END SUBROUTINE
  END IF
 END SUBROUTINE
 
+SUBROUTINE Calc_d0d1d2W_temp(Q, Qt, SQt, Bt, Pt, d0W, d1W, d2W, nderiv)
+   IMPLICIT NONE
+   REAL(kind=Rkind),    INTENT(IN)     :: Q       ! Position
+   REAL(kind=Rkind),    INTENT(IN)     :: Qt      ! Center of Gaussian
+   REAL(kind=Rkind),    INTENT(IN)     :: SQt     ! Width (std dev)
+   REAL(kind=Rkind),    INTENT(IN)     :: Bt      ! Related to complex width
+   REAL(kind=Rkind),    INTENT(IN)     :: Pt      ! Momentum
+   LOGICAL,             INTENT(IN)     :: nderiv  ! Flag to compute derivatives
+ 
+   COMPLEX(kind=Rkind), INTENT(INOUT)  :: d0W     ! complex exponential part of the gaussian value
+   COMPLEX(kind=Rkind), INTENT(INOUT)  :: d1W     ! First derivative of the complex exponential part of the gaussian value
+   COMPLEX(kind=Rkind), INTENT(INOUT)  :: d2W     ! Second derivative of the complex exponential part of the gaussian value
+ 
+   ! === Local variables ===
+   COMPLEX(kind=Rkind) :: cst, cst1, cst2
+   REAL(kind=Rkind)    :: DQ
+ 
+   ! === Compute Q - Qt
+   DQ = Q - Qt
+ 
+   ! === Compute exponential part of the wavefunction
+   cst = -HALF * EYE * (Bt / (SQt * SQt)) * Q * Q + EYE * (Pt / SQt) * Q
+ 
+   ! === Derivatives of the exponential (symbolic form)
+   cst1 = -EYE * (Bt / (SQt * SQt)) * Q + EYE * (Pt / SQt)
+   cst2 = -EYE * (Bt / (SQt * SQt)) + cst1 * cst1
+ 
+   ! === Set output values
+   IF (nderiv) THEN
+     d0W = EXP(cst)
+     d1W = cst1 * d0W
+     d2W = cst2 * d0W
+   ELSE
+     d0W = EXP(cst)
+     d1W = CZERO
+     d2W = CZERO
+   END IF
+ 
+   ! Uncomment for debugging:
+   ! PRINT *, 'd0W = ', d0W, ' d1W = ', d1W, ' d2W = ', d2W
+ 
+ END SUBROUTINE Calc_d0d1d2W_temp
 
 
-SUBROUTINE Construct_Hagedorn_Variational_Basis(Basis,Qt,SQt,At,Pt)
-  USE QDUtil_m
-  IMPLICIT NONE
-  TYPE(Basis_t),intent(inout)                     :: Basis
-  real(kind=Rkind),intent(in)                     :: Qt(:), SQt(:),Pt(:)
-  complex(kind=Rkind), intent(in)                 :: At(:)
-  integer                                         :: ndim,ib
+ SUBROUTINE Calc_d0d1d2W(Q, Qt, SQt, Bt, Pt, d0W, d1W, d2W, nderiv)
+   IMPLICIT NONE
+ 
+   ! === Input ===
+   REAL(kind=Rkind),    INTENT(IN)     :: Q        ! Position
+   REAL(kind=Rkind),    INTENT(IN)     :: Qt       ! Center of the wave packet
+   REAL(kind=Rkind),    INTENT(IN)     :: SQt      ! Width of the Gaussian (not used here)
+   REAL(kind=Rkind),    INTENT(IN)     :: Bt       ! Imaginary width parameter
+   REAL(kind=Rkind),    INTENT(IN)     :: Pt       ! Momentum
+   LOGICAL,             INTENT(IN)     :: nderiv   ! Flag to compute derivatives
+ 
+   ! === Output ===
+   COMPLEX(kind=Rkind), INTENT(INOUT)  :: d0W      ! complex exponential part of the gaussian value
+   COMPLEX(kind=Rkind), INTENT(INOUT)  :: d1W      ! First derivative of the complex exponential part of the gaussian value
+   COMPLEX(kind=Rkind), INTENT(INOUT)  :: d2W      ! Second derivative of the complex exponential part of the gaussian value
+ 
+   ! === Local variables ===
+   COMPLEX(kind=Rkind) :: cst, cst1, cst2
+   REAL(kind=Rkind)    :: DQ  ! Displacement Q - Qt
+ 
+   ! === Compute displacement from the center
+   DQ = Q - Qt
+ 
+   ! === Compute wavefunction and its derivatives
+   IF (nderiv) THEN
+      ! Compute complex phase for wavefunction
+      cst  = -EYE * HALF * Bt * DQ * DQ + EYE * Pt * DQ
+      ! First derivative of the exponential argument
+      cst1 = -EYE * Bt * DQ + EYE * Pt
+      ! Second derivative of the exponential argument
+      cst2 = -EYE * Bt + cst1 * cst1
+ 
+      ! Compute wavefunction and derivatives
+      d0W = EXP(cst)
+      d1W = cst1 * d0W
+      d2W = cst2 * d0W
+ 
+   ELSE
+      ! Only compute the exponential part, derivatives are set to zero
+      cst  = -EYE * HALF * Bt * DQ * DQ + EYE * Pt * DQ
+      d0W  = EXP(cst)
+      d1W  = CZERO
+      d2W  = CZERO
+   END IF
+ 
+   ! Uncomment this line for debugging:
+   ! PRINT *, 'd0W = ', d0W, ' d1W = ', d1W, ' d2W = ', d2W
+ 
+ END SUBROUTINE Calc_d0d1d2W
 
-  ndim = size(Basis%tab_basis)-1
-  call Change_Basis_Parameters(Basis,Qt,SQt,At,Pt)
+ SUBROUTINE Change_Basis_Parameters(Basis, Qt, SQt, At, Pt)
+   IMPLICIT NONE
+ 
+   ! === Input/Output ===
+   TYPE(Basis_t), INTENT(INOUT)          :: Basis   ! Basis object to modify
+   REAL(kind=Rkind), INTENT(IN)          :: Qt(:)    ! New centers (position)
+   REAL(kind=Rkind), INTENT(IN)          :: SQt(:)   ! New scaling factors
+   REAL(kind=Rkind), INTENT(IN)          :: Pt(:)    ! New impulses (momentum)
+   COMPLEX(kind=Rkind), INTENT(IN)       :: At(:)    ! New complex width parameters
+ 
+   ! === Local variables ===
+   INTEGER                               :: ndim     ! Number of degrees of freedom
+   INTEGER                               :: ib       ! Basis index
+ 
+   ! === Compute number of spatial dimensions (assume last index is for electronic state)
+   ndim = SIZE(Basis%tab_basis) - 1
+ 
+   ! === Update basis parameters for each spatial dimension
+   DO ib = 1, ndim
+     Basis%tab_basis(ib)%Q0      = Qt(ib)
+     Basis%tab_basis(ib)%SCALEQ  = SQt(ib)
+     Basis%tab_basis(ib)%Imp_k   = Pt(ib)
+     Basis%tab_basis(ib)%alpha   = At(ib)
+   END DO
+ 
+ END SUBROUTINE Change_Basis_Parameters
 
-  DO ib = 1,ndim
-   if (Basis%tab_basis(ib)%Basis_name == 'herm' .or.Basis%tab_basis(ib)%Basis_name == 'ho') then
-   call Construct_Basis_Ho(Basis%tab_basis(ib))
-   call Scale_Basis(Basis%tab_basis(ib),Basis%tab_basis(ib)%Q0,Basis%tab_basis(ib)%SCALEQ)
-   call Complete_Hagedorn_none_variationnal_Basis(Basis%tab_basis(ib))
-   call Calc_tranpose_d0gb(Basis%tab_basis(ib))
-   call Calc_Basis_dPtQtAt(Basis%tab_basis(ib))
-   call Calc_dngg_grid(Basis%tab_basis(ib))
-   call CheckOrtho_Basis(Basis%tab_basis(ib), nderiv=2)
-   End If  
-  End Do
-
-End SUBROUTINE
-
-
-
-
-SUBROUTINE Calc_d0d1d2W_temp(Q,Qt,SQt,Bt,Pt,d0W,d1W,d2W,nderiv)
-  complex(kind=Rkind) , intent(inout)     :: d0W,d1W,d2W
-  real(kind=Rkind)  , intent(in)          :: Q,Qt,SQt,Bt,Pt
-  logical,intent(in)                      :: nderiv
-  complex(kind=Rkind)                     :: cst1,cst2,cst
-  real(kind=Rkind)                        ::DQ
-
-    DQ = Q-Qt
-    cst = -HALF*EYE*(Bt/SQt*SQt)*Q*Q+EYE*(Pt/SQt)*Q
-    cst1 = -EYE*(Bt/SQt*SQt)*Q+EYE*(Pt/SQt)
-    cst2 = -EYE*(Bt/SQt*SQt)+cst1*cst1
-  If(nderiv) then
-   d0W =exp(cst)
-   d1W = cst1*d0W
-   d2W =cst2*d0W
-  Else
-    d0W =exp(cst)
-    d1W = CZERO
-    d2W = CZERO
-  End If
-  !print*,'d0w, d1w,d2w',d0W,d1W,d2W
-End SUBROUTINE
-
-
-SUBROUTINE Calc_d0d1d2W(Q,Qt,SQt,Bt,Pt,d0W,d1W,d2W,nderiv)
-  complex(kind=Rkind) , intent(inout)     :: d0W,d1W,d2W
-  real(kind=Rkind)  , intent(in)          :: Q,Qt,SQt,Bt,Pt
-  logical,intent(in)                      :: nderiv
-  complex(kind=Rkind)                     :: cst1,cst2,cst
-  real(kind=Rkind)                        ::DQ
-   DQ = Q-Qt
-  If(nderiv) then
-   cst = -EYE*HALF*Bt*DQ*DQ+EYE*Pt*DQ
-   cst1 = -EYE*Bt*DQ+EYE*Pt
-   cst2 = -EYE*Bt+cst1*cst1
-   d0W =exp(cst)
-   d1W = cst1*d0W
-   d2W =cst2*d0W
-  Else
-    cst = -EYE*HALF*Bt*DQ*DQ+EYE*Pt*DQ
-    d0W =exp(cst)
-    d1W = CZERO
-    d2W = CZERO
-  End If
-  !print*,'d0w, d1w,d2w',d0W,d1W,d2W
-End SUBROUTINE
-
-SUBROUTINE Complete_Hagedorn_none_variationnal_Basis(Basis)
-   TYPE(Basis_t), intent(inout)            :: Basis
-   complex(kind=Rkind)                     :: d0W,d1W,d2W
-   real(kind=Rkind)                        :: Qt,SQt,Bt,Pt
-   integer                                 :: nb,nq,ib,iq
-   nb  = Basis%nb
-   nq  = Basis%nq
-   Qt  = Basis%Q0
-   SQt = Basis%SCALEQ
-   Pt  = Basis%Imp_k
-   Bt  = aimag(Basis%alpha)
-  DO ib = 1,nb
-     DO iq = 1,nq
-         call Calc_d0d1d2W(Basis%x(iq),Qt,SQt,Bt,Pt,d0W,d1W,d2W,.true.)
-         Basis%d2gb(iq, ib, 1, 1) =  Basis%d2gb(iq, ib, 1, 1)*d0W +TWO*Basis%d1gb(iq,ib,1)*d1W+Basis%d0gb(iq,ib)*d2W
-         Basis%d1gb(iq,ib,1) = Basis%d1gb(iq,ib,1)*d0W+Basis%d0gb(iq,ib)*d1W
-         Basis%d0gb(iq,ib) = Basis%d0gb(iq,ib)*d0W
-     END DO
- END DO    
-End SUBROUTINE
-
-
-
-
-SUBROUTINE Complete_Hagedorn_none_variationnal_Basis_temp(Basis)
-   TYPE(Basis_t), intent(inout)            :: Basis
-   complex(kind=Rkind)                     :: d0W,d1W,d2W
-   real(kind=Rkind)                        :: Qt,SQt,Bt,Pt
-   integer                                 :: nb,nq,ib,iq
-   nb  = Basis%nb
-   nq  = Basis%nq
-   Qt  = Basis%Q0
-   SQt = Basis%SCALEQ
-   Pt  = Basis%Imp_k
-   Bt  = aimag(Basis%alpha)
-  DO ib = 1,nb
-     DO iq = 1,nq
-         call Calc_d0d1d2W_temp(Basis%x(iq),Qt,SQt,Bt,Pt,d0W,d1W,d2W,.true.)
-         Basis%d2gb(iq, ib, 1, 1) =  Basis%d2gb(iq, ib, 1, 1)*d0W +TWO*Basis%d1gb(iq,ib,1)*d1W+Basis%d0gb(iq,ib)*d2W
-         Basis%d1gb(iq,ib,1) = Basis%d1gb(iq,ib,1)*d0W+Basis%d0gb(iq,ib)*d1W
-         Basis%d0gb(iq,ib) = Basis%d0gb(iq,ib)*d0W
-     END DO
- END DO    
-End SUBROUTINE
-
-SUBROUTINE Change_Basis_Parameters(Basis,Qt,SQt,At,Pt)
-
-  TYPE(Basis_t),intent(inout)                      :: Basis
-  real(kind=Rkind),intent(in)                      :: Qt(:), SQt(:),Pt(:)
-  complex(kind=Rkind), intent(in)                  :: At(:)
-  integer                                          :: ndim,ib
-
-ndim = size(Basis%tab_basis)-1
-
-Do ib = 1,ndim
-    Basis%tab_basis(ib)%Q0  = Qt(ib)
-    Basis%tab_basis(ib)%SCALEQ  = SQt(ib)
-    Basis%tab_basis(ib)%Imp_k  = Pt(ib)
-    Basis%tab_basis(ib)%alpha  = At(ib)
-End DO
-
-End SUBROUTINE
-
-
-SUBROUTINE Get_Basis_Parameters(Basis,Qt,SQt,At,Pt)
-
-  TYPE(Basis_t),intent(in)                      :: Basis
-  real(kind=Rkind),intent(inout)                :: Qt(:), SQt(:),Pt(:)
-  complex(kind=Rkind), intent(inout)            :: At(:)
-  integer                                       :: ndim,ib
-
-ndim = size(Basis%tab_basis)-1
-
-Do ib = 1,ndim
-  Qt(ib) = Basis%tab_basis(ib)%Q0
-  SQt(ib) = Basis%tab_basis(ib)%SCALEQ
-  Pt(ib) = Basis%tab_basis(ib)%Imp_k
-  At(ib) = Basis%tab_basis(ib)%alpha
-End DO
-
-End SUBROUTINE
+ SUBROUTINE Get_Basis_Parameters(Basis, Qt, SQt, At, Pt)
+   IMPLICIT NONE
+ 
+   ! === Input ===
+   TYPE(Basis_t), INTENT(IN)           :: Basis      ! basis structure
+ 
+   ! === Output ===
+   REAL(kind=Rkind), INTENT(OUT)       :: Qt(:)      ! position centers
+   REAL(kind=Rkind), INTENT(OUT)       :: SQt(:)     ! scaling (widths)
+   REAL(kind=Rkind), INTENT(OUT)       :: Pt(:)      ! momentum components
+   COMPLEX(kind=Rkind), INTENT(OUT)    :: At(:)      ! complex parameters alpha
+ 
+   ! === Local variables ===
+   INTEGER                             :: ndim       ! Number of spatial dimensions
+   INTEGER                             :: ib         ! Loop index
+ 
+   ! Determine the number of spatial dimensions (excluding electronic state)
+   ndim = SIZE(Basis%tab_basis) - 1
+ 
+   ! Extract the parameters from the basis
+   DO ib = 1, ndim
+     Qt(ib)  = Basis%tab_basis(ib)%Q0
+     SQt(ib) = Basis%tab_basis(ib)%SCALEQ
+     Pt(ib)  = Basis%tab_basis(ib)%Imp_k
+     At(ib)  = Basis%tab_basis(ib)%alpha
+   END DO
+ 
+ END SUBROUTINE Get_Basis_Parameters
 
 END MODULE Basis_m

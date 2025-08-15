@@ -23,7 +23,7 @@ module sub_propa_m
 
    public :: march_taylor, marh_RK4th,March,march_ITP,march_SIL,march_VP
    public :: mEyeHPsi, write_propa, Analyse, creat_file_unit, read_propa,diff2
-   public :: test_taylor,march_taylor_nolim
+   public :: test_taylor,march_taylor_nolim,Calc_average_energy
 
 contains
 
@@ -522,19 +522,21 @@ END SUBROUTINE
       REAL(KIND=Rkind)                               :: Norm
       if (Psi%Grid) then
 
-         !Print*,"psi  is on Grid"
+         Print*,"psi  is on Grid"
          CALL init_psi(psi_b, psi%Basis, cplx=.TRUE., grid=.false.)
          call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
          CALL init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.false.)
-         !call calc_OpPsi(H, psi_b, Hpsi)
-         stop 'verifie le calcul d E'
+         call calc_OpPsi(H, psi_b, Hpsi)
+         !stop 'verifie le calcul d E'
+         write(out_unit,*) 'rappele toi , sur la calcule de l energie'
          E = real(dot_product(Hpsi%CVec, psi_b%CVec), kind=Rkind)
 
       else
-         !Print*,"psi is on basis"
+         Print*,"psi is on basis"
          CALL init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.false.)
-         !call calc_OpPsi(H, psi, Hpsi)
-         stop 'verifie le calcul d E'
+         call calc_OpPsi(H, psi, Hpsi)
+         !stop 'verifie le calcul d E'
+         write(out_unit,*) 'rappele toi , sur la calcule de l energie'
          E = real(dot_product(Hpsi%CVec, psi%CVec), kind=Rkind)
 
       end if
@@ -546,8 +548,59 @@ END SUBROUTINE
       CALL dealloc_psi(psi_b)
    End SUBROUTINE Calc_average_energy
 
+   subroutine Calc_Av_E(E, psi, H)
+      !> -----------------------------------------------------------
+      !> Computes the expectation value E = <Psi | H | Psi>
+      !> Normalizes by <Psi|Psi> to ensure proper scaling
+      !> -----------------------------------------------------------
+   
+      use QDUtil_m
+      use psi_m
+      implicit none
+   
+      ! ===== Arguments =====
+      real(kind=Rkind), intent(inout) :: E
+      type(psi_t), intent(in)         :: psi
+      type(Op_t), intent(in)         :: H
+   
+      ! ===== Local variables =====
+      type(psi_t)         :: Hpsi, psi_b
+      real(kind=Rkind)    :: Norm
+      ! ===== Expectation value calculation =====
+      if (psi%Grid) then
+         ! Convert wavefunction from grid to basis representation
+         call init_psi(psi_b, psi%Basis, cplx=.true., grid=.false.)
+         call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
+   
+         ! Apply operator H to wavefunction in basis
+         call init_psi(Hpsi, psi%Basis, cplx=.true., grid=.false.)
+         call calc_OpPsi(H, psi_b, Hpsi)
+   
+         ! Compute <psi_b | H | psi_b>
+         E = real(dot_product(Hpsi%CVec, psi_b%CVec), kind=Rkind)
+   
+      else
+         ! Directly apply H to wavefunction
+         call init_psi(Hpsi, psi%Basis, cplx=.true., grid=.false.)
+         call calc_OpPsi(H, psi, Hpsi)
+         ! Compute <psi | H | psi>
+         E = real(dot_product(Hpsi%CVec, psi%CVec), kind=Rkind)
+      end if
+   
+      ! ===== Normalize by the norm of psi =====
+      call Calc_Norm_OF_Psi(psi, Norm)
+      E = E / Norm**2
+   
+      !print *, "<psi|H|psi> = ", E, "   <psi|psi> = ", Norm
+   
+      ! ===== Cleanup =====
+      call dealloc_psi(Hpsi)
+      call dealloc_psi(psi_b)
+      !stop 'energy end'
+   end subroutine Calc_Av_E
 
-   SUBROUTINE Calc_Av_E(E,psi,H)
+
+   SUBROUTINE Calc_Av_E_temp(E,psi,H)
       !>-------------------------------------------------------
       !>     E = <Psi | H | Psi>
       !>--------------------------------------------------------

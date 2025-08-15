@@ -5,10 +5,51 @@
         private
      public:: poly_Hermite_exp,d0d1d2poly_Hermite_exp,poly_Hermite
      public:: hercom,herroot,herrec,d0d1d2box,d0d1d2fourier
+     public:: d0d1d2poly_Hag_exp
     
 
 
     contains
+
+    SUBROUTINE d0d1d2poly_Hag_exp(x, l, d0, d1, d2, deriv, alpha, p0)
+      USE QDUtil_m
+      IMPLICIT NONE
+    
+      ! Arguments
+      INTEGER, INTENT(IN) :: l
+      REAL(KIND=Rkind), INTENT(IN) :: x,p0
+      COMPLEX(KIND=Rkind), INTENT(IN) :: alpha
+      LOGICAL, INTENT(IN) :: deriv
+      COMPLEX(KIND=Rkind), INTENT(OUT) :: d0, d1, d2
+    
+      ! Local variables
+      COMPLEX(KIND=Rkind) :: d0_oh, d1_oh, d2_oh
+      COMPLEX(KIND=Rkind) :: W, F
+      REAL(KIND=Rkind) :: a, b, inv_a, sqrt_a
+    
+      ! Extract real and imaginary parts
+      a = REAL(alpha, KIND=Rkind)
+      b = AIMAG(alpha)
+      inv_a = ONE / a
+      sqrt_a = SQRT(a)
+    
+      ! Compute W(x)
+      W = EXP( -EYE * b * HALF * inv_a * x * x + EYE * p0 / sqrt_a * x )
+    
+      ! Compute F(x) = W'(x)/W(x)
+      F = -EYE * b * inv_a * x + EYE * p0 / sqrt_a
+    
+      ! Compute Hermite function and its derivatives
+      CALL d0d1d2poly_Hermite_exp(x, l, d0_oh, d1_oh, d2_oh, deriv)
+    
+      ! Compute Hagedorn basis and its derivatives
+      d0 = d0_oh * W
+      d1 = (d1_oh + F * d0_oh) * W
+      d2 = (d2_oh + TWO * F * d1_oh + (-EYE * b * inv_a + F * F) * d0_oh) * W
+    
+      RETURN
+    END SUBROUTINE d0d1d2poly_Hag_exp
+
       
    !  FUNCTION Funct_1D(x,i,ntyp,first_i)
    !  USE QDUtil_m

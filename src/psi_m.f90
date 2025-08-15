@@ -52,320 +52,369 @@ contains
 
    SUBROUTINE init_psi(psi, Basis, cplx, grid)
       USE Basis_m
-
-      TYPE(psi_t), intent(inout)          :: psi
-      TYPE(Basis_t), intent(in), target   :: Basis
-      logical, intent(in)                 :: cplx, grid
-
+   
+      !======================================================================
+      ! PURPOSE:
+      !   Initialize a wavefunction (psi_t) structure, allocating
+      !   memory for either grid or basis representation.
+      !
+      ! ARGUMENTS:
+      !   psi   : (INOUT) Wavefunction to initialize
+      !   Basis : (IN)   Basis set (must be allocated and valid)
+      !   cplx  : (IN)   .TRUE. => complex representation, .FALSE. => real
+      !   grid  : (IN)   .TRUE. => allocate in grid representation
+      !                     .FALSE. => allocate in basis representation
+      !
+      ! SAFETY:
+      !   - Avoids memory leaks by always deallocating previous data first.
+      !   - Uses STAT= in ALLOCATE to catch memory allocation errors.
+      !   - Checks validity of the Basis before allocation.
+      !======================================================================
+   
+      TYPE(psi_t),     INTENT(INOUT) :: psi
+      TYPE(Basis_t),   INTENT(IN), TARGET :: Basis
+      LOGICAL,         INTENT(IN)    :: cplx, grid
+   
+      INTEGER :: alloc_size   ! size of vector to allocate
+      INTEGER :: istat        ! allocation status
+   
+      !-----------------------------------------------------------
+      ! Step 1: Deallocate any existing psi data
+      !-----------------------------------------------------------
       CALL dealloc_psi(psi)
-
-      IF (.NOT. Basis_IS_allocated(Basis)) STOP 'ERROR in init_psi: the Basis is not initialized'
-
-      IF (Basis%nb < 1) STOP 'ERROR in init_psi: Basis%nb < 1!'
-
-      Psi%Basis => Basis
-      Psi%Grid = Grid
-
-      If (Grid) THEN !allocation on grid
-         !print*,"psi is on Grid"
-         IF (cplx) THEN
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%CVec(Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            else
-
-               allocate (psi%CVec(Basis%nq))
-
-            END IF
-
-         ELSE
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%RVec(Basis%nq*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            ELSE
-
-               allocate (psi%RVec(Basis%nq))
-
-            END IF
-
-         END IF
-
-      ELSE ! allocation on basis
-         !print*,"psi is on Basis"
-
-         IF (cplx) THEN
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%CVec(Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            else
-
-               allocate (psi%CVec(Basis%nb))
-
-            END IF
-
-         ELSE
-
-            IF (allocated(Basis%tab_basis)) THEN
-
-               allocate (psi%RVec(Basis%nb*Basis%tab_basis(size(Basis%tab_basis))%nb))
-
-            ELSE
-
-               allocate (psi%RVec(Basis%nb))
-
-            END IF
-
-         END IF
-
+   
+      !-----------------------------------------------------------
+      ! Step 2: Validate basis
+      !-----------------------------------------------------------
+      IF (.NOT. Basis_IS_allocated(Basis)) THEN
+         PRINT *, 'ERROR in init_psi: the Basis is not initialized'
+         RETURN
       END IF
-
+   
+      IF (Basis%nb < 1) THEN
+         PRINT *, 'ERROR in init_psi: Basis%nb < 1!'
+         RETURN
+      END IF
+   
+      !-----------------------------------------------------------
+      ! Step 3: Link psi to basis and set representation flag
+      !-----------------------------------------------------------
+      psi%Basis => Basis
+      psi%Grid  = grid
+   
+      !-----------------------------------------------------------
+      ! Step 4: Determine allocation size
+      !-----------------------------------------------------------
+      IF (grid) THEN
+         ! GRID representation
+         IF (ALLOCATED(Basis%tab_basis)) THEN
+            alloc_size = Basis%nq * Basis%tab_basis(SIZE(Basis%tab_basis))%nb
+         ELSE
+            alloc_size = Basis%nq
+         END IF
+      ELSE
+         ! BASIS representation
+         IF (ALLOCATED(Basis%tab_basis)) THEN
+            alloc_size = Basis%nb * Basis%tab_basis(SIZE(Basis%tab_basis))%nb
+         ELSE
+            alloc_size = Basis%nb
+         END IF
+      END IF
+   
+      !-----------------------------------------------------------
+      ! Step 5: Allocate the correct coefficient vector
+      !-----------------------------------------------------------
+      istat = 0
+      IF (cplx) THEN
+         ALLOCATE(psi%CVec(alloc_size), STAT=istat)
+      ELSE
+         ALLOCATE(psi%RVec(alloc_size), STAT=istat)
+      END IF
+   
+      !-----------------------------------------------------------
+      ! Step 6: Handle allocation errors
+      !-----------------------------------------------------------
+      IF (istat /= 0) THEN
+         PRINT *, 'ERROR in init_psi: Allocation failed, STAT=', istat
+         CALL dealloc_psi(psi)
+         RETURN
+      END IF
+   
    END SUBROUTINE init_psi
 
 
    SUBROUTINE dealloc_psi(psi)
-
-      TYPE(psi_t), intent(inout) :: psi
-
-      nullify (psi%Basis)
-
-      IF (allocated(psi%RVec)) THEN
-
-         deallocate (psi%RVec)
-
+      !======================================================================
+      ! PURPOSE:
+      !   Deallocate the memory associated with a wavefunction (psi_t type)
+      !   and nullify its basis pointer.
+      !
+      ! ARGUMENTS:
+      !   psi : (INOUT) The wavefunction to be deallocated.
+      !
+      ! NOTES:
+      !   - Any allocated real or complex coefficient vectors are released.
+      !   - The basis pointer is nullified to avoid dangling references.
+      !======================================================================
+   
+      TYPE(psi_t), INTENT(INOUT) :: psi
+   
+      !-----------------------------------------------------------
+      ! Nullify the basis pointer (safe even if already nullified)
+      !-----------------------------------------------------------
+      NULLIFY(psi%Basis)
+   
+      !-----------------------------------------------------------
+      ! Deallocate real coefficient vector if allocated
+      !-----------------------------------------------------------
+      IF (ALLOCATED(psi%RVec)) THEN
+         DEALLOCATE(psi%RVec)
       END IF
-
-      IF (allocated(psi%CVec)) THEN
-
-         deallocate (psi%CVec)
-
+   
+      !-----------------------------------------------------------
+      ! Deallocate complex coefficient vector if allocated
+      !-----------------------------------------------------------
+      IF (ALLOCATED(psi%CVec)) THEN
+         DEALLOCATE(psi%CVec)
       END IF
-
-
+   
    END SUBROUTINE dealloc_psi
 
+
    SUBROUTINE write_psi(psi, psi_cplx, print_psi_grid, print_basis, t, int_print, real_part)
-      TYPE(psi_t), intent(in)                                 :: psi
-      logical, intent(in)                                     :: print_psi_grid, print_basis, psi_cplx, real_part
-      integer, intent(in), optional                           :: int_print
-      real(kind= Rkind), intent(in), optional                 :: t
-      logical, parameter                                      :: debug = .true.
-
-      !local variable
-      TYPE(psi_t)                                              :: psi_g, psi_b
-      integer                                                  :: i
-
-      if (print_psi_grid) then
-
-         if (psi%Grid) then
-
-            if (present(t) .and. present(int_print)) then
-
-               call write_psi_grid(psi, print_cplx=psi_cplx, t=t, nio=int_print, real_part=real_part)
-
-            elseif (present(t)) then
-
-               call write_psi_grid(psi, print_cplx=psi_cplx, t=t, real_part=real_part)
-
-            elseif (present(int_print)) then
-
-               call write_psi_grid(psi, print_cplx=psi_cplx, nio=int_print, real_part=real_part)
-
-            elseif (.not. present(t) .and. .not. present(int_print)) then
-
-               call write_psi_grid(psi, print_cplx=psi_cplx, real_part=real_part)
-
-            end if
-
-         else
-
-            call init_psi(psi_g, psi%Basis, cplx=.TRUE., grid=.true.)
-            call BasisTOGrid_nD_cplx(psi_g%CVec, psi%CVec, psi%Basis)
-
-            if (present(t) .and. present(int_print)) then
-
-               call write_psi_grid(psi_g, print_cplx=psi_cplx, t=t, nio=int_print, real_part=real_part)
-
-            elseif (present(t)) then
-
-               call write_psi_grid(psi_g, print_cplx=psi_cplx, t=t, real_part=real_part)
-
-            elseif (present(int_print)) then
-
-               call write_psi_grid(psi_g, print_cplx=psi_cplx, nio=int_print, real_part=real_part)
-
-            elseif (.not. present(t) .and. .not. present(int_print)) then
-
-               call write_psi_grid(psi_g, print_cplx=psi_cplx, real_part=real_part)
-
-            end if
-
-         end if
-
-         call dealloc_psi(psi_g)
-
-      else
-
-         if (psi%Grid) then
-
-            call init_psi(psi_b, psi%Basis, cplx=.TRUE., grid=.false.)
-            call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
-
-            if (present(t) .and. present(int_print)) then
-
-               call write_psi_basis(psi_b, print_cplx=psi_cplx, t=t, nio=int_print, real_part=real_part)
-
-            elseif (present(t)) then
-
-               call write_psi_basis(psi_b, print_cplx=psi_cplx, t=t, real_part=real_part)
-
-            elseif (present(int_print)) then
-
-               call write_psi_basis(psi_b, print_cplx=psi_cplx, nio=int_print, real_part=real_part)
-
-            elseif (.not. present(t) .and. .not. present(int_print)) then
-
-               call write_psi_basis(psi_b, print_cplx=psi_cplx, real_part=real_part)
-
-            end if
-
-            call dealloc_psi(psi_b)
-
-         else
-
-            if (present(t) .and. present(int_print)) then
-
-               call write_psi_basis(psi, print_cplx=psi_cplx, t=t, nio=int_print, real_part=real_part)
-
-            elseif (present(t)) then
-
-               call write_psi_basis(psi, print_cplx=psi_cplx, t=t, real_part=real_part)
-
-            elseif (present(int_print)) then
-
-               call write_psi_basis(psi, print_cplx=psi_cplx, nio=int_print, real_part=real_part)
-
-            elseif (.not. present(t) .and. .not. present(int_print)) then
-
-               call write_psi_basis(psi, print_cplx=psi_cplx, real_part=real_part)
-
-            end if
-
-         end if
-
-      end if
-
-      if (print_basis) then
-
-         call Write_Basis(psi%Basis)
-
-      end if
-
-      if (debug) then
-
-         flush (out_unit)
-
-      end if
-
-
+      !======================================================================
+      ! PURPOSE:
+      !   Write the wavefunction psi either in grid representation
+      !   or basis representation, depending on user request.
+      !
+      ! ARGUMENTS:
+      !   psi            : quantum state (type psi_t)
+      !   psi_cplx       : .true. => print complex values, .false. => real only
+      !   print_psi_grid : .true. => print in grid representation
+      !   print_basis    : .true. => also print the basis
+      !   t              : (optional) time
+      !   int_print      : (optional) output unit number
+      !   real_part      : .true. => print only the real part
+      !
+      ! NOTES:
+      !   - If the representation of psi does not match the desired
+      !     output (grid/basis), a temporary conversion is performed.
+      !   - Temporary psi objects are always deallocated before return.
+      !======================================================================
+   
+      TYPE(psi_t),        INTENT(IN)           :: psi
+      LOGICAL,            INTENT(IN)           :: print_psi_grid, print_basis, psi_cplx, real_part
+      INTEGER, OPTIONAL,  INTENT(IN)           :: int_print
+      REAL(KIND=Rkind), OPTIONAL, INTENT(IN)   :: t
+      LOGICAL, PARAMETER                      :: debug = .true.
+   
+      ! Local temporary variables for conversion
+      TYPE(psi_t) :: psi_g   ! Temporary wavefunction in grid representation
+      TYPE(psi_t) :: psi_b   ! Temporary wavefunction in basis representation
+      LOGICAL     :: alloc_g, alloc_b
+   
+      alloc_g = .FALSE.
+      alloc_b = .FALSE.
+   
+      !===============================
+      ! Main printing logic
+      !===============================
+      IF (print_psi_grid) THEN
+         !---------------------------------------------------------
+         ! CASE 1: User requested grid representation
+         !---------------------------------------------------------
+         IF (psi%Grid) THEN
+            ! Already in grid representation → print directly
+            CALL call_write_psi_grid(psi, psi_cplx, t, int_print, real_part)
+         ELSE
+            ! Convert basis → grid
+            CALL init_psi(psi_g, psi%Basis, cplx=.TRUE., grid=.TRUE.)
+            alloc_g = .TRUE.
+            CALL BasisTOGrid_nD_cplx(psi_g%CVec, psi%CVec, psi%Basis)
+   
+            CALL call_write_psi_grid(psi_g, psi_cplx, t, int_print, real_part)
+         END IF
+   
+      ELSE
+         !---------------------------------------------------------
+         ! CASE 2: User requested basis representation
+         !---------------------------------------------------------
+         IF (psi%Grid) THEN
+            ! Convert grid → basis
+            CALL init_psi(psi_b, psi%Basis, cplx=.TRUE., grid=.FALSE.)
+            alloc_b = .TRUE.
+            CALL GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
+   
+            CALL call_write_psi_basis(psi_b, psi_cplx, t, int_print, real_part)
+         ELSE
+            ! Already in basis representation → print directly
+            CALL call_write_psi_basis(psi, psi_cplx, t, int_print, real_part)
+         END IF
+      END IF
+   
+      !===============================
+      ! Optional: print the basis
+      !===============================
+      IF (print_basis) THEN
+         CALL Write_Basis(psi%Basis)
+      END IF
+   
+      !===============================
+      ! Debug: flush output
+      !===============================
+      IF (debug) THEN
+         FLUSH(out_unit)
+      END IF
+   
+      !===============================
+      ! Memory cleanup
+      !===============================
+      IF (alloc_g) CALL dealloc_psi(psi_g)
+      IF (alloc_b) CALL dealloc_psi(psi_b)
+   
+   CONTAINS
+   
+      !-------------------------------------------------------------------
+      ! Helper routine to write psi in grid representation
+      ! This avoids code repetition when checking PRESENT arguments.
+      !-------------------------------------------------------------------
+      SUBROUTINE call_write_psi_grid(psi_data, cplx_flag, t_opt, nio_opt, real_flag)
+         TYPE(psi_t),        INTENT(IN) :: psi_data
+         LOGICAL,            INTENT(IN) :: cplx_flag, real_flag
+         REAL(KIND=Rkind), OPTIONAL, INTENT(IN) :: t_opt
+         INTEGER, OPTIONAL,  INTENT(IN) :: nio_opt
+   
+         IF (PRESENT(t_opt) .AND. PRESENT(nio_opt)) THEN
+            CALL write_psi_grid(psi_data, print_cplx=cplx_flag, t=t_opt, nio=nio_opt, real_part=real_flag)
+         ELSEIF (PRESENT(t_opt)) THEN
+            CALL write_psi_grid(psi_data, print_cplx=cplx_flag, t=t_opt, real_part=real_flag)
+         ELSEIF (PRESENT(nio_opt)) THEN
+            CALL write_psi_grid(psi_data, print_cplx=cplx_flag, nio=nio_opt, real_part=real_flag)
+         ELSE
+            CALL write_psi_grid(psi_data, print_cplx=cplx_flag, real_part=real_flag)
+         END IF
+      END SUBROUTINE call_write_psi_grid
+   
+      !-------------------------------------------------------------------
+      ! Helper routine to write psi in basis representation
+      !-------------------------------------------------------------------
+      SUBROUTINE call_write_psi_basis(psi_data, cplx_flag, t_opt, nio_opt, real_flag)
+         TYPE(psi_t),        INTENT(IN) :: psi_data
+         LOGICAL,            INTENT(IN) :: cplx_flag, real_flag
+         REAL(KIND=Rkind), OPTIONAL, INTENT(IN) :: t_opt
+         INTEGER, OPTIONAL,  INTENT(IN) :: nio_opt
+   
+         IF (PRESENT(t_opt) .AND. PRESENT(nio_opt)) THEN
+            CALL write_psi_basis(psi_data, print_cplx=cplx_flag, t=t_opt, nio=nio_opt, real_part=real_flag)
+         ELSEIF (PRESENT(t_opt)) THEN
+            CALL write_psi_basis(psi_data, print_cplx=cplx_flag, t=t_opt, real_part=real_flag)
+         ELSEIF (PRESENT(nio_opt)) THEN
+            CALL write_psi_basis(psi_data, print_cplx=cplx_flag, nio=nio_opt, real_part=real_flag)
+         ELSE
+            CALL write_psi_basis(psi_data, print_cplx=cplx_flag, real_part=real_flag)
+         END IF
+      END SUBROUTINE call_write_psi_basis
+   
    END SUBROUTINE write_psi
 
-   SUBROUTINE Projection(psi_dt_2, psi_dt_1)
 
+   !=====================================================================
+   !> @brief
+   !>   Hagedorn projection of psi_dt_1 onto psi_dt_2.
+   !>   Supports N-dimensional basis sets with sequential 1D transformations.
+   !>
+   !> @details
+   !>   - Uses temporary pointers and allocatables for intermediate transformations.
+   !>   - Computes initial and final norms for verification.
+   !>   - Debug output is local and only printed if the local flag is .true.
+   !=====================================================================
+
+   SUBROUTINE Projection(psi_dt_2, psi_dt_1)
       TYPE(psi_t), intent(in), target                  :: psi_dt_1
       TYPE(psi_t), intent(inout), target               :: psi_dt_2
-
-      complex(kind= Rkind), pointer                    :: BBB1(:, :, :), BBB2(:, :, :)
-      complex(kind= Rkind), allocatable, target        :: B1(:), B2(:)
-      real(kind= Rkind)                                :: Norm0
-
+      complex(kind=Rkind), pointer                     :: BBB1(:, :, :), BBB2(:, :, :)
+      complex(kind=Rkind), allocatable, target         :: B1(:), B2(:)
+      real(kind=Rkind)                                 :: Norm0
       logical, parameter                               :: debug = .true.
       integer                                          :: inb, i1, i3, Ndim
       Integer, allocatable                             :: Ib1(:), Ib2(:), Ib3(:)
-
-
+   
+      ! Compute index arrays for multidimensional basis representation
       call Calc_index(Ib1=Ib1, Ib2=Ib2, Ib3=Ib3, Basis=psi_dt_1%Basis)
+   
+      ! Determine the number of dimensions (basis functions)
       Ndim = size(psi_dt_1%Basis%tab_basis) - 1
-      call Calc_Norm_OF_psi(psi_dt_1,Norm0)
-
-      write (out_unit, *) 'Begin Hagedorn projection <psi|psi>=',Norm0
-      !write (out_unit, *) 'out',psi_dt_2%CVec
-      !call  Write_VecMat(psi_dt_1%Basis%tab_basis(1)%S, out_unit, 5,  info='S')
-
-      If (Ndim == 1) then
-
+   
+      ! Compute initial norm of psi_dt_1 for verification
+      call Calc_Norm_OF_psi(psi_dt_1, Norm0)
+      write (out_unit, *) 'Begin Hagedorn projection <psi|psi>=', Norm0
+   
+      ! Perform the Hagedorn projection
+      if (Ndim == 1) then
+         ! Link the CVec arrays to pointer views for easier access
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_2%CVec
-
+   
+         ! Initialize psi_dt_2%CVec to zero
          psi_dt_2%CVec(:) = CZERO
-
+   
+         ! Apply the basis transformation along dimension 1
          DO i3 = 1, ubound(BBB1, dim=3)
-
-         DO i1 = 1, ubound(BBB1, dim=1)
-
-            BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
-
+            DO i1 = 1, ubound(BBB1, dim=1)
+               BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S, BBB1(i1, :, i3))
+            END DO
          END DO
-
-         END DO
-
       else
-
+         ! Allocate temporary vector B1 to hold intermediate data
          allocate (B1(Ib1(1)*Ib2(1)*Ib3(1)))
+   
+         ! Link pointers for manipulation
          BBB1(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => psi_dt_1%CVec
          BBB2(1:Ib1(1), 1:Ib2(1), 1:Ib3(1)) => B1
-
+   
+         ! First transformation along dimension 1
          DO i3 = 1, ubound(BBB1, dim=3)
-
-         DO i1 = 1, ubound(BBB1, dim=1)
-
-            BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S,BBB1(i1, :, i3))
-
+            DO i1 = 1, ubound(BBB1, dim=1)
+               BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(1)%S, BBB1(i1, :, i3))
+            END DO
          END DO
-
-         END DO
-
-         Do inb = 2, Ndim
-
+   
+         ! Loop through remaining dimensions to apply projection
+         DO inb = 2, Ndim
+            ! Allocate temporary buffer B2
             allocate (B2(Ib1(inb)*Ib2(inb)*Ib3(inb)))
+   
+            ! Link BBB1 to B1 (previous result), BBB2 to B2 (target of transformation)
             BBB1(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B1
             BBB2(1:Ib1(inb), 1:Ib2(inb), 1:Ib3(inb)) => B2
-
+   
+            ! Apply transformation along current dimension
             DO i3 = 1, ubound(BBB1, dim=3)
-
-            DO i1 = 1, ubound(BBB1, dim=1)
-
-               BBB2(i1, :, i3) = matmul( psi_dt_1%Basis%tab_basis(inb)%S,BBB1(i1, :, i3))
-
+               DO i1 = 1, ubound(BBB1, dim=1)
+                  BBB2(i1, :, i3) = matmul(psi_dt_1%Basis%tab_basis(inb)%S, BBB1(i1, :, i3))
+               END DO
             END DO
-
-            END DO
-
+   
+            ! Prepare for next iteration
             B1 = B2
             B2 = CZERO
             deallocate (B2)
+   
+            ! If last iteration, copy final result to psi_dt_2%CVec
             if (inb == Ndim) psi_dt_2%CVec = B1
-
          END DO
-
       END IF
-
-        call Calc_Norm_OF_psi(psi_dt_2,Norm0)
-
-        deallocate(Ib1, Ib2, Ib3)
-        if(allocated(B1)) deallocate(B1)
-        if(allocated(B2)) deallocate(B2)
-
-      write (out_unit, *) 'END Hagedorn projection <psi|psi>=',Norm0
-      !write (out_unit, *) 'out',psi_dt_2%CVec
-
+   
+      ! Compute final norm for verification
+      call Calc_Norm_OF_psi(psi_dt_2, Norm0)
+   
+      ! Clean up dynamically allocated memory
+      deallocate(Ib1, Ib2, Ib3)
+      if (allocated(B1)) deallocate(B1)
+      if (allocated(B2)) deallocate(B2)
+   
+      write (out_unit, *) 'END Hagedorn projection <psi|psi>=', Norm0
    END SUBROUTINE Projection
-
 
    SUBROUTINE Projection1(psi_dt_2, psi_dt_1)
    TYPE(psi_t), intent(in), target                  :: psi_dt_1
@@ -423,487 +472,419 @@ contains
    !write (out_unit, *) 'out',psi_dt_2%CVec
 END SUBROUTINE 
 
+SUBROUTINE Calc_Norm_OF_Psi(psi, Norm)
+   !===========================================================================
+   ! PURPOSE:
+   !   Compute the norm of the wavefunction psi, either on the grid or in basis.
+   !   Optionally prints the norm if debug is enabled.
+   !
+   ! ARGUMENTS:
+   !   psi   : (IN)  Wavefunction structure
+   !   Norm  : (INOUT) Norm value of psi
+   !===========================================================================
 
-   SUBROUTINE Calc_Norm_OF_Psi(psi, Norm)
+   IMPLICIT NONE
 
-      implicit none
-      type(Psi_t), intent(in)             :: psi
-      real(kind= Rkind), intent(inout)    :: Norm
+   TYPE(Psi_t), INTENT(IN)          :: psi
+   REAL(KIND=Rkind), INTENT(INOUT)  :: Norm
+   LOGICAL, PARAMETER                :: debug = .FALSE.  ! Set to .TRUE. to print norm
 
-      IF (psi%Grid) THEN
+   !------------------ Compute norm based on psi representation ----------------
+   IF (psi%Grid) THEN
+      CALL Calc_Norm_OF_PsiGrid(psi, Norm)
+   ELSE
+      CALL Calc_Norm_OF_PsiBasis(psi, Norm)
+   END IF
 
-         CALL Calc_Norm_OF_PsiGrid(Psi, Norm)
+   !------------------ Debug output if enabled ---------------------------------
+   IF (debug) THEN
+      WRITE(out_unit,*) '<psi|psi> =', Norm
+      FLUSH(out_unit)
+   END IF
 
-      ELSE
-
-         CALL Calc_Norm_OF_PsiBasis(psi, Norm)
-
-      END IF
-
-      !write(out_unit,*) '<psi|psi> =',Norm
-
-   END SUBROUTINE Calc_Norm_OF_Psi
+END SUBROUTINE Calc_Norm_OF_Psi
 
    SUBROUTINE Calc_Norm_OF_PsiGrid(psi_g, Norm)
-
+      !======================================================================
+      ! PURPOSE:
+      !   Compute the total norm of a wavefunction (psi_g) defined on a grid,
+      !   summing contributions from all electronic states.
+      !
+      ! ARGUMENTS:
+      !   psi_g : (IN)     Psi_t structure containing the wavefunction data.
+      !   Norm  : (OUT)    Computed total norm.
+      !
+      ! NOTES:
+      !   - Assumes psi_g%CVec is allocated and contains the complex values
+      !     of the wavefunction in grid representation.
+      !   - Basis weights are used to compute the weighted norm.
+      !   - No memory leaks: all allocated arrays are deallocated at the end.
+      !======================================================================
+   
       USE QDUtil_m
-      logical, parameter                   :: debug = .false.
-      TYPE(Psi_t), intent(in)              :: psi_g
-      real(kind= Rkind), intent(inout)     :: Norm
-
-
-      complex(kind= Rkind), allocatable    :: psi_gb(:, :)
-      logical                              :: Endloop_q    
-      real(kind= Rkind), allocatable       :: Norme(:)
-      real(kind= Rkind)                    :: WnD
-      integer, allocatable                 :: Tab_iq(:)
-      integer                              :: iq, inb, inbe
-
+      LOGICAL, PARAMETER                  :: debug = .FALSE.
+      TYPE(Psi_t), INTENT(IN)             :: psi_g
+      REAL(KIND=Rkind), INTENT(OUT)       :: Norm
+   
+      ! Local variables
+      COMPLEX(KIND=Rkind), ALLOCATABLE    :: psi_gb(:, :)
+      LOGICAL                             :: Endloop_q
+      REAL(KIND=Rkind), ALLOCATABLE       :: Norme(:)
+      REAL(KIND=Rkind)                    :: WnD
+      INTEGER, ALLOCATABLE                :: Tab_iq(:)
+      INTEGER                             :: iq, inb, inbe
+      INTEGER                             :: nq, nbasis, nstates
+   
+      !-----------------------------------------------------------
+      ! Cache frequently used values for efficiency
+      !-----------------------------------------------------------
+      nq       = psi_g%Basis%nq
+      nbasis   = SIZE(psi_g%Basis%tab_basis)
+      nstates  = psi_g%Basis%tab_basis(nbasis)%nb
+   
+      !-----------------------------------------------------------
+      ! Debug output (optional)
+      !-----------------------------------------------------------
       IF (debug) THEN
-
-         write (out_unit, *) 'Beging NormGrid'
-         flush (out_unit)
-
+         WRITE (out_unit, *) 'Beginning NormGrid computation'
+         FLUSH (out_unit)
       END IF
-
-      Allocate (Psi_gb(Psi_g%Basis%nq, Psi_g%Basis%tab_basis(size(Psi_g%Basis%tab_basis))%nb))
-      Allocate (Tab_iq(size(Psi_g%Basis%tab_basis) - 1))
-      Allocate (Norme( psi_g%Basis%tab_basis(size(psi_g%Basis%tab_basis))%nb))
-
-      Psi_gb(:, :) = reshape(Psi_g%CVec, shape=[psi_g%Basis%nq, Psi_g%Basis%tab_basis(size(Psi_g%Basis%tab_basis))%nb])
-
-      DO inbe = 1, psi_g%Basis%tab_basis(size(psi_g%Basis%tab_basis))%nb !electronic state
-
+   
+      !-----------------------------------------------------------
+      ! Allocate working arrays
+      !-----------------------------------------------------------
+      ALLOCATE(psi_gb(nq, nstates))
+      ALLOCATE(Tab_iq(nbasis - 1))
+      ALLOCATE(Norme(nstates))
+   
+      ! Reshape psi_g%CVec into 2D form: (grid points, nb_states)
+      psi_gb(:, :) = RESHAPE(psi_g%CVec, SHAPE=[nq, nstates])
+   
+      ! Initialize total norm accumulator
+      Norm = ZERO
+   
+      !-----------------------------------------------------------
+      ! Loop over electronic states
+      !-----------------------------------------------------------
+      DO inbe = 1, nstates
+   
          Norme(inbe) = ZERO
-
-         Call Init_tab_ind(Tab_iq, psi_g%Basis%NDindexq)
-
-         Iq = 0
-
+   
+         CALL Init_tab_ind(Tab_iq, psi_g%Basis%NDindexq)
+   
+         iq = 0
          DO
-
-            Iq = Iq + 1
-
+            iq = iq + 1
             CALL increase_NDindex(Tab_iq, psi_g%Basis%NDindexq, Endloop_q)
-
-            !if(inbe == 1)  print*,Tab_iq
-
-            IF (Endloop_q) exit
-
+            IF (Endloop_q) EXIT
+   
+            ! Compute the product of the weights for this grid point
             WnD = ONE
-
-            DO inb = 1, size(psi_g%Basis%tab_basis) - 1
-
-               WnD = WnD*Psi_g%Basis%tab_basis(inb)%w(Tab_iq(inb))
-
+            DO inb = 1, nbasis - 1
+               WnD = WnD * psi_g%Basis%tab_basis(inb)%w(Tab_iq(inb))
             END DO
-
-            Norme(inbe) = Norme(inbe) + conjg(Psi_gb(iq, inbe))*Psi_gb(iq, inbe)*WnD
-
+   
+            ! Accumulate weighted squared amplitude for this state
+            Norme(inbe) = Norme(inbe) + REAL(CONJG(psi_gb(iq, inbe)) * psi_gb(iq, inbe) * WnD,kind=Rkind)
+   
          END DO
-
-         Norm = sqrt(sum(Norme))
-
+   
+         ! Add contribution from this state to the total norm
+         Norm = Norm + Norme(inbe)
+   
       END DO
-
-      Deallocate (Tab_iq,Norme)
-      Deallocate (Psi_gb)
-
+   
+      ! Final square root after summing over all states
+      Norm = SQRT(Norm)
+   
+      !-----------------------------------------------------------
+      ! Free allocated memory to avoid leaks
+      !-----------------------------------------------------------
+      DEALLOCATE(Tab_iq, Norme, psi_gb)
+   
+      !-----------------------------------------------------------
+      ! Debug output (optional)
+      !-----------------------------------------------------------
       IF (debug) THEN
-
-         write (out_unit, *) 'END NormGrid'
-         flush (out_unit)
-
+         WRITE (out_unit, *) 'End of NormGrid computation'
+         FLUSH (out_unit)
       END IF
-
+   
    END SUBROUTINE Calc_Norm_OF_PsiGrid
 
-
    SUBROUTINE Calc_Norm_OF_PsiBasis(psi, Norm)
-
-      TYPE(psi_t), intent(in)          :: Psi
-      real(kind= Rkind), intent(inout) :: Norm
-
-      Norm = sqrt(real(dot_product(Psi%CVec, Psi%CVec), kind= Rkind))
-
-      ! write(out_unit,*) 'norm,psi',Norm
+      !======================================================================
+      ! PURPOSE:
+      !   Compute the norm of a wavefunction (psi) represented in the basis.
+      !   Works automatically for real (RVec) or complex (CVec) representations.
+      !
+      ! ARGUMENTS:
+      !   psi  : (IN)  Psi_t structure containing the wavefunction coefficients
+      !   Norm : (OUT) Computed norm of the wavefunction
+      !
+      ! NOTES:
+      !   - If both RVec and CVec are allocated, CVec takes priority.
+      !   - Uses Euclidean norm (dot product for real/complex vectors)
+      !======================================================================
+   
+      TYPE(psi_t), INTENT(IN)       :: psi
+      REAL(KIND=Rkind), INTENT(OUT) :: Norm
+   
+      ! Check which vector is allocated
+      IF (ALLOCATED(psi%CVec)) THEN
+         ! Compute norm for complex coefficients
+         Norm = SQRT(REAL(DOT_PRODUCT(psi%CVec, psi%CVec), KIND=Rkind))
+      ELSEIF (ALLOCATED(psi%RVec)) THEN
+         ! Compute norm for real coefficients
+         Norm = SQRT(DOT_PRODUCT(psi%RVec, psi%RVec))
+      ELSE
+         ! No vector allocated: return zero and print warning
+         Norm = ZERO
+         PRINT *, 'WARNING: Calc_Norm_OF_PsiBasis: no coefficients allocated in psi'
+      END IF
+   
    END SUBROUTINE Calc_Norm_OF_PsiBasis
 
-
    SUBROUTINE write_psi_basis(psi, print_cplx, t, nio, real_part)
-
-      TYPE(psi_t), intent(in), target                :: psi
-      real(kind= Rkind), intent(in), optional        :: t
-      integer, intent(in), optional                  :: nio
-      logical, intent(in)                            :: print_cplx, real_part
-
-      complex(Kind= Rkind), pointer                  ::psibe(:, :)
-      integer                                        :: ib, Ndim
-
-      Ndim = size(psi%Basis%tab_basis)
+      !======================================================================
+      ! PURPOSE:
+      !   Write the wavefunction psi in the basis representation to a file
+      !   or standard output.
+      !
+      ! ARGUMENTS:
+      !   psi        : (IN)  Psi_t structure containing the wavefunction
+      !   print_cplx : (IN)  Logical flag to print complex coefficients
+      !   t          : (IN, OPTIONAL) Time value to include in output
+      !   nio        : (IN, OPTIONAL) Output unit number
+      !   real_part  : (IN)  Logical flag to print only the real part
+      !======================================================================
+   
+      TYPE(psi_t), INTENT(IN), TARGET          :: psi
+      REAL(KIND=Rkind), INTENT(IN), OPTIONAL   :: t
+      INTEGER, INTENT(IN), OPTIONAL            :: nio
+      LOGICAL, INTENT(IN)                      :: print_cplx, real_part
+   
+      COMPLEX(KIND=Rkind), POINTER             :: psibe(:, :)
+      INTEGER                                  :: ib, Ndim
+      INTEGER                                  :: outunit_local
+      LOGICAL                                   :: has_time
+   
+      !-----------------------------------------------------------
+      ! Determine dimensions and set pointer to complex vector
+      !-----------------------------------------------------------
+      Ndim = SIZE(psi%Basis%tab_basis)
       psibe(1:psi%Basis%nb, 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
-
-      if (print_cplx) then 
-
-         if (real_part) then
-
-           ! write (*, *) '****************** Beging wrinting psi on basis****************************'
-
-            if (present(nio) .and. present(t)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (nio, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :)), t
-
-               end do
-
-            elseif (present(t)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (*, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :)), t
-
-               end do
-
-            elseif (present(nio)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (nio, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :))
-
-               end do
-
-            elseif (.not. present(nio) .and. .not. present(t)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (out_unit, *) ib, real(psibe(ib, :), kind= Rkind), aimag(psibe(ib, :))
-
-               end do
-
-            else
-
-               print *, 'no default case'
-
-            end if
-
-            !write (*, *) '****************** End wrinting psi on basis********************************'
-
-         else
-
-           ! write (*, *) '****************** Beging wrinting psi on basis****************************'
-
-            if (present(nio) .and. present(t)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (nio, *) t, ib, psibe(ib, :)
-
-               end do
-
-            elseif (present(t)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (*, *) t, ib, psibe(ib, 1)
-
-               end do
-
-            elseif (present(nio)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (nio, *) ib, psibe(ib, :)
-
-               end do
-
-            elseif (.not. present(nio) .and. .not. present(t)) then
-
-               do ib = 1, psi%Basis%nb
-
-                  write (out_unit, *) ib, psibe(ib, :)
-
-               end do
-
-            else
-
-               print *, 'no default case'
-
-            end if
-
-            !write (*, *) '****************** End wrinting psi on basis********************************'
-
-         end if
-
-      else
-
-         !write (*, *) '****************** Beging wrinting <psi/psi> on basis****************************'
-
-         if (present(nio) .and. present(t)) then
-
-            do ib = 1, psi%Basis%nb
-
-               write (nio, *) t, ib, abs(psibe(ib, :))**2
-
-            end do
-
-         elseif (present(t)) then
-
-            do ib = 1, psi%Basis%nb
-
-               write (*, *) t, ib, abs(psibe(ib, :))**2
-
-            end do
-
-         elseif (present(nio)) then
-
-            do ib = 1, psi%Basis%nb
-
-               write (nio, *) ib, abs(psibe(ib, :))**2
-
-            end do
-
-         elseif (.not. present(nio) .and. .not. present(t)) then
-
-            do ib = 1, psi%Basis%nb
-
-               write (out_unit, *) ib, abs(psibe(ib, :))**2
-
-            end do
-
-         else
-
-            print *, 'no default case'
-
-         end if
-
-      end if
-
+   
+      !-----------------------------------------------------------
+      ! Determine output unit
+      !-----------------------------------------------------------
+      IF (PRESENT(nio)) THEN
+         outunit_local = nio
+      ELSE
+         outunit_local = out_unit
+      END IF
+   
+      has_time = PRESENT(t)
+   
+      !-----------------------------------------------------------
+      ! Loop over basis functions
+      !-----------------------------------------------------------
+      DO ib = 1, psi%Basis%nb
+         IF (print_cplx) THEN
+            IF (real_part) THEN
+               IF (has_time) THEN
+                  WRITE(outunit_local, *) ib, REAL(psibe(ib, :), KIND=Rkind), &
+                                         AIMAG(psibe(ib, :)), t
+               ELSE
+                  WRITE(outunit_local, *) ib, REAL(psibe(ib, :), KIND=Rkind), &
+                                         AIMAG(psibe(ib, :))
+               END IF
+            ELSE
+               IF (has_time) THEN
+                  WRITE(outunit_local, *) t, ib, psibe(ib, :)
+               ELSE
+                  WRITE(outunit_local, *) ib, psibe(ib, :)
+               END IF
+            END IF
+         ELSE
+            ! Print modulus squared |psi|^2
+            IF (has_time) THEN
+               WRITE(outunit_local, *) t, ib, ABS(psibe(ib, :))**2
+            ELSE
+               WRITE(outunit_local, *) ib, ABS(psibe(ib, :))**2
+            END IF
+         END IF
+      END DO
+   
    END SUBROUTINE write_psi_basis
 
-
    SUBROUTINE write_psi_grid(psi, print_cplx, t, nio, real_part)
-
-      TYPE(psi_t), intent(in), target                 :: psi
-      real(kind= Rkind), intent(in), optional         :: t
-      integer, intent(in), optional                   :: nio
-      logical, intent(in)                             :: print_cplx, real_part
-
-      complex(Kind= Rkind), pointer                   :: psige(:, :)
-      integer                                         :: iq, Ndim
-      real(Kind= Rkind), allocatable                  :: Q(:, :)
-
-      Ndim = size(psi%Basis%tab_basis)
+      !======================================================================
+      ! PURPOSE:
+      !   Write the wavefunction psi in grid representation to a file or 
+      !   standard output.
+      !
+      ! ARGUMENTS:
+      !   psi        : (IN)  Psi_t structure containing the wavefunction
+      !   print_cplx : (IN)  Logical flag to print complex coefficients
+      !   t          : (IN, OPTIONAL) Time value to include in output
+      !   nio        : (IN, OPTIONAL) Output unit number
+      !   real_part  : (IN)  Logical flag to print only the real part
+      !
+      ! NOTES:
+      !   - Uses calc_Q_grid to obtain grid coordinates
+      !   - Handles complex, real-part-only, or modulus squared output
+      !   - Single loop over grid points avoids code duplication
+      !======================================================================
+   
+      TYPE(psi_t), INTENT(IN), TARGET          :: psi
+      REAL(KIND=Rkind), INTENT(IN), OPTIONAL   :: t
+      INTEGER, INTENT(IN), OPTIONAL            :: nio
+      LOGICAL, INTENT(IN)                      :: print_cplx, real_part
+   
+      COMPLEX(KIND=Rkind), POINTER             :: psige(:, :)
+      INTEGER                                  :: iq, Ndim
+      REAL(KIND=Rkind), ALLOCATABLE            :: Q(:, :)
+      INTEGER                                  :: outunit_local
+      LOGICAL                                  :: has_time
+   
+      !-----------------------------------------------------------
+      ! Determine dimensions and set pointer to complex vector
+      !-----------------------------------------------------------
+      Ndim = SIZE(psi%Basis%tab_basis)
       psige(1:psi%Basis%nq, 1:psi%Basis%tab_basis(Ndim)%nb) => psi%CVec
-
-      call calc_Q_grid(Q, psi%Basis)
-
-      if (print_cplx) then
-
-         if (real_part) then
-
-           ! write (*, *) '****************** Beging wrinting psi on Grid****************************'
-
-            if (present(nio) .and. present(t)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (nio, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :)), t
-                  if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (nio, *)
-
-               end do
-
-            elseif (present(t)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (*, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :)), t
-                  if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (*, *)
-
-               end do
-
-            elseif (present(nio)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (nio, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :))
-                  if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (nio, *)
-
-               end do
-
-            elseif (.not. present(nio) .and. .not. present(t)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (out_unit, *) Q(iq, :), real(psige(iq, :), kind= Rkind), aimag(psige(iq, :))
-                  if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (out_unit, *)
-
-               end do
-
-            else
-
-               print *, 'no default case'
-
-            end if
-
-          !  write (*, *) '****************** End wrinting psi on Grid ********************************'
-
-         else
-
-           ! write (*, *) '****************** Beging wrinting psi on Grid****************************'
-
-            if (present(nio) .and. present(t)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (nio, *) Q(iq, :), psige(iq, :), t
-
-               end do
-            elseif (present(t)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (*, *) Q(iq, :), psige(iq, :), t
-
-               end do
-
-            elseif (present(nio)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (nio, *) Q(iq, :), psige(iq, :)
-
-               end do
-
-            elseif (.not. present(nio) .and. .not. present(t)) then
-
-               do iq = 1, psi%Basis%nq
-
-                  write (out_unit, *) Q(iq, :), psige(iq, :)
-
-               end do
-
-            else
-
-               print *, 'no default case'
-
-            end if
-
-            !write (*, *) '****************** End wrinting psi on Grid ********************************'
-
-
-         end if
-
-      else
-
-        ! write (*, *) '****************** Beging wrinting <psi/psi> on Grid ****************************'
-
-         if (present(nio) .and. present(t)) then
-
-            do iq = 1, psi%Basis%nq
-
-               write (nio, *) t, Q(iq, :), abs(psige(iq, :))**2
-               if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (nio, *)
-
-            end do
-
-         elseif (present(t)) then
-
-            do iq = 1, psi%Basis%nq
-
-               write (*, *) t, Q(iq, :), abs(psige(iq, :))**2
-               if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (*, *)
-
-            end do
-
-         elseif (present(nio)) then
-
-            do iq = 1, psi%Basis%nq
-
-               write (nio, *) Q(iq, :), abs(psige(iq, :))**2
-
-               if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (nio, *)
-
-            end do
-
-         elseif (.not. present(nio) .and. .not. present(t)) then
-
-            do iq = 1, psi%Basis%nq
-
-               write (out_unit, *) Q(iq, :), abs(psige(iq, :))**2
-               if (mod(iq, psi%Basis%tab_basis(1)%nq) == 0) write (out_unit, *)
-
-            end do
-
-         else
-
-            print *, 'no default case'
-
-         end if
-
-      end if
-      deallocate(Q)
-
-   END SUBROUTINE
-
+   
+      ! Compute grid coordinates
+      CALL calc_Q_grid(Q, psi%Basis)
+   
+      ! Determine output unit and if time is present
+      IF (PRESENT(nio)) THEN
+         outunit_local = nio
+      ELSE
+         outunit_local = out_unit
+      END IF
+      has_time = PRESENT(t)
+   
+      !-----------------------------------------------------------
+      ! Loop over grid points
+      !-----------------------------------------------------------
+      DO iq = 1, psi%Basis%nq
+   
+         IF (print_cplx) THEN
+            IF (real_part) THEN
+               IF (has_time) THEN
+                  WRITE(outunit_local, *) Q(iq, :), REAL(psige(iq, :), KIND=Rkind), &
+                                         AIMAG(psige(iq, :)), t
+               ELSE
+                  WRITE(outunit_local, *) Q(iq, :), REAL(psige(iq, :), KIND=Rkind), &
+                                         AIMAG(psige(iq, :))
+               END IF
+            ELSE
+               IF (has_time) THEN
+                  WRITE(outunit_local, *) t, Q(iq, :), psige(iq, :)
+               ELSE
+                  WRITE(outunit_local, *) Q(iq, :), psige(iq, :)
+               END IF
+            END IF
+         ELSE
+            ! Print modulus squared |psi|^2
+            IF (has_time) THEN
+               WRITE(outunit_local, *) t, Q(iq, :), ABS(psige(iq, :))**2
+            ELSE
+               WRITE(outunit_local, *) Q(iq, :), ABS(psige(iq, :))**2
+            END IF
+         END IF
+   
+         ! Optional: add a blank line at end of each grid block (for readability)
+         IF (MOD(iq, psi%Basis%tab_basis(1)%nq) == 0) THEN
+            WRITE(outunit_local, *)
+         END IF
+   
+      END DO
+   
+      !-----------------------------------------------------------
+      ! Free allocated memory for grid coordinates
+      !-----------------------------------------------------------
+      DEALLOCATE(Q)
+   
+   END SUBROUTINE write_psi_grid
 
 
    SUBROUTINE psi_init_GWP(psi, Tab_GWP)
+      !======================================================================
+      ! PURPOSE:
+      !   Initialize a wavefunction psi as a Gaussian Wave Packet (GWP)
+      !   in grid space, then transform it to the basis representation.
+      !
+      ! ARGUMENTS:
+      !   psi      : (INOUT) Psi_t structure to be initialized
+      !   Tab_GWP  : (IN)    Array of GWP_t structures containing GWP parameters
+      !
+      ! NOTES:
+      !   - Norm checking is performed before and after Grid->Basis transformation
+      !   - Memory for temporary psi0 and grid coordinates Q is properly managed
+      !======================================================================
+   
       USE QDUtil_m
-      TYPE(psi_t), intent(inout), target         :: psi
-      TYPE(GWP_t)                                :: Tab_GWP(:)
-
-      !------------------locale variables--------------------------------------------
-      TYPE(psi_t), target                        :: psi0
-      real(kind= Rkind), allocatable             :: Q(:, :)
-      integer                                    :: iq, iGWO
-      complex(Kind= Rkind), pointer              :: gb(:, :)
-      real(Kind= Rkind)                          :: NormG, NormB
-      integer                                    :: ndim,n_surf,nq,i_surf
-
-      !initialisation-----------------------------------------------------------------
-      CALL init_psi(psi0, psi%Basis, cplx=.true., grid=.true.)
-      call calc_Q_grid(Q, psi%Basis)
-
+   
+      TYPE(psi_t), INTENT(INOUT), TARGET  :: psi
+      TYPE(GWP_t)                         :: Tab_GWP(:)
+   
+      !------------------ Local variables ---------------------------------------
+      TYPE(psi_t), TARGET                  :: psi0               ! temporary wavefunction on grid
+      REAL(KIND=Rkind), ALLOCATABLE        :: Q(:, :)            ! grid coordinates
+      INTEGER                              :: iq, iGWP
+      COMPLEX(KIND=Rkind), POINTER         :: gb(:, :)           ! pointer to psi0 coefficients
+      REAL(KIND=Rkind)                      :: NormG, NormB       ! norms before/after basis transformation
+      INTEGER                               :: ndim, n_surf, nq, i_surf
+   
+      !------------------ Initialization ----------------------------------------
+      CALL init_psi(psi0, psi%Basis, cplx=.true., grid=.true.)   ! allocate psi0 on grid
+      CALL calc_Q_grid(Q, psi%Basis)                             ! compute grid coordinates
+   
+      ! Zero target wavefunction coefficients
       psi%CVec(:) = CZERO
-      ndim = size(psi%Basis%tab_basis)-1
+   
+      ndim   = SIZE(psi%Basis%tab_basis) - 1
       n_surf = psi%Basis%tab_basis(ndim+1)%nb
-      nq = psi%Basis%nq
-      i_surf =Tab_GWP(1)%Elecindex
+      nq     = psi%Basis%nq
+      i_surf = Tab_GWP(1)%Elecindex
+   
+      ! Point gb to psi0 grid coefficients and zero it
       gb(1:nq, 1:n_surf) => psi0%CVec
       gb(:, :) = CZERO
-      DO iq = 1,nq
-
+   
+      !------------------ Build Gaussian Wave Packet on grid --------------------
+      DO iq = 1, nq
          gb(iq, i_surf) = calc_GWP(Tab_GWP(1), Q(iq, :))
-         ! write(25,*)  Q(iq,:),   abs( gb(iq,Tab_GWP(1)%Elecindex))**2
-         !if(mod(iq,10)==0) write(25,*)
+         ! Optional debugging:
+         ! WRITE(25,*) Q(iq,:), ABS(gb(iq, Tab_GWP(1)%Elecindex))**2
+         ! IF(MOD(iq,10)==0) WRITE(25,*)
       END DO
-      !------------------transformation Grid to Basis-------------------------
-      call Calc_Norm_OF_Psi(psi0, NormG)
-      !psi0%CVec(:) = psi0%CVec(:)/NormG
-      !call Calc_Norm_OF_Psi(psi0, NormG)
-      write (out_unit, *)'------------------- Begining Norm Checking---------------------------------------'
-      write (out_unit, *)
-      write (out_unit, *) 'NormG = ', NormG
-
-      call GridTOBasis_nD_cplx(psi%CVec, psi0%CVec, psi%Basis)
-
-      call Calc_Norm_OF_Psi(psi, NormB)
-      !psi%CVec(:) = psi%CVec(:)/NormB
-      !call Calc_Norm_OF_Psi(psi, NormB)
-
-      print *, 'NormB = ', NormB
-
-      !psi%CVec(:) = psi%CVec(:)/NormB
-      !call Calc_Norm_OF_Psi(psi, NormB)
-
-      print *, 'NormB (renormed)= ', NormB
-      write (out_unit, *)'------------------------------End Norm Checking---------------------------------'
-      write (out_unit, *)
-      deallocate (Q)
+   
+      !------------------ Compute norm on grid ---------------------------------
+      CALL Calc_Norm_OF_Psi(psi0, NormG)
+      WRITE(out_unit, *) '------------------- Beginning Norm Checking ---------------------------'
+      WRITE(out_unit, *)
+      WRITE(out_unit, *) 'NormG = ', NormG
+   
+      !------------------ Transform Grid -> Basis --------------------------------
+      CALL GridTOBasis_nD_cplx(psi%CVec, psi0%CVec, psi%Basis)
+   
+      ! Compute norm in basis representation
+      CALL Calc_Norm_OF_Psi(psi, NormB)
+      PRINT *, 'NormB = ', NormB
+      PRINT *, 'NormB (renormalized) = ', NormB   ! optionally renormalize if needed
+   
+      WRITE(out_unit, *) '------------------------------ End Norm Checking --------------------------'
+      WRITE(out_unit, *)
+   
+      !------------------ Clean up memory ---------------------------------------
+      DEALLOCATE(Q)
       CALL dealloc_psi(psi0)
+   
+   END SUBROUTINE psi_init_GWP
 
-   END SUBROUTINE
 
    subroutine test(Basis)
       implicit none

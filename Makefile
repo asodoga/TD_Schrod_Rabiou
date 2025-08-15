@@ -7,13 +7,21 @@ FC = gfortran
 #FC = ifort
 
 # Compilation flags (optimized for production)
-FFLAGS = -Wall -Wextra -O3 -fopenmp -J$(MOD_DIR)
-
+#FFLAGS = -Wall -Wextra -O3 -fopenmp -J$(MOD_DIR)
+#FFLAGS = -g -O0 -Wall -Wextra -fcheck=all -fbacktrace -fopenmp -J$(MOD_DIR)
+#FFLAGS = -Wall -Wextra -Wimplicit-interface -Wno-unused -fcheck=all -fbacktrace -fopenmp -J$(MOD_DIR)
+ 
 # Alternative flags for debugging (uncomment if needed)
 #FFLAGS = -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
 #FFLAGS= -Og -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
 #FFLAGS= -Wall -Wextra -Wimplicit-interface -fPIC -O3 -march=native -ffast-math -funroll-loops -fopenmp -J$(MOD_DIR)
 #FFLAGS= -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=5 -g -fcheck=all -fbacktrace -Og -g -fcheck=bounds -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan -fopenmp -J$(MOD_DIR)
+
+FFLAGS = -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=5 \
+         -g -fcheck=all -fbacktrace -Og -fcheck=bounds -fwhole-file \
+         -fcheck=pointer -Wuninitialized -finit-real=nan -finit-integer=nan \
+         -fopenmp -Warray-temporaries -J$(MOD_DIR)
+
 OBJ_DIR=obj
 
 # =====================================================================================
@@ -28,7 +36,7 @@ MAIN_DIR = app
 # External library paths
 # =====================================================================================
 QML_DIR = EXT_Lib/QuantumModelLib
-QDU_DIR = EXT_Lib/QDUtilLib
+QDU_DIR = $(QML_DIR)/Ext_Lib/QDUtilLib
 MOD_EXT = $(QDU_DIR)/OBJ/obj_gfortran_opt1_omp1_lapack1_int4
 
 FFLAGS += -I$(MOD_EXT)

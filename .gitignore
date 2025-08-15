@@ -1,61 +1,47 @@
-# =============================================
-# General temporary and output files
-# =============================================
-*.x                 # Executable files
-fort.*              # Fortran temporary files
-*.log               # Log files
-*.pdf               # PDF files
-*.dat               # Data files
-*.swap              # Swap files (editor temp files)
-*.txt               # Text files (if generated)
-*.png               # Image files (if generated)
-*.ipynb             # Jupyter notebooks
-*.gp                # Gnuplot scripts
-*.py                # Python scripts
-*.sh                # Shell scripts
+# === EXECUTABLES ET FICHIERS COMPILÉS ===
+*.x            
+*.exe          
+*.out          
+*.o            
+*.mod          
+*.smod         
+*.obj
+*.dll
+*.so
+*.a
+*.lib
+*.dylib
+*.sh
 
-# =============================================
-# Build and compilation artifacts
-# =============================================
-# Prerequisites
-*.d                 # Dependency files
-cplx-basis-test     # Test executable
-EXT_Lib             # External libraries directory (should be managed separately)
-results_*           # All results directories (pattern)
-16-04-25            # Date-stamped directory
-diff.x.dSYM         # macOS debug symbols
-DAT_files           # Data directory
-build               # Build directory
-obj                 # Object files directory
+# === FICHIERS TEMPORAIRES OU DE TRAVAIL ===
+*.log
+*.txt
+*.dat
+*.swap
+*.d
+*.zip
+*.pdf
+*.png
+*.gch
+*.pch
+*.ipynb
+*.lua
+*.gp
+*.py
 
-# Compiled Object files
-*.slo               # Shared library objects
-*.lo                # Libtool objects
-*.o                 # Object files
-*.obj               # Object files (alternative extension)
+# === DOSSIERS DE RÉSULTATS ===
+res*            
+results*         
+obj
 
-# Precompiled Headers
-*.gch               # GCC precompiled headers
-*.pch               # Precompiled headers
+# === OUTILS ET LIBS LOCAUX ===
+EXT_Lib/
 
-# Compiled Dynamic libraries
-*.so                # Shared objects (Linux)
-*.dylib             # Dynamic libraries (macOS)
-*.dll               # Dynamic-link libraries (Windows)
-
-# Fortran module files
-*.mod               # Fortran module files
-*.smod              # Fortran submodule files
-
-# Compiled Static libraries
-*.lai               # Libtool archive index
-*.la                # Libtool archives
-*.a                 # Static libraries
-*.lib               # Static libraries (Windows)
-
-# Executables
-*.exe               # Windows executables
-*.out               # Unix executables
-*.app               # macOS application bundles
-*.zip               # Zip archives
-*.f90
+# === WINSURF ===
+winsurf/          
+*.wsv            
+*.srf            
+*.sur 
+calc*
+spectrum* 
+diff*          

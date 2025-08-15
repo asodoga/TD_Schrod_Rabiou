@@ -95,7 +95,8 @@ SUBROUTINE LambdaTOpsi(psi,L)
    End DO
 
    SQt(:) = ONE
-   call Construct_Hagedorn_Variational_Basis(psi%Basis,Qt,SQt,At,Pt)
+   !call Construct_Hagedorn_Variational_Basis(psi%Basis,Qt,SQt,At,Pt)
+   stop 'att sub_vp ligne 99'
    deallocate (SQt,Qt,Pt,At)
 
 
