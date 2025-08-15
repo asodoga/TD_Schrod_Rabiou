@@ -207,8 +207,85 @@ contains
       END IF
    END SUBROUTINE Kpsi_nD
 
+   SUBROUTINE Calc_Scalar_Pot(V, Basis)
+      use QDUtil_m
+      use Basis_m
+      use omp_lib
+      implicit none
+   
+      ! ===== Arguments =====
+      type(Basis_t), intent(in), target                :: Basis
+      real(kind=Rkind), allocatable, intent(inout)     :: V(:, :, :)
+   
+      ! ===== Local variables =====
+      integer                                          :: ndim, iq, nq, nsurf
+      real(kind=Rkind), allocatable                    :: Q(:,:)
+   
+      ! ===== Initialization =====
+      ndim  = size(Basis%tab_basis) - 1        ! Number of nuclear degrees of freedom
+      nq    = Basis%nq                         ! Total number of grid points
+      nsurf = Basis%tab_basis(ndim + 1)%nb     ! Number of electronic surfaces
+   
+      allocate(V(nq, nsurf, nsurf))
+      call Calc_Q_grid(Q, Basis)
+   
+      ! ===== Parallel loop avec variables privées =====
+      !$OMP PARALLEL DEFAULT(NONE) &
+      !$OMP          SHARED(V, Q, nq, nsurf, ndim) &
+      !$OMP          PRIVATE(iq)
+      
+      !$OMP DO SCHEDULE(DYNAMIC)
+      Do iq = 1, nq
+         ! Appel de la version sans tableaux temporaires
+         call calc_potential_point(V, Q, iq, nsurf, ndim)
+      end do
+      !$OMP END DO
+   
+      !$OMP END PARALLEL
+   
+      ! ===== Deallocation =====
+      deallocate(Q)
+   
+   END SUBROUTINE Calc_Scalar_Pot
+   
+   ! ===== Subroutine auxiliaire pour éviter les tableaux temporaires =====
+   SUBROUTINE calc_potential_point(V, Q, iq, nsurf, ndim)
+      use QDUtil_m
+      implicit none
+      
+      ! Arguments
+      real(kind=Rkind), intent(inout)                  :: V(:, :, :)
+      real(kind=Rkind), intent(in)                     :: Q(:, :)
+      integer, intent(in)                              :: iq, nsurf, ndim
+      
+      ! Variables locales contiguës
+      real(kind=Rkind)                                 :: V_local(nsurf, nsurf)
+      real(kind=Rkind)                                 :: Q_local(ndim)
+      integer                                          :: i, j
+      
+      ! Copie explicite pour garantir la contiguïté
+      do i = 1, ndim
+         Q_local(i) = Q(iq, i)
+      end do
+      
+      ! Initialisation pour respecter -finit-real=nan
+      V_local = 0.0_Rkind
+      
+      ! Appel avec tableaux continus
+      call sub_Qmodel_V(V_local, Q_local)
+      
+      ! Copie du résultat avec boucles explicites
+      do j = 1, nsurf
+         do i = 1, nsurf
+            V(iq, i, j) = V_local(i, j)
+         end do
+      end do
+      
+   END SUBROUTINE calc_potential_point
 
-   subroutine Calc_Scalar_Pot(V, Basis)
+
+
+   subroutine Calc_Scalar_Pot_buggy(V, Basis)
       use QDUtil_m
       use Basis_m
       implicit none
@@ -240,7 +317,7 @@ contains
       ! ===== Deallocation =====
       deallocate(Q)
    
-   end subroutine Calc_Scalar_Pot
+   end subroutine Calc_Scalar_Pot_buggy
 
 SUBROUTINE Calc_Scalar_Pot_temp(V, Basis)
    USE  QDUtil_m

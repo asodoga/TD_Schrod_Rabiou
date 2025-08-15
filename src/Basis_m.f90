@@ -935,6 +935,7 @@ END SUBROUTINE construct_primitive_basis_temp
       REAL(KIND=Rkind) :: sq_half, sq_3half, sq_5half
    
       IF (Basis%nq == 0) RETURN
+      IF (TO_lowercase(Basis%Basis_name) /= 'ho' ) RETURN
    
       IF (abs(sq) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
          sq_half  = sqrt(sq)

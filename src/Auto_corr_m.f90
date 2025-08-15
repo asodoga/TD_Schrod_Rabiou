@@ -50,7 +50,7 @@ SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name
       call Hagedorn_Inv(psi, psi_t0, renorm)
 
       ! Compute auto-correlation coefficient and its phase
-      corre_coeff = dot_product(psi0%CVec, psi%CVec) / dot_product(psi%CVec, psi%CVec)**2
+      corre_coeff = dot_product(psi0%CVec, psi%CVec) !/ dot_product(psi%CVec, psi%CVec)**2
       X = real(corre_coeff, kind=Rkind)
       Y = aimag(corre_coeff)
       arg_corre_coeff = atan2(Y, X)
@@ -73,7 +73,7 @@ SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name
 
    ELSE
       ! Compute auto-correlation for non-Hagedorn case
-      corre_coeff = dot_product(psi0%CVec, psi_dt%CVec) / dot_product(psi_dt%CVec, psi_dt%CVec)
+      corre_coeff = dot_product(psi0%CVec, psi_dt%CVec) !/ dot_product(psi_dt%CVec, psi_dt%CVec)
       X = real(corre_coeff, kind=Rkind)
       Y = aimag(corre_coeff)
       arg_corre_coeff = atan2(Y, X)
