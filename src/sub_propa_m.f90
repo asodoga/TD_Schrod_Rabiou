@@ -57,36 +57,66 @@ SUBROUTINE march_temp(psi, psi_dt, t, propa,H)
 END SUBROUTINE
 
 
-   SUBROUTINE march(psi, psi_dt, t, propa)
-      USE psi_m
-      TYPE(propa_t), INTENT(IN)                :: propa
-      TYPE(psi_t), INTENT(IN)                  :: psi
-      TYPE(psi_t), INTENT(INOUT)               :: psi_dt
-      real(kind=Rkind), INTENT(IN)             :: t
+!=====================================================================
+!> SUBROUTINE march
+!! Performs time propagation of the wavefunction `psi`
+!! according to the propagation method specified in `propa`.
+!!
+!! This routine acts as a dispatcher:
+!! - Converts the propagation method name to lowercase.
+!! - Calls the corresponding propagation routine:
+!!     * RK4     : 4th-order Runge-Kutta
+!!     * Taylor  : Taylor series expansion
+!!     * SIL     : Short Iterative Lanczos
+!!     * ITP     : Imaginary Time Propagation
+!!     * VP      : Variational Principle
+!!
+!! Arguments:
+!!   - psi     : (IN)     initial wavefunction
+!!   - psi_dt  : (INOUT)  wavefunction after propagation
+!!   - t       : (IN)     current time
+!!   - propa   : (IN)     propagation parameters
+!=====================================================================
+SUBROUTINE march(psi, psi_dt, t, propa)
+   USE psi_m
 
-      real(kind=Rkind)                          :: Qt, sQt, Norm, Norm0
-      character(len=Name_len)                   :: name
+   TYPE(propa_t), INTENT(IN)     :: propa
+   TYPE(psi_t),    INTENT(IN)    :: psi
+   TYPE(psi_t),    INTENT(INOUT) :: psi_dt
+   real(kind=Rkind), INTENT(IN)  :: t
 
+   real(kind=Rkind)              :: Qt, sQt, Norm, Norm0
+   character(len=Name_len)       :: name
 
-       name = propa%propa_name2 
-      call string_uppercase_TO_lowercase(name)
+   ! Retrieve and convert the propagation method name to lowercase
+   name = propa%propa_name2
+   call string_uppercase_TO_lowercase(name)
 
-      select case (name)
-      case ('rk4') ! rk4 : Runge-kutta time propagation
-         CALL marh_RK4th(psi, psi_dt, t, propa)
-      case ('taylor') ! taylor : Taylor propagation
-         CALL march_taylor(psi, psi_dt, t, propa)
-      case ('sil') ! SIL: short iterative lanczos
-        CALL march_SIL(psi, psi_dt, t, propa)
-      case ('itp') ! ITP : imaginary times propagation
-         call Imaginary_time_propagation(psi, psi_dt, propa)
-      case ('vp') ! VP : Variational principle times propagation
-         call march_VP(psi, psi_dt, t, propa)   
-      case default
-         write (out_unit, *) ' March name is not in the list'
-      end select      
+   ! Select the propagation method based on the method name
+   select case (name)
 
-   END SUBROUTINE
+   case ('rk4')        ! RK4: 4th-order Runge-Kutta time propagation
+      CALL marh_RK4th(psi, psi_dt, t, propa)
+
+   case ('taylor')     ! Taylor: Taylor series time propagation
+      CALL march_taylor(psi, psi_dt, t, propa)
+
+   case ('sil')        ! SIL: Short Iterative Lanczos method
+      CALL march_SIL(psi, psi_dt, t, propa)
+
+   case ('itp')        ! ITP: Imaginary Time Propagation
+      CALL Imaginary_time_propagation(psi, psi_dt, propa)
+
+   case ('vp')         ! VP: Variational Principle time propagation
+      CALL march_VP(psi, psi_dt, t, propa)
+
+   case default        ! Unknown propagation method
+      write (out_unit, *) ' March name is not in the list'
+
+   end select
+
+END SUBROUTINE march
+
 
    SUBROUTINE CopyPsi(psi2,psi1)
      implicit none
@@ -138,55 +168,98 @@ END SUBROUTINE
 
    END SUBROUTINE Analyse
 
+!=====================================================================
+!> SUBROUTINE march_taylor
+!! Performs time propagation of the wavefunction `psi`
+!! using the Taylor series expansion method.
+!!
+!! The algorithm:
+!!   1. Initialize working wavefunctions (`Hpsi`, `psi0`).
+!!   2. Copy the initial wavefunction into `psi_dt` and `psi0`.
+!!   3. Iteratively apply the Hamiltonian using mEyeHPsi,
+!!      scaling each term by Δt / k, and summing into `psi_dt`.
+!!   4. Stop when the norm of the current term is smaller than
+!!      the convergence threshold (`propa%eps`) or when `max_iter`
+!!      is reached.
+!!
+!! Arguments:
+!!   - psi     : (IN)     Initial wavefunction
+!!   - psi_dt  : (INOUT)  Wavefunction after propagation
+!!   - t       : (IN)     Current time
+!!   - propa   : (IN)     Propagation parameters
+!=====================================================================
    SUBROUTINE march_taylor(psi, psi_dt, t, propa)
       USE op_m
       USE psi_m
       USE Basis_m
-
-      TYPE(psi_t), INTENT(INOUT)       :: psi_dt
-      TYPE(psi_t), INTENT(IN)          :: psi
-      TYPE(propa_t), INTENT(IN)        :: propa
-      real(kind=Rkind), INTENT(IN)     :: t
-      TYPE(psi_t)                      :: psi0
-      TYPE(psi_t)                      :: Hpsi
-      real(kind=Rkind)                 :: alpha
- 
-      ! variables locales-------------------------------------------------------------------------------
-
-      real(kind=Rkind)                 :: Rkk, Norm, Norm0
-      integer                          :: kk
-      CALL init_psi(Hpsi, psi%basis, cplx=.TRUE., grid=.false.) ! to be changed
-      CALL init_psi(Psi0, psi%basis, cplx=.TRUE., grid=.false.) ! to be changed
-
-      write (out_unit, *) 'BEGINNIG march_taylor  ', t, propa%delta_t
-      Rkk = ONE
+   
+      TYPE(psi_t),    INTENT(INOUT) :: psi_dt
+      TYPE(psi_t),    INTENT(IN)    :: psi
+      TYPE(propa_t),  INTENT(IN)    :: propa
+      real(kind=Rkind), INTENT(IN)  :: t
+   
+      TYPE(psi_t)                   :: psi0      ! Temporary wavefunction
+      TYPE(psi_t)                   :: Hpsi      ! Hamiltonian applied to psi
+      real(kind=Rkind)              :: alpha     ! Stability threshold
+   
+      ! Local variables -------------------------------------------------
+      real(kind=Rkind)              :: Rkk, Norm, Norm0
+      integer                       :: kk
+   
+      ! Initialize work arrays for Hamiltonian application
+      CALL init_psi(Hpsi, psi%basis, cplx=.TRUE., grid=.FALSE.)
+      CALL init_psi(psi0, psi%basis, cplx=.TRUE., grid=.FALSE.)
+   
+      write (out_unit, *) 'BEGINNING march_taylor', t, propa%delta_t
+   
+      Rkk   = ONE
       alpha = TEN**10
-      Psi_dt%CVec = Psi%CVec
-      Psi0%CVec = Psi%CVec
-      Do kk = 1, propa%max_iter, 1
+   
+      ! Initialize psi_dt and psi0 with the initial wavefunction
+      psi_dt%CVec = psi%CVec
+      psi0%CVec   = psi%CVec
+   
+      ! Taylor expansion loop
+      DO kk = 1, propa%max_iter, 1
+   
+         ! Apply Hamiltonian: H|psi0> → Hpsi
          CALL mEyeHPsi(psi0, Hpsi)
-
-          psi0%CVec(:) = Hpsi%CVec(:)*(propa%delta_t/kk)
-          psi_dt%CVec(:) = psi_dt%CVec(:) + psi0%CVec(:)
-          Hpsi%CVec(:) = CZERO
-         call Calc_Norm_OF_Psi(psi0, Norm)
+   
+         ! Scale by (Δt / kk) and accumulate into psi_dt
+         psi0%CVec(:)   = Hpsi%CVec(:) * (propa%delta_t / kk)
+         psi_dt%CVec(:) = psi_dt%CVec(:) + psi0%CVec(:)
+   
+         ! Reset Hpsi to zero for next iteration
+         Hpsi%CVec(:) = CZERO
+   
+         ! Check the norm of the current term
+         CALL Calc_Norm_OF_Psi(psi0, Norm)
          write (out_unit, *) 'sqrt(<Hpsi|Hpsi>) = ', kk, Norm
-         if (Norm >= alpha) then
-            stop "wrong choice of delta_t"
-         elseif (Norm <= propa%eps) Then
-
-            write (out_unit, *) 'Taylor condition is fulfild after', kk, 'iteration'
-            exit
-         End if
-      End do
-      CALL Calc_Norm_OF_Psi(Psi, Norm0)
-      CALL Calc_Norm_OF_Psi(Psi_dt, Norm)
-      write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi0|psi0>)  =', abs(Norm0 - Norm)
+   
+         ! Stop if the term is too large (instability)
+         IF (Norm >= alpha) THEN
+            STOP "wrong choice of delta_t"
+   
+         ! Convergence reached
+         ELSEIF (Norm <= propa%eps) THEN
+            write (out_unit, *) 'Taylor condition is fulfilled after', kk, 'iterations'
+            EXIT
+         END IF
+   
+      END DO
+   
+      ! Final norm check
+      CALL Calc_Norm_OF_Psi(psi, Norm0)
+      CALL Calc_Norm_OF_Psi(psi_dt, Norm)
+      write (out_unit, *) '<psi_dt|psi_dt> = ', Norm, 'abs(<psi_dt|psi_dt> - <psi0|psi0>) =', abs(Norm0 - Norm)
+   
       write (out_unit, *) 'END march_taylor'
+   
+      ! Free allocated memory
       CALL dealloc_psi(psi0)
       CALL dealloc_psi(Hpsi)
+   
    END SUBROUTINE march_taylor
-
 
 
    SUBROUTINE march_taylor_temp(psi, psi_dt, t, propa,H)
@@ -427,44 +500,61 @@ END SUBROUTINE
       
    END SUBROUTINE 
 
+   !----------------------------------------------------------------------
+! SUBROUTINE: read_propa
+!
+! DESCRIPTION:
+!   Reads propagation parameters (time interval, time step, tolerance,
+!   method names, and various options) from the "prop" namelist and
+!   stores them in the "propa" structure.
+!   Method names are converted to lowercase.
+!----------------------------------------------------------------------
 
-   SUBROUTINE read_propa(propa)
-      USE psi_m
-      implicit none
-      TYPE(propa_t), intent(inout)   :: propa
-      real(kind=Rkind)               :: t0, tf, delta_t, eps
-      character(len=40)              :: propa_name, propa_name2
-      integer                        :: max_iter
-      logical                        :: Beta,P,renorm
+SUBROUTINE read_propa(propa)
+   USE psi_m
+   IMPLICIT NONE
 
-      namelist /prop/ t0, tf, delta_t,max_iter,eps,propa_name, propa_name2 , Beta,P,renorm
-      t0 = ZERO
-      tf = TEN
-      delta_t = ONETENTH**3
-      eps = ONETENTH**10
-      max_iter = 500
-      propa_name = 'non_hagedorn'
-      propa_name2 = 'rk4'
-      Beta        = .true.
-      P           = .true.
-      renorm      = .true.
+   TYPE(propa_t), INTENT(INOUT) :: propa
+   REAL(KIND=Rkind)             :: t0, tf, delta_t, eps
+   CHARACTER(LEN=40)            :: propa_name, propa_name2
+   INTEGER                      :: max_iter
+   LOGICAL                      :: Beta, P, renorm
 
-      read (*, nml=prop)
+   NAMELIST /prop/ t0, tf, delta_t, max_iter, eps, propa_name, propa_name2, &
+                   Beta, P, renorm
 
-      propa%t0 = t0
-      propa%tf = tf
-      propa%delta_t = delta_t
-      propa%eps = eps
-       propa%max_iter = max_iter
-      propa%propa_name = propa_name
-      propa%propa_name2 = propa_name2
-      propa%Beta =   Beta
-      propa%P = P 
-      propa%renorm =renorm
-      call string_uppercase_TO_lowercase( propa%propa_name)
-      call string_uppercase_TO_lowercase( propa%propa_name2)
+   ! Default values
+   t0          = ZERO
+   tf          = TEN
+   delta_t     = ONETENTH**3
+   eps         = ONETENTH**10
+   max_iter    = 500
+   propa_name  = 'non_hagedorn'
+   propa_name2 = 'rk4'
+   Beta        = .TRUE.
+   P           = .TRUE.
+   renorm      = .TRUE.
 
-   END SUBROUTINE read_propa
+   ! Read the namelist
+   READ (*, NML=prop)
+
+   ! Assign to structure
+   propa%t0          = t0
+   propa%tf          = tf
+   propa%delta_t     = delta_t
+   propa%eps         = eps
+   propa%max_iter    = max_iter
+   propa%propa_name  = propa_name
+   propa%propa_name2 = propa_name2
+   propa%Beta        = Beta
+   propa%P           = P 
+   propa%renorm      = renorm
+
+   ! Convert method names to lowercase
+   CALL string_uppercase_TO_lowercase(propa%propa_name)
+   CALL string_uppercase_TO_lowercase(propa%propa_name2)
+
+END SUBROUTINE read_propa
 
    SUBROUTINE mEyeHPsi(psi, Hpsi) !calcul de -iHpsi
       USE op_m
@@ -479,35 +569,79 @@ END SUBROUTINE
       Hpsi%CVec(:) = -EYE*Hpsi%CVec(:)
    END SUBROUTINE 
 
-   SUBROUTINE mEyeHPsi_temp(psi, Hpsi,H) !calcul de -iHpsi
-      USE op_m
-      USE psi_m
-      TYPE(psi_t), intent(in)       :: psi
-      TYPE(psi_t), intent(inout)    :: Hpsi
-      TYPE(Op_t) ,intent(in)        :: H
+   !----------------------------------------------------------------------
+! SUBROUTINE: mEyeHPsi_temp
+!
+! DESCRIPTION:
+!   Computes the action of the Hamiltonian operator H on a wavefunction
+!   psi, multiplies the result by -i, and stores it in Hpsi.
+!
+!   Mathematically:
+!      Hpsi = -i * ( H * psi )
+!
+! ARGUMENTS:
+!   psi   : Input wavefunction.
+!   Hpsi  : Output wavefunction after applying -i*H.
+!   H     : Hamiltonian operator.
+!----------------------------------------------------------------------
 
-      call calc_OpPsi(H, psi, Hpsi)
-      Hpsi%CVec(:) = -EYE*Hpsi%CVec(:)
+SUBROUTINE mEyeHPsi_temp(psi, Hpsi, H)
+   USE op_m
+   USE psi_m
+   TYPE(psi_t), INTENT(IN)    :: psi
+   TYPE(psi_t), INTENT(INOUT) :: Hpsi
+   TYPE(Op_t),  INTENT(IN)    :: H
 
-   END SUBROUTINE 
+   ! Apply the operator H to psi
+   CALL calc_OpPsi(H, psi, Hpsi)
 
-   SUBROUTINE write_propa(propa)
-      USE psi_m
-      implicit none
-      TYPE(propa_t), intent(inout) :: propa
+   ! Multiply by -i
+   Hpsi%CVec(:) = -EYE * Hpsi%CVec(:)
+END SUBROUTINE mEyeHPsi_temp
 
-      write (out_unit, *) 't0 = ', propa%t0
-      write (out_unit, *) 'tf = ', propa%tf
-      write (out_unit, *) 'deltat_t = ', propa%delta_t
-      write (out_unit, *) 'eps = ', propa%eps
-      write (out_unit, *) 'max_iter = ', propa%max_iter
-      write (out_unit, *) 'propa_name = ', propa%propa_name
-      write (out_unit, *) 'propa_name2 = ', propa%propa_name2
-       write (out_unit, *) 'Beta = ', propa%Beta
-      write (out_unit, *) 'P = ', propa%P
-      write (out_unit, *) 'renorm = ', propa%renorm
+!----------------------------------------------------------------------
+! SUBROUTINE: write_propa
+!
+! DESCRIPTION:
+!   Writes the current propagation parameters stored in the "propa"
+!   structure to the output unit (out_unit) in a clean, aligned format.
+!   This is useful for logging or verifying the propagation settings
+!   before or during the simulation.
+!
+! ARGUMENTS:
+!   propa : Propagation parameters structure (read-only here).
+!----------------------------------------------------------------------
 
-   END SUBROUTINE write_propa
+SUBROUTINE write_propa(propa)
+   USE psi_m
+   IMPLICIT NONE
+
+   TYPE(propa_t), INTENT(INOUT) :: propa
+
+   WRITE (out_unit, '(A15, " : ", ES15.8)') 't0',         propa%t0
+   WRITE (out_unit, '(A15, " : ", ES15.8)') 'tf',         propa%tf
+   WRITE (out_unit, '(A15, " : ", ES15.8)') 'delta_t',    propa%delta_t
+   WRITE (out_unit, '(A15, " : ", ES15.8)') 'eps',        propa%eps
+   WRITE (out_unit, '(A15, " : ", I0)')     'max_iter',   propa%max_iter
+   WRITE (out_unit, '(A15, " : ", A)')      'propa_name',  TRIM(propa%propa_name)
+   WRITE (out_unit, '(A15, " : ", A)')      'propa_name2', TRIM(propa%propa_name2)
+   WRITE (out_unit, '(A15, " : ", L1)')     'Beta',       propa%Beta
+   WRITE (out_unit, '(A15, " : ", L1)')     'P',          propa%P
+   WRITE (out_unit, '(A15, " : ", L1)')     'renorm',     propa%renorm
+END SUBROUTINE write_propa
+
+!----------------------------------------------------------------------
+! SUBROUTINE: Calc_average_energy
+!
+! DESCRIPTION:
+!   Calculates the average energy of a wavefunction Psi using the
+!   Hamiltonian operator H. The energy is computed as <Psi | H | Psi>
+!   and normalized by <Psi | Psi> to ensure proper scaling.
+!
+! ARGUMENTS:
+!   Psi   : Input wavefunction.
+!   E     : Output average energy.
+!----------------------------------------------------------------------
 
    SUBROUTINE Calc_average_energy(Psi, E)
       !>-------------------------------------------------------
@@ -548,57 +682,77 @@ END SUBROUTINE
       CALL dealloc_psi(psi_b)
    End SUBROUTINE Calc_average_energy
 
-   subroutine Calc_Av_E(E, psi, H)
+   !----------------------------------------------------------------------
+   ! SUBROUTINE: Calc_Av_E
+   !
+   ! DESCRIPTION:
+   !   Computes the expectation value E = <Psi | H | Psi>
+   !   Normalizes by <Psi|Psi> to ensure proper scaling.
+   !
+   ! ARGUMENTS:
+   !   E     : Output average energy.
+   !   psi   : Input wavefunction.
+   !   H     : Hamiltonian operator.
+   !----------------------------------------------------------------------
+
+   SUBROUTINE Calc_Av_E(E, psi, H)
       !> -----------------------------------------------------------
       !> Computes the expectation value E = <Psi | H | Psi>
-      !> Normalizes by <Psi|Psi> to ensure proper scaling
+      !> Normalizes by <Psi|Psi> to ensure proper scaling.
+      !> Includes a local debug flag to optionally print E.
       !> -----------------------------------------------------------
    
-      use QDUtil_m
-      use psi_m
-      implicit none
+      USE QDUtil_m
+      USE psi_m
+      IMPLICIT NONE
    
       ! ===== Arguments =====
-      real(kind=Rkind), intent(inout) :: E
-      type(psi_t), intent(in)         :: psi
-      type(Op_t), intent(in)         :: H
+      REAL(KIND=Rkind), INTENT(INOUT) :: E
+      TYPE(psi_t), INTENT(IN)         :: psi
+      TYPE(Op_t),  INTENT(IN)         :: H
    
       ! ===== Local variables =====
-      type(psi_t)         :: Hpsi, psi_b
-      real(kind=Rkind)    :: Norm
+      TYPE(psi_t)      :: Hpsi, psi_b
+      REAL(KIND=Rkind) :: Norm
+      LOGICAL          :: debug  ! Debug flag
+   
+      ! ===== Debug control =====
+      debug = .FALSE.  ! Set to .TRUE. to print E
+   
       ! ===== Expectation value calculation =====
-      if (psi%Grid) then
+      IF (psi%Grid) THEN
          ! Convert wavefunction from grid to basis representation
-         call init_psi(psi_b, psi%Basis, cplx=.true., grid=.false.)
-         call GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
+         CALL init_psi(psi_b, psi%Basis, cplx=.TRUE., grid=.FALSE.)
+         CALL GridTOBasis_nD_cplx(psi_b%CVec, psi%CVec, psi%Basis)
    
          ! Apply operator H to wavefunction in basis
-         call init_psi(Hpsi, psi%Basis, cplx=.true., grid=.false.)
-         call calc_OpPsi(H, psi_b, Hpsi)
+         CALL init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.FALSE.)
+         CALL calc_OpPsi(H, psi_b, Hpsi)
    
          ! Compute <psi_b | H | psi_b>
-         E = real(dot_product(Hpsi%CVec, psi_b%CVec), kind=Rkind)
-   
-      else
+         E = REAL(DOT_PRODUCT(Hpsi%CVec, psi_b%CVec), KIND=Rkind)
+      ELSE
          ! Directly apply H to wavefunction
-         call init_psi(Hpsi, psi%Basis, cplx=.true., grid=.false.)
-         call calc_OpPsi(H, psi, Hpsi)
+         CALL init_psi(Hpsi, psi%Basis, cplx=.TRUE., grid=.FALSE.)
+         CALL calc_OpPsi(H, psi, Hpsi)
+   
          ! Compute <psi | H | psi>
-         E = real(dot_product(Hpsi%CVec, psi%CVec), kind=Rkind)
-      end if
+         E = REAL(DOT_PRODUCT(Hpsi%CVec, psi%CVec), KIND=Rkind)
+      END IF
    
       ! ===== Normalize by the norm of psi =====
-      call Calc_Norm_OF_Psi(psi, Norm)
+      CALL Calc_Norm_OF_Psi(psi, Norm)
       E = E / Norm**2
    
-      !print *, "<psi|H|psi> = ", E, "   <psi|psi> = ", Norm
+      ! ===== Debug output =====
+      IF (debug) THEN
+         WRITE(*,'(A,ES16.8)') 'DEBUG: <psi|H|psi> normalized = ', E
+      END IF
    
       ! ===== Cleanup =====
-      call dealloc_psi(Hpsi)
-      call dealloc_psi(psi_b)
-      !stop 'energy end'
-   end subroutine Calc_Av_E
-
+      CALL dealloc_psi(Hpsi)
+      CALL dealloc_psi(psi_b)
+   END SUBROUTINE Calc_Av_E
 
    SUBROUTINE Calc_Av_E_temp(E,psi,H)
       !>-------------------------------------------------------
@@ -694,25 +848,155 @@ END SUBROUTINE
       end do
     END SUBROUTINE
 
-  SUBROUTINE  creat_file_unit(nio, name, propa)
-      character(*), intent(in)    :: name
-      type(propa_t), intent(in)   :: propa
-      character(100)              :: name_tot
-      integer, intent(in)         :: nio
-      character(len=20)           :: dt
-      character(len=8)            :: fmt
+    !===============================================================
+!> @brief   Crée et ouvre un fichier texte pour l'enregistrement
+!>          des résultats d'une propagation.
+!>
+!> @param[in] nio     Numéro d'unité logique (unit) pour le fichier.
+!> @param[in] name    Nom de base à utiliser pour créer le fichier.
+!> @param[in] propa   Structure contenant les informations sur la
+!>                    propagation (nom, type, pas de temps, etc.).
+!>
+!> @details
+!> Le nom final du fichier est construit comme :
+!>   name_propaName_propaName2.txt
+!> Exemple :
+!>   si name = "Qt", propa%propa_name = "STD", propa%propa_name2 = "nb10"
+!>   alors le fichier sera : "Qt_STD_nb10.txt"
+!>
+!> Le fichier est ouvert avec le buffering désactivé (`BUFFERED='NO'`)
+!> pour que chaque écriture soit immédiatement visible sur disque.
+!===============================================================
+SUBROUTINE creat_file_unit(nio, name, propa)
 
-      fmt = "(E0.1)"
+   !==== Arguments ====
+   INTEGER,          INTENT(IN) :: nio       ! Numéro d'unité du fichier
+   CHARACTER(*),     INTENT(IN) :: name      ! Nom de base du fichier
+   TYPE(propa_t),    INTENT(IN) :: propa     ! Données de la propagation
 
-      write (dt, fmt) propa%delta_t
-      name_tot = trim(name)//'_'//trim(propa%propa_name)//'_'//trim(propa%propa_name2)//'.txt'
-     ! name_tot = 'file'//'_'//trim(name)!trim(name_tot)
+   !==== Variables locales ====
+   CHARACTER(100) :: name_tot   ! Nom complet du fichier
+   CHARACTER(20)  :: dt         ! Pas de temps converti en chaîne
+   CHARACTER(8)   :: fmt        ! Format pour afficher le pas de temps
 
-      open (unit=nio, file=name_tot)
+   !==== Construction du format pour écrire delta_t ====
+   fmt = "(E0.1)"
+   WRITE(dt, fmt) propa%delta_t
 
-    END SUBROUTINE
+   !==== Construction du nom complet du fichier ====
+   name_tot = TRIM(name) // '_' // TRIM(propa%propa_name) // '_' // &
+              TRIM(propa%propa_name2) // '.txt'
 
-     SUBROUTINE march_VP(psi, psi_dt, t, propa)
+   !==== Ouverture du fichier ====
+   ! BUFFERED='NO' → désactive le buffering pour écriture immédiate
+   OPEN(UNIT=nio, FILE=name_tot, STATUS='UNKNOWN', ACTION='WRITE', &
+        FORM='FORMATTED')
+
+END SUBROUTINE creat_file_unit
+
+     !==============================================================
+     !> @brief
+     !>   Write a complex autocorrelation value at a given time 
+     !>   to a file unit with different output options.
+     !>
+     !> @details
+     !>   Controlled by the character string 'op':
+     !>     - "t_z"     : write (t, z)   where z is complex
+     !>     - "t_norm"  : write (t, |z|)
+     !>     - "t_re_im" : write (t, Re(z), Im(z))
+     !>     - "t_re"    : write (t, Re(z))
+     !>     - "t_im"    : write (t, Im(z))
+     !>     - "z"       : write z only
+     !>     - "norm"    : write |z| only
+     !>     - "re_im"   : write Re(z), Im(z)
+     !>
+     !> @param[in] z    Complex autocorrelation value
+     !> @param[in] nio  File unit number (must be open before calling)
+     !> @param[in] op   Output format option (see list above)
+     !> @param[in] t    Time value (required if op begins with "t_")
+     !==============================================================
+   SUBROUTINE Write_Complex(z, nio, op, t)
+      IMPLICIT NONE
+      COMPLEX(KIND=Rkind), INTENT(in) :: z(:)
+      INTEGER, INTENT(in)              :: nio
+      CHARACTER(*), INTENT(in)         :: op
+      REAL(KIND=Rkind), INTENT(in)     :: t
+
+      ! Test if z is a scalar (size=1) or vector (size>1)
+      IF (SIZE(z) == 1) THEN
+         CALL Write_Complex_scalar(z(1), nio, op, t)
+      ELSE
+         CALL Write_Complex_vector(z, nio, op, t)
+      END IF
+
+   END SUBROUTINE Write_Complex
+
+   !=============================
+   ! Cas scalaire
+   !=============================
+   SUBROUTINE Write_Complex_scalar(z, nio, op, t)
+      IMPLICIT NONE
+      COMPLEX(KIND=Rkind), INTENT(in) :: z
+      INTEGER,             INTENT(in) :: nio
+      CHARACTER(*),        INTENT(in) :: op
+      REAL(KIND=Rkind),    INTENT(in) :: t
+
+      REAL(KIND=Rkind) :: zr, zi, znorm
+      zr    = REAL(z, KIND=Rkind)
+      zi    = AIMAG(z)
+      znorm = ABS(z)
+
+      SELECT CASE (TRIM(ADJUSTL(op)))
+      CASE ("t_z","t_re_im")
+         WRITE(nio,*) t, zr, zi
+      CASE ("t_norm")
+         WRITE(nio,*) t, znorm
+      CASE ("t_re")
+         WRITE(nio,*) t, zr
+      CASE ("t_im")
+         WRITE(nio,*) t, zi
+      CASE ("z","re_im")
+         WRITE(nio,*) zr, zi
+      CASE ("norm")
+         WRITE(nio,*) znorm
+      CASE DEFAULT
+         WRITE(*,*) "Error: Unknown option in Write_Complex_scalar -> ", op
+      END SELECT
+   END SUBROUTINE Write_Complex_scalar
+
+   !=============================
+   ! Cas vecteur
+   !=============================
+   SUBROUTINE Write_Complex_vector(z, nio, op, t)
+      IMPLICIT NONE
+      COMPLEX(KIND=Rkind), DIMENSION(:), INTENT(in) :: z
+      INTEGER,             INTENT(in) :: nio
+      CHARACTER(*),        INTENT(in) :: op
+      REAL(KIND=Rkind),    INTENT(in) :: t
+
+      INTEGER :: i, n
+      n = SIZE(z)
+
+      SELECT CASE (TRIM(ADJUSTL(op)))
+      CASE ("t_z","t_re_im")
+         WRITE(nio,*) t, REAL(z(:),KIND=Rkind), AIMAG(z(:))
+      CASE ("t_norm")
+         WRITE(nio,*) t, ABS(z(:))
+      CASE ("t_re")
+         WRITE(nio,*) t, REAL(z(:),KIND=Rkind)
+      CASE ("t_im")
+         WRITE(nio,*) t, AIMAG(z(:))
+      CASE ("z","re_im")
+         WRITE(nio,*) REAL(z(:),KIND=Rkind), AIMAG(z(:))
+      CASE ("norm")
+         WRITE(nio,*) ABS(z(:))
+      CASE DEFAULT
+         WRITE(*,*) "Error: Unknown option in Write_Complex_vector -> ", op
+      END SELECT
+   END SUBROUTINE Write_Complex_vector
+
+
+    SUBROUTINE march_VP(psi, psi_dt, t, propa)
       USE lanczos_m
       USE psi_m
       type(psi_t),   intent(INOUT)   :: psi_dt

@@ -9,92 +9,147 @@ module Auto_corr_m
 
 contains
 
-SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, propa_name, renorm, t, it)
+   !==============================================================
+   !> @brief
+   !>   Compute the autocorrelation function between the reference
+   !>   wavefunction (psi0) and the propagated wavefunction (psi_dt).
+   !>
+   !> @details
+   !>   - If the propagation scheme is 'hagedorn', the routine applies
+   !>     the inverse Hagedorn transformation before computing the 
+   !>     autocorrelation coefficient.
+   !>   - Otherwise, the autocorrelation is computed directly.
+   !>   - The routine also evaluates the phase (argument) of the
+   !>     autocorrelation coefficient.
+   !>   - Optional debug output is provided if debug=.true.
+   !>
+   !> @param[in]     psi0             Reference wavefunction at t=0
+   !> @param[in]     psi_dt           Propagated wavefunction at time t
+   !> @param[inout]  corre_coeff      Autocorrelation coefficient
+   !> @param[inout]  arg_corre_coeff  Phase of autocorrelation coefficient
+   !> @param[in]     propa_name       Propagation scheme name ('hagedorn' or else)
+   !> @param[in]     renorm           Logical flag for renormalization
+   !> @param[in]     t                (Optional) Time value
+   !> @param[in]     it               (Optional) Iteration index
+   !> @param[in]     debug            (Optional) If .true., write debug information
+   !==============================================================
+   SUBROUTINE Calc_Auto_corr(psi0, psi_dt, corre_coeff, arg_corre_coeff, &
+      propa_name, renorm, t, it, debug)
    USE QDUtil_m
    USE psi_m
-
-   TYPE(psi_t), intent(in)                    :: psi0, psi_dt
-   real(kind=Rkind), intent(in), optional     :: t
-   integer, intent(in), optional              :: it
-   complex(kind=Rkind), intent(inout)         :: corre_coeff
-   real(kind=Rkind), intent(inout)            :: arg_corre_coeff 
-   logical, intent(in)                        :: renorm
-   character(*), intent(in)                   :: propa_name
-
-   ! local variables---------------------------------------------------
-   TYPE(psi_t)                                :: psi, psi_t0
-   TYPE(Basis_t)                              :: Basis0, Basis_dt
-   real(kind=Rkind)                           :: X, Y
-   integer                                    :: ib
-
-   !write(out_unit, *) 'Beging Calc_Auto_corr'
-
+   
+   !=====================
+   ! Arguments
+   !=====================
+   TYPE(psi_t),      intent(in)            :: psi0, psi_dt
+   complex(Rkind),   intent(inout)         :: corre_coeff
+   real(Rkind),      intent(inout)         :: arg_corre_coeff
+   character(*),     intent(in)            :: propa_name
+   logical,          intent(in)            :: renorm
+   real(Rkind),      intent(in), optional  :: t
+   integer,          intent(in), optional  :: it
+   logical,          intent(in), optional  :: debug
+   
+   !=====================
+   ! Local variables
+   !=====================
+   TYPE(psi_t)       :: psi, psi_t0
+   TYPE(Basis_t)     :: Basis0, Basis_dt
+   real(Rkind)       :: X, Y
+   integer           :: ib
+   logical           :: ldebug
+   
+   !=====================
+   ! Initialization
+   !=====================
+   ldebug = .false.
+   IF (PRESENT(debug)) ldebug = debug
+   
+   !-----------------------------------------------------------
+   ! Begin autocorrelation calculation
+   !-----------------------------------------------------------
+   IF (ldebug) WRITE(out_unit,*) ">>> Entering Calc_Auto_corr"
+   
    IF (propa_name == 'hagedorn') THEN
-      ! Initialize Basis0 from psi0 and construct primitive basis
-      call init_Basis1_TO_Basis2(Basis0, psi0%Basis)
-      call construct_primitive_basis(Basis0)
-
-      ! Initialize Basis_dt from psi_dt and construct primitive basis
-      call init_Basis1_TO_Basis2(Basis_dt, psi_dt%Basis)
-      call construct_primitive_basis(Basis_dt)
-
-      ! Initialize psi and psi_t0 with complex vectors and grid = false
-      call init_psi(psi,    Basis0, cplx=.TRUE., grid=.false.)
-      call init_psi(psi_t0, Basis_dt, cplx=.TRUE., grid=.false.)
-
-      ! Set psi to zero and copy psi_dt to psi_t0
-      psi%CVec = CZERO
-      psi_t0%CVec(:) = psi_dt%CVec(:)
-
-      ! Apply inverse Hagedorn transformation
-      call Hagedorn_Inv(psi, psi_t0, renorm)
-
-      ! Compute auto-correlation coefficient and its phase
-      corre_coeff = dot_product(psi0%CVec, psi%CVec) !/ dot_product(psi%CVec, psi%CVec)**2
-      X = real(corre_coeff, kind=Rkind)
-      Y = aimag(corre_coeff)
-      arg_corre_coeff = atan2(Y, X)
-
-      ! Output wavefunction data if time is present
-      IF (present(t)) THEN
-         ! call write_psi(psi=psi, psi_cplx=.false., print_psi_grid=.false. &
-         ! , print_basis=.false., t=t, int_print=27, real_part=.false.)
-         call test_write_cplx(psi, ib=27, t=t)
-         write(27, *)
-      END IF
-
-      ! Optional write if iteration index is present
-      IF (present(it)) call test_write(psi, ib=27)    
-      IF (present(it)) write(27, *)
-
-      ! Clean up memory
-      call dealloc_psi(psi)
-      call dealloc_psi(psi_t0)
-
-   ELSE
-      ! Compute auto-correlation for non-Hagedorn case
-      corre_coeff = dot_product(psi0%CVec, psi_dt%CVec) !/ dot_product(psi_dt%CVec, psi_dt%CVec)
-      X = real(corre_coeff, kind=Rkind)
-      Y = aimag(corre_coeff)
-      arg_corre_coeff = atan2(Y, X)
-
-      ! Output wavefunction data if time is present
-      IF (present(t)) THEN
-         ! call write_psi(psi=psi_dt, psi_cplx=.false., print_psi_grid=.false. &
-         ! , print_basis=.false., t=t, int_print=27, real_part=.false.)
-         call test_write_cplx(psi_dt, ib=27, t=t)
-         write(27, *)
-      END IF
-
-      ! Optional write if iteration index is present
-      IF (present(it)) call test_write(psi_dt, ib=27)
-      IF (present(it)) write(27, *)
+   !--- Initialize Basis0 from psi0 and construct primitive basis
+   CALL init_Basis1_TO_Basis2(Basis0, psi0%Basis)
+   CALL construct_primitive_basis(Basis0)
+   
+   !--- Initialize Basis_dt from psi_dt and construct primitive basis
+   CALL init_Basis1_TO_Basis2(Basis_dt, psi_dt%Basis)
+   CALL construct_primitive_basis(Basis_dt)
+   
+   !--- Initialize psi and psi_t0 (complex vectors, grid = false)
+   CALL init_psi(psi,    Basis0, cplx=.TRUE., grid=.false.)
+   CALL init_psi(psi_t0, Basis_dt, cplx=.TRUE., grid=.false.)
+   
+   !--- Set psi to zero and copy psi_dt to psi_t0
+   psi%CVec    = CZERO
+   psi_t0%CVec = psi_dt%CVec
+   
+   !--- Apply inverse Hagedorn transformation
+   CALL Hagedorn_Inv(psi, psi_t0, renorm)
+   
+   !--- Compute autocorrelation coefficient
+   corre_coeff     = DOT_PRODUCT(psi0%CVec, psi%CVec)
+   X               = REAL(corre_coeff, kind=Rkind)
+   Y               = AIMAG(corre_coeff)
+   arg_corre_coeff = ATAN2(Y, X)
+   
+   !--- Debug output
+   IF (ldebug) THEN
+   WRITE(out_unit,*) "Hagedorn autocorrelation:"
+   WRITE(out_unit,*) "   corre_coeff     =", corre_coeff
+   WRITE(out_unit,*) "   arg_corre_coeff =", arg_corre_coeff
    END IF
-
-   ! write(out_unit, *) 'corre_coeff =', corre_coeff, 'arg_corre_coeff=', arg_corre_coeff
-   !write(out_unit, *) 'End Calc_Auto_corr'
-
-END SUBROUTINE Calc_Auto_corr
+   
+   !--- Optional wavefunction output
+   IF (ldebug) THEN
+   IF (PRESENT(t)) THEN
+   CALL test_write_cplx(psi, ib=27, t=t)
+   WRITE(27,*)
+   END IF
+   
+   IF (PRESENT(it)) CALL test_write(psi, ib=27)    
+   IF (PRESENT(it)) WRITE(27,*)
+   END IF
+   
+   !--- Deallocate
+   CALL dealloc_psi(psi)
+   CALL dealloc_psi(psi_t0)
+   
+   ELSE
+   !-----------------------------------------------------------
+   ! Direct autocorrelation calculation (non-Hagedorn case)
+   !-----------------------------------------------------------
+   corre_coeff     = DOT_PRODUCT(psi0%CVec, psi_dt%CVec)
+   X               = REAL(corre_coeff, kind=Rkind)
+   Y               = AIMAG(corre_coeff)
+   arg_corre_coeff = ATAN2(Y, X)
+   
+   !--- Debug output
+   IF (ldebug) THEN
+   WRITE(out_unit,*) "Direct autocorrelation:"
+   WRITE(out_unit,*) "   corre_coeff     =", corre_coeff
+   WRITE(out_unit,*) "   arg_corre_coeff =", arg_corre_coeff
+   END IF
+   
+   !--- Optional wavefunction output
+   IF (ldebug) THEN
+   IF (PRESENT(t)) THEN
+   CALL test_write_cplx(psi_dt, ib=27, t=t)
+   WRITE(27,*)
+   END IF
+   
+   IF (PRESENT(it)) CALL test_write(psi_dt, ib=27)
+   IF (PRESENT(it)) WRITE(27,*)
+   END IF
+   END IF
+   
+   IF (ldebug) WRITE(out_unit,*) "<<< Leaving Calc_Auto_corr"
+   !-----------------------------------------------------------
+   
+   END SUBROUTINE Calc_Auto_corr
 
    SUBROUTINE Calc_fft_Auto_corr(autocor_function, time, fft_autocor_function, delta_t, N)
       USE QDUtil_m

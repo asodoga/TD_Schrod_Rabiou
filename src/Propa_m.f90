@@ -26,29 +26,29 @@ SUBROUTINE propagation(psif, psi0, propa)
    TYPE(propa_t),   INTENT(INOUT) :: propa    ! Propagation parameters
 
    !====================== Local constants ====================
-   LOGICAL, PARAMETER :: debug = .true.       ! Debug flag
+   LOGICAL, PARAMETER :: debug = .true. ,ldebug = .false.      ! Debug flag
 
    !====================== Local variables ====================
-   TYPE(Basis_t)              :: Basis        ! Local basis
-   TYPE(Op_t)                 :: H            ! Hamiltonian operator
-   REAL(kind=Rkind)           :: t            ! Current time
-   REAL(kind=Rkind)           :: t_deltat     ! Time at next step
-   REAL(kind=Rkind)           :: Norm         ! Wavefunction norm
-   REAL(kind=Rkind)           :: E, e0        ! Energies
-   REAL(kind=Rkind)           :: aut_func_arg ! Autocorrelation phase argument
-   COMPLEX(kind=Rkind)        :: aut_func     ! Autocorrelation value
+   TYPE(Basis_t)              :: Basis           ! Local basis
+   TYPE(Op_t)                 :: H               ! Hamiltonian operator
+   REAL(kind=Rkind)           :: t               ! Current time
+   REAL(kind=Rkind)           :: t_deltat        ! Time at next step
+   REAL(kind=Rkind)           :: Norm            ! Wavefunction norm
+   REAL(kind=Rkind)           :: E, e0           ! Energies
+   REAL(kind=Rkind)           :: aut_func_arg(1) ! Autocorrelation phase argument
+   COMPLEX(kind=Rkind)        :: aut_func(1)     ! Autocorrelation value
 
-   REAL(kind=Rkind), ALLOCATABLE    :: Qt(:)   ! Position centers
-   REAL(kind=Rkind), ALLOCATABLE    :: SQt(:)  ! Widths
-   REAL(kind=Rkind), ALLOCATABLE    :: Pt(:)   ! Momentum centers
-   COMPLEX(kind=Rkind), ALLOCATABLE :: At(:)   ! Complex widths
-   REAL(kind=Rkind), ALLOCATABLE    :: pop(:)  ! Populations per surface
+   REAL(kind=Rkind), ALLOCATABLE    :: Qt(:)     ! Position centers
+   REAL(kind=Rkind), ALLOCATABLE    :: SQt(:)    ! Widths
+   REAL(kind=Rkind), ALLOCATABLE    :: Pt(:)     ! Momentum centers
+   COMPLEX(kind=Rkind), ALLOCATABLE :: At(:)     ! Complex widths
+   REAL(kind=Rkind), ALLOCATABLE    :: pop(:)    ! Populations per surface
    INTEGER, ALLOCATABLE             :: Tab_iq(:, :)  ! Basis index mapping
 
-   TYPE(REDUCED_DENSIRY_t)    :: Rd           ! Reduced density matrix (unused for now)
-
-   INTEGER :: Ndim, i, nt, nf, nsurf          ! Dimensions, loop indices
-   TYPE(psi_t) :: psi, psi_dt, psi_t0         ! Wavefunction containers (current, step, and reference)
+   TYPE(REDUCED_DENSIRY_t)    :: Rd               ! Reduced density matrix (unused for now)
+    
+   INTEGER :: Ndim, i, nt, nf, nsurf              ! Dimensions, loop indices
+   TYPE(psi_t) :: psi, psi_dt, psi_t0             ! Wavefunction containers (current, step, and reference)
 
    !====================== Initialization =====================
 
@@ -62,7 +62,7 @@ SUBROUTINE propagation(psif, psi0, propa)
    END IF
 
    ! Create output files
-   CALL creat_file_unit(nio=10, name='psi', propa=propa)
+   if(ldebug) CALL creat_file_unit(nio=10, name='psi', propa=propa)
    CALL creat_file_unit(nio=11, name='Qt', propa=propa)
    CALL creat_file_unit(nio=12, name='E', propa=propa)
    CALL creat_file_unit(nio=13, name='SQt', propa=propa)
@@ -76,7 +76,7 @@ SUBROUTINE propagation(psif, psi0, propa)
    CALL creat_file_unit(nio=24, name='Norm_13', propa=propa)
    CALL creat_file_unit(nio=25, name='E_13', propa=propa)
    CALL creat_file_unit(nio=26, name='auto_cor', propa=propa)
-   CALL creat_file_unit(nio=27, name='psi_dt_on_basis0', propa=propa)
+   if(ldebug) CALL creat_file_unit(nio=27, name='psi_dt_on_basis0', propa=propa)
    !CALL creat_file_unit(nio=28, name='file_norm_pics', propa=propa)
 
    ! Initialize basis from psi0
@@ -133,16 +133,17 @@ SUBROUTINE propagation(psif, psi0, propa)
       CALL Calc_Norm_OF_psi(psi, Norm)
       CALL Population(psi, pop)
 
-      CALL Calc_Auto_corr(psi_t0, psi, aut_func, aut_func_arg, propa%propa_name, propa%renorm, t=t)
+      CALL Calc_Auto_corr(psi_t0, psi, aut_func(1), aut_func_arg(1), propa%propa_name, propa%renorm, t=t,debug=ldebug)
+      CALL Write_Complex(aut_func, nio=26, op='t_z', t=t)
+      CALL Write_Complex(At, nio=20, op='t_z', t=t)
 
       WRITE(11,*) t, Qt
       WRITE(12,*) t, E
       WRITE(13,*) t, SQt
       WRITE(14,*) t, Norm
-      WRITE(26,*) t, aut_func%re, aut_func%im
       WRITE(18,*) t, pop
       WRITE(19,*) t, Pt
-      WRITE(20,*) t,At(:) ! REAL(At(:), kind=Rkind), AIMAG(At(:))
+      
 
       FLUSH(11)
       FLUSH(12)
@@ -156,16 +157,18 @@ SUBROUTINE propagation(psif, psi0, propa)
       !call eval_pics(psi, ib=28, t=t_deltat)
 
       if (mod(i, 60) == 0) then
-         call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false., &
+         if(ldebug) then 
+            call write_psi(psi=psi, psi_cplx=.true., print_psi_grid=.false., &
                print_basis=.false., t=t_deltat, int_print=10, real_part=.false.)
-         !call eval_pics(psi, ib=28, t=t)
-         !call Calc_reduced_density(Rd, psi%CVec, psi%Basis)
-         !call Rdensity_Writing(Rd, psi%Basis, nio=21, ib=1, t=t_deltat)
-         !call test_propa_Hagedorn(psi, t)
+            !call eval_pics(psi, ib=28, t=t)
+            !call Calc_reduced_density(Rd, psi%CVec, psi%Basis)
+            !call Rdensity_Writing(Rd, psi%Basis, nio=21, ib=1, t=t_deltat)
+            !call test_propa_Hagedorn(psi, t)
          write(10,*)
          flush(10)
          !write(21,*)
          !flush(21)
+         end if
       end if
 
       CALL march_Global(psi, psi_dt, t_deltat, propa, H)

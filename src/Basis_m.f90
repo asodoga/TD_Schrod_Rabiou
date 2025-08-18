@@ -37,36 +37,63 @@ MODULE Basis_m
    PUBLIC :: REDUCED_DENSIRY_t
    PUBLIC :: calc_tab_Iq0 ,Complete_construct_Basis
 
+!----------------------------------------------------------------------
+! TYPE: Basis_t
+!
+! DESCRIPTION:
+!   Data structure defining a numerical basis set for quantum dynamics
+!   calculations. It contains the number of basis functions, scaling
+!   parameters, coordinate grids, weights, and precomputed operator
+!   matrices (position, momentum, derivatives, etc.).
+!
+! FIELDS:
+!   nb_basis   : Total number of basis functions.
+!   nb         : Number of basis functions along one coordinate.
+!   nq         : Number of grid points.
+!   A, B       : Scaling or transformation parameters (user-defined meaning).
+!   imp_k      : momentum (p₀ or k₀ type quantity).
+!   scaleQ     : Scaling factor for coordinate Q.
+!   Q0         : Coordinate origin shift.
+!   Alpha      : Complex parameter (often Gaussian width or similar).
+!   Basis_name : Name of the basis set (dynamically allocated string).
+!   x, w       : Grid points and quadrature weights.
+!   d0*, d1*, d2* : Precomputed derivative/operator matrices in various forms.
+!   dag*, dq0*, dp0* : Precomputed derivative/shift operators.
+!   S          : Overlap matrix of the basis functions.
+!   NDindexq   : Index mapping for grid representation.
+!   NDindexb   : Index mapping for basis representation.
+!   tab_basis  : Table of sub-basis structures.
+!----------------------------------------------------------------------
+
    TYPE :: Basis_t
-      integer                             :: nb_basis = ZERO
-      integer                             :: nb ,nq
-      real(kind=Rkind)                    :: A , B ,imp_k , scaleQ,Q0
-      complex(kind=Rkind)                 :: Alpha = CZERO
-      character(len=:),    allocatable    :: Basis_name
-      real(kind=Rkind),    allocatable    :: x(:)
-      real(kind=Rkind),    allocatable    :: w(:)
-      complex(kind=Rkind), allocatable    :: d0gb(:, :) 
-      complex(kind=Rkind), allocatable    :: d0bgw(:, :) 
-      complex(kind=Rkind), allocatable    :: d1gb(:, :, :)
-      complex(kind=Rkind), allocatable    :: d1gg(:, :, :)  
-      complex(kind=Rkind), allocatable    :: d2gb(:, :, :, :)
-      complex(kind=Rkind), allocatable    :: d2gg(:, :, :, :)
-      complex(kind=Rkind), allocatable    :: dagb(:, :)
-      complex(kind=Rkind), allocatable    :: dagg(:, :)
-      complex(kind=Rkind), allocatable    :: dq0gb(:, :)
-      complex(kind=Rkind), allocatable    :: dq0gg(:, :)
-      complex(kind=Rkind), allocatable    :: dp0gb(:, :)
-      complex(kind=Rkind), allocatable    :: dp0gg(:, :)
-      complex(kind=Rkind), allocatable    :: S(:, :)
-      TYPE(NDindex_t)                     :: NDindexq
-      TYPE(NDindex_t)                     :: NDindexb
-      TYPE(Basis_t), allocatable          :: tab_basis(:)     
-
-   END TYPE Basis_t
-
+   INTEGER                             :: nb_basis = ZERO
+   INTEGER                             :: nb, nq
+   REAL(KIND=Rkind)                    :: A, B
+   REAL(KIND=Rkind)                    :: imp_k    ! Momentum parameter
+   REAL(KIND=Rkind)                    :: scaleQ, Q0
+   COMPLEX(KIND=Rkind)                 :: Alpha = CZERO
+   CHARACTER(LEN=:), ALLOCATABLE       :: Basis_name
+   REAL(KIND=Rkind),    ALLOCATABLE    :: x(:)      ! Grid points
+   REAL(KIND=Rkind),    ALLOCATABLE    :: w(:)      ! Quadrature weights
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: d0gb(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: d0bgw(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: d1gb(:, :, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: d1gg(:, :, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: d2gb(:, :, :, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: d2gg(:, :, :, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: dagb(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: dagg(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: dq0gb(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: dq0gg(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: dp0gb(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: dp0gg(:, :)
+   COMPLEX(KIND=Rkind), ALLOCATABLE    :: S(:, :)   ! Overlap matrix
+   TYPE(NDindex_t)                     :: NDindexq
+   TYPE(NDindex_t)                     :: NDindexb
+   TYPE(Basis_t), ALLOCATABLE          :: tab_basis(:)     
+END TYPE Basis_t
 
    TYPE REDUCED_DENSIRY_t
-      
       real(kind=Rkind),    allocatable    :: Norm(:)
       real(kind=Rkind),    allocatable    :: prob(:)
       TYPE(REDUCED_DENSIRY_t),allocatable :: tab_prob(:)
@@ -385,84 +412,136 @@ CONTAINS
    
    END SUBROUTINE Deallocate_Basis
 
+!=======================================================================
+!  RECURSIVE SUBROUTINE: Read_Basis
+!
+!  PURPOSE:
+!    Reads a basis set definition from an input unit (NIO) using the 
+!    namelist "basis_nD". Supports hierarchical basis definitions 
+!    through recursion when `nb_basis > 1`.
+!
+!  INPUT:
+!    nio   : Logical unit number from which the basis namelist is read.
+!
+!  INPUT/OUTPUT:
+!    Basis : Basis_t structure to be filled with parameters and 
+!            optional sub-bases.
+!
+!  NAMELIST FIELDS:
+!    name       : Name of the basis (string).
+!    nb_basis   : Number of basis components (for composite/multidim bases).
+!    nb         : Number of basis functions along one coordinate.
+!    nq         : Number of grid points.
+!    A, B       : Basis scaling or transformation parameters.
+!    scaleQ     : Scaling factor for the coordinate Q.
+!    Q0         : Coordinate origin shift.
+!    Imp_k      : momentum (e.g., k₀ in Gaussian packets).
+!    Alpha      : Complex basis parameter (width, phase, etc.).
+!
+!  NOTES:
+!    - If `nb_basis > 1`, the routine allocates `tab_basis` and calls 
+!      itself recursively for each sub-basis.
+!    - If `nb_basis <= 1`, it initializes the overlap matrix S to identity.
+!=======================================================================
    RECURSIVE SUBROUTINE Read_Basis(Basis, nio)
-      USE QDUtil_m
-      logical, parameter                       :: debug = .true.
-      !logical,             parameter          ::debug = .false.
-      TYPE(Basis_t), intent(inout)             :: Basis
-      integer, intent(in)                      :: nio
-      integer                                  :: err_io, nb, nq, i, j, nb_basis, ib
-      character(len=Name_len)                  :: name
-      real(kind=Rkind)                         :: A, B, scaleQ, Q0, d0, d2, X1, W1,Imp_k
-      complex(kind=Rkind)                      :: Alpha
+   USE QDUtil_m
+   LOGICAL, PARAMETER                  :: debug = .TRUE.
+   TYPE(Basis_t), INTENT(INOUT)        :: Basis
+   INTEGER, INTENT(IN)                 :: nio
 
-      NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0,Imp_k,Alpha
-      nb_basis = 0
-      nb = 0
-      nq = 0
-      A = ZERO
-      B = ZERO
-      Q0 = ZERO
-      scaleQ = ONE
-      name = '0'
-      Imp_k= ZERO
-      Alpha = CONE
+   ! Local variables
+   INTEGER                              :: err_io, nb, nq, i, nb_basis, ib
+   CHARACTER(LEN=Name_len)              :: name
+   REAL(KIND=Rkind)                     :: A, B, scaleQ, Q0, d0, d2, X1, W1, Imp_k
+   COMPLEX(KIND=Rkind)                  :: Alpha
 
-      read (nio, nml=basis_nD, IOSTAT=err_io)
-      write (out_unit, nml=basis_nD)
-      IF (err_io < 0) THEN
-         write (out_unit, basis_nD)
-         write (out_unit, *) ' ERROR in Read_Basis'
-         write (out_unit, *) ' while reading the namelist "basis_nD"'
-         write (out_unit, *) ' end of file or end of record'
-         write (out_unit, *) ' Probably, you forget a basis set ...'
-         write (out_unit, *) ' Check your data !!'
-         STOP ' ERROR in Read_Basis: problems with the namelist.'
-      END IF
-      IF (err_io > 0) THEN
-         write (out_unit, basis_nD)
-         write (out_unit, *) ' ERROR in Read_Basis'
-         write (out_unit, *) ' while reading the namelist "basis_nD"'
-         write (out_unit, *) ' Probably, some arguments of namelist are wrong.'
-         write (out_unit, *) ' Check your data !!'
-         STOP ' ERROR in Read_Basis: problems with the namelist.'
-      END IF
+   ! Namelist declaration
+   NAMELIST /basis_nD/ name, nb_basis, nb, nq, A, B, scaleQ, Q0, Imp_k, Alpha
 
-      IF (nb_basis > 1) THEN
-         Basis%Basis_name = 'Dp'
-         Basis%nb_basis = nb_basis
-         call string_uppercase_TO_lowercase(Basis%Basis_name)
-         allocate (Basis%tab_basis(nb_basis))
-         DO i = 1, nb_basis
-            CALL Read_Basis(Basis%tab_basis(i), nio)
-         END DO
-         Basis%nb = 1
-         Basis%nq = 1
-         DO i = 1, nb_basis
-            if (Basis%tab_basis(i)%Basis_name == 'el') cycle
-            Basis%nb = Basis%nb*Basis%tab_basis(i)%nb
-            Basis%nq = Basis%nq*Basis%tab_basis(i)%nq
-         END DO
-      ELSE
-         Basis%nb_basis = nb_basis
-         Basis%nb = nb
-         Basis%nq = nq
-         Basis%Q0 = Q0
-         Basis%SCALEQ = SCALEQ
-         Basis%A = A
-         Basis%B = B
-         Basis%Imp_k = Imp_k
-         Basis%alpha = alpha
-         Basis%Basis_name = trim(adjustl(name))
-         allocate (Basis%S(nb, nb))
-         Basis%S(:, :) = ZERO
-         do ib = 1, Basis%nb
-            Basis%S(ib, ib) =CONE
-         end do
+   ! ===== Default values =====
+   nb_basis = 0
+   nb       = 0
+   nq       = 0
+   A        = ZERO
+   B        = ZERO
+   Q0       = ZERO
+   scaleQ   = ONE
+   name     = '0'
+   Imp_k    = ZERO
+   Alpha    = CONE
 
-         CALL string_uppercase_TO_lowercase(Basis%Basis_name)
-      END IF
-   END SUBROUTINE Read_Basis
+   ! ===== Read namelist =====
+   READ (nio, NML=basis_nD, IOSTAT=err_io)
+
+   ! ===== Debug / formatted output =====
+   IF (debug) THEN
+      WRITE(out_unit,'(A20,": ",A)')        'Basis name', TRIM(name)
+      WRITE(out_unit,'(A20,": ",I5)')       'nb_basis',   nb_basis
+      WRITE(out_unit,'(A20,": ",I5)')       'nb',         nb
+      WRITE(out_unit,'(A20,": ",I5)')       'nq',         nq
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'A',          A
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'B',          B
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'scaleQ',     scaleQ
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'Q0',         Q0
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'Imp_k',      Imp_k
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'Alpha (real)', REAL(Alpha)
+      WRITE(out_unit,'(A20,": ",ES30.15)')  'Alpha (imag)', AIMAG(Alpha)
+      WRITE(out_unit,*)  ! empty line for spacing
+   END IF
+
+   ! ===== Check I/O errors =====
+   IF (err_io < 0) THEN
+      WRITE (out_unit, *) ' ERROR in Read_Basis: end of file or record.'
+      STOP ' ERROR in Read_Basis: namelist reading failed.'
+   ELSE IF (err_io > 0) THEN
+      WRITE (out_unit, *) ' ERROR in Read_Basis: namelist arguments may be wrong.'
+      STOP ' ERROR in Read_Basis: invalid namelist arguments.'
+   END IF
+
+   ! ===== Composite basis case =====
+   IF (nb_basis > 1) THEN
+      Basis%Basis_name = 'Dp'
+      Basis%nb_basis   = nb_basis
+      CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+
+      ALLOCATE (Basis%tab_basis(nb_basis))
+      DO i = 1, nb_basis
+         CALL Read_Basis(Basis%tab_basis(i), nio)
+      END DO
+
+      ! Compute total nb and nq excluding "el" bases
+      Basis%nb = 1
+      Basis%nq = 1
+      DO i = 1, nb_basis
+         IF (Basis%tab_basis(i)%Basis_name == 'el') CYCLE
+         Basis%nb = Basis%nb * Basis%tab_basis(i)%nb
+         Basis%nq = Basis%nq * Basis%tab_basis(i)%nq
+      END DO
+
+   ! ===== Single basis case =====
+   ELSE
+      Basis%nb_basis   = nb_basis
+      Basis%nb         = nb
+      Basis%nq         = nq
+      Basis%Q0         = Q0
+      Basis%scaleQ     = scaleQ
+      Basis%A          = A
+      Basis%B          = B
+      Basis%Imp_k      = Imp_k
+      Basis%Alpha      = Alpha
+      Basis%Basis_name = TRIM(ADJUSTL(name))
+
+      ! Initialize overlap matrix S as identity
+      ALLOCATE (Basis%S(nb, nb))
+      Basis%S(:, :) = ZERO
+      DO ib = 1, Basis%nb
+         Basis%S(ib, ib) = CONE
+      END DO
+
+      CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+   END IF
+
+END SUBROUTINE Read_Basis
 
    
    !> Calculates the index table Tab_iq for multi-dimensional quadrature indexing
@@ -844,70 +923,76 @@ END SUBROUTINE construct_primitive_basis_temp
    !> Check orthonormality of the basis set
    !! This subroutine checks if the basis functions are orthonormal (⟨b_i | b_j⟩ ≈ δ_ij)
    !! It also checks the overlaps with derivatives if requested (up to second order).
-   SUBROUTINE CheckOrtho_Basis(Basis, nderiv)
-      USE QDUtil_m
-      IMPLICIT NONE
-   
-      TYPE(Basis_t), intent(in)          :: Basis
-      integer, intent(in)                :: nderiv
-      integer                            :: ib, jb
-      real(kind=Rkind), ALLOCATABLE      :: S(:, :)
-      real(kind=Rkind)                   :: Sii, Sij
-   
+
+  SUBROUTINE CheckOrtho_Basis(Basis, nderiv)
+   USE QDUtil_m
+   IMPLICIT NONE
+
+   TYPE(Basis_t), intent(in)          :: Basis
+   INTEGER, intent(in)                :: nderiv
+   INTEGER                            :: ib, jb
+   REAL(KIND=Rkind), ALLOCATABLE      :: S(:, :)
+   REAL(KIND=Rkind)                   :: Sii, Sij
+
+   !-------------------------------------------------------------------------
+   ! Check for incompatible basis type
+   IF (Basis%Basis_name == 'el') THEN
+      WRITE(out_unit, '(A)') 'This routine is not applicable to Basis ''el'''
+      RETURN
+   END IF
+   !-------------------------------------------------------------------------
+
+   ! Proceed only if basis data is allocated
+   IF (Basis_IS_allocated(Basis)) THEN
+
+      WRITE(out_unit,*) 
+     ! WRITE(out_unit,'(A)') '--------------------------------------------------'
+      !WRITE(out_unit,'(A,A)') ' Ortho Basis: ', TRIM(Basis%Basis_name)
+      WRITE(out_unit,'(A)') '--------------------------------------------------'
+
+      ! Compute overlap matrix: S = <d0b|d0b>
+      S = matmul(conjg(Basis%d0bgw), Basis%d0gb)
+
+      ! Check deviation from orthonormality
+      Sii = ZERO
+      DO ib = 1, Basis%nb
+         IF (ABS(S(ib, ib) - ONE) > Sii) Sii = ABS(S(ib, ib) - ONE)
+         S(ib, ib) = ZERO
+      END DO
+      Sij = MAXVAL(ABS(S))
+
+      ! Formatted and aligned output
+      WRITE(out_unit,'(A, 2ES12.5)') 'Basis: '//TRIM(Basis%Basis_name)//' | max|Sii-1|, max|Sij| = ', Sii, Sij
+
       !-------------------------------------------------------------------------
-      ! Check for incompatible basis type
-      IF (Basis%Basis_name == 'el') THEN
-         PRINT *, 'This routine is not applicable to Basis ''el'''
-         RETURN
+      ! Check overlap with first derivatives if required
+      IF (nderiv > 0) THEN
+         WRITE(out_unit,*) 
+         !WRITE(out_unit,'(A)') 'First derivative overlaps <d0b|d1b>:'
+         !S = matmul(conjg(Basis%d0bgw), Basis%d1gb(:, :, 1))
+         ! Optionally, format and write the matrix here
+         ! CALL Write_VecMat(S, out_unit, 5, info='<d0b|d1b>')
       END IF
+
       !-------------------------------------------------------------------------
-   
-      !-------------------------------------------------------------------------
-      ! Proceed only if basis data is allocated
-      IF (Basis_IS_allocated(Basis)) THEN
-   
-         ! Compute overlap matrix: S = <d0b|d0b>
-         S = matmul(conjg(Basis%d0bgw), Basis%d0gb)
-   
-         ! Optional debug loop (currently disabled)
-         ! DO ib = 1, Basis%nb
-         !    DO jb = 1, Basis%nb
-         !       WRITE(115,*) ib, jb, S(ib, ib), S(ib, jb)
-         !    END DO
-         ! END DO
-   
-         ! Check deviation from orthonormality
-         Sii = ZERO
-         DO ib = 1, Basis%nb
-            IF (ABS(S(ib, ib) - ONE) > Sii) Sii = ABS(S(ib, ib) - ONE)
-            S(ib, ib) = ZERO
-         END DO
-         Sij = MAXVAL(ABS(S))
-   
-         WRITE(out_unit, *) 'Deviation from orthonormality: max|Sii - 1| =', Sii, ', max|Sij| =', Sij
-   
-         !-------------------------------------------------------------------------
-         ! Check overlap with first derivatives if required
-         IF (nderiv > 0) THEN
-            WRITE(out_unit, *)
-            S = matmul(conjg(Basis%d0bgw), Basis%d1gb(:, :, 1))
-            ! CALL Write_VecMat(S, out_unit, 5, info='<d0b|d1b>')
-         END IF
-   
-         !-------------------------------------------------------------------------
-         ! Check overlap with second derivatives if required
-         IF (nderiv > 1) THEN
-            WRITE(out_unit, *)
-            S = matmul(conjg(Basis%d0bgw), Basis%d2gb(:, :, 1, 1))
-            ! CALL Write_VecMat(S, out_unit, 5, info='<d0b|d2b>')
-         END IF
-   
-      ELSE
-         WRITE(out_unit, *) 'WARNING in CheckOrtho_Basis: The basis is not allocated.'
+      ! Check overlap with second derivatives if required
+      IF (nderiv > 1) THEN
+         WRITE(out_unit,*) 
+         !WRITE(out_unit,'(A)') 'Second derivative overlaps <d0b|d2b>:'
+         S = matmul(conjg(Basis%d0bgw), Basis%d2gb(:, :, 1, 1))
+         ! Optionally, format and write the matrix here
+         ! CALL Write_VecMat(S, out_unit, 5, info='<d0b|d2b>')
       END IF
-   
-   END SUBROUTINE CheckOrtho_Basis
-   SUBROUTINE Scale_Basis(Basis, q0, sq)
+
+   ELSE
+      WRITE(out_unit,'(A,A)') 'WARNING in CheckOrtho_Basis: The basis is not allocated. Basis=', TRIM(Basis%Basis_name)
+   END IF
+
+END SUBROUTINE CheckOrtho_Basis
+
+
+
+  SUBROUTINE Scale_Basis(Basis, q0, sq)
       USE QDUtil_m
       TYPE(Basis_t), intent(inout)  :: Basis
       real(kind=Rkind), intent(in)  :: q0, sq
